@@ -1,0 +1,29 @@
+{
+  "type": "documentation",
+  "name": "architecture",
+  "metadata": {
+    "title": "Architecture Documentation",
+    "purposeAndUsage": "Explains the overall architecture of the flow management framework including directory structure, file types, and system components.",
+    "lastUpdated": "2026-01-20"
+  },
+  "sections": [
+    {"name": "Overview", "description": "High-level architecture overview"},
+    {"name": "Directory Structure", "description": "Organization of framework directories"},
+    {"name": "Components", "description": "Main components and their responsibilities"},
+    {"name": "File Types", "description": "Types of files used in the framework"},
+    {"name": "Flow Instance JSON", "description": "Machine-readable flow state (flow.json)"}
+  ],
+  "references": {
+    "relatedDocs": ["getting-started", "flow-management", "examples"],
+    "templatesLocation": "~/.claude/zeremai/templates/flows/",
+    "commandsLocation": "commands/",
+    "typesLocation": "types/",
+    "configLocation": "~/.claude/zeremai/config/",
+    "cacheLocation": "~/.claude/zeremai/cache/"
+  }
+}
+
+
+
+
+

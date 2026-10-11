@@ -1,0 +1,19 @@
+{
+  "id": "RM-014",
+  "title": "Per-step LLM model configuration",
+  "description": "Allow setting different LLM models for different steps via configuration, enabling cost optimization by using cheaper models for simpler steps.",
+  "type": "feature",
+  "status": "proposed",
+  "priority": "medium",
+  "category": "framework",
+  "milestone": "backlog",
+  "effort": "",
+  "tags": [],
+  "dependencies": [],
+  "created": "2026-05-29",
+  "updated": "2026-05-29",
+  "author": "matanha@payoneer.com",
+  "notes": "",
+  "acceptance_criteria": [],
+  "illustration": "model-switch"
+}

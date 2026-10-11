@@ -1,0 +1,19 @@
+{
+  "id": "RM-013",
+  "title": "Improve continuous learning step",
+  "description": "Guide the continuous learning step to find improvements for one-shot execution, better token cost effectiveness, and improved context management.",
+  "type": "improvement",
+  "status": "proposed",
+  "priority": "medium",
+  "category": "framework",
+  "milestone": "backlog",
+  "effort": "",
+  "tags": [],
+  "dependencies": [],
+  "created": "2026-05-29",
+  "updated": "2026-05-29",
+  "author": "matanha@payoneer.com",
+  "notes": "",
+  "acceptance_criteria": [],
+  "illustration": "brain-learning"
+}

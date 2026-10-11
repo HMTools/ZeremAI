@@ -1,0 +1,19 @@
+{
+  "id": "RM-029",
+  "title": "Better UX for reviewing processes",
+  "description": "Add more super-easy UX ways for reviewing processes, potentially moving beyond markdown to richer interactive formats.",
+  "type": "improvement",
+  "status": "proposed",
+  "priority": "medium",
+  "category": "ui",
+  "milestone": "backlog",
+  "effort": "",
+  "tags": [],
+  "dependencies": [],
+  "created": "2026-05-29",
+  "updated": "2026-05-29",
+  "author": "matanha@payoneer.com",
+  "notes": "",
+  "acceptance_criteria": [],
+  "illustration": "ui-components"
+}

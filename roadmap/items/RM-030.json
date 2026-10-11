@@ -1,0 +1,19 @@
+{
+  "id": "RM-030",
+  "title": "Template creator via chat with dynamic preview",
+  "description": "Build a chat-based template creator with dynamic preview UI, allowing users to design process templates conversationally while seeing live previews.",
+  "type": "feature",
+  "status": "proposed",
+  "priority": "medium",
+  "category": "ui",
+  "milestone": "backlog",
+  "effort": "",
+  "tags": [],
+  "dependencies": [],
+  "created": "2026-05-29",
+  "updated": "2026-05-29",
+  "author": "matanha@payoneer.com",
+  "notes": "",
+  "acceptance_criteria": [],
+  "illustration": "chat-interface"
+}

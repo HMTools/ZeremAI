@@ -1,0 +1,19 @@
+{
+  "id": "RM-010",
+  "title": "Git management: branches, tagging, worktrees",
+  "description": "Add git management capabilities including branch creation, tagging, and worktree support for process isolation.",
+  "type": "feature",
+  "status": "proposed",
+  "priority": "medium",
+  "category": "framework",
+  "milestone": "backlog",
+  "effort": "",
+  "tags": [],
+  "dependencies": [],
+  "created": "2026-05-29",
+  "updated": "2026-05-29",
+  "author": "matanha@payoneer.com",
+  "notes": "",
+  "acceptance_criteria": [],
+  "illustration": "git-branches"
+}

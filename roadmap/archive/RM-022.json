@@ -1,0 +1,19 @@
+{
+  "id": "RM-022",
+  "title": "Step executor skill",
+  "description": "Create a dedicated step executor skill for running individual steps with proper context isolation and state management.",
+  "type": "feature",
+  "status": "done",
+  "priority": "high",
+  "category": "framework",
+  "milestone": "backlog",
+  "effort": "",
+  "tags": [],
+  "dependencies": [],
+  "created": "2026-05-29",
+  "updated": "2026-06-06",
+  "author": "matanha@payoneer.com",
+  "notes": "",
+  "acceptance_criteria": [],
+  "illustration": "step-executor"
+}

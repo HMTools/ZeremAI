@@ -1,0 +1,19 @@
+{
+  "id": "RM-004",
+  "title": "Change memory from single file to multiple files",
+  "description": "Split the memory.json monolith into multiple memory files for better modularity, reduced merge conflicts, and more granular access patterns.",
+  "type": "improvement",
+  "status": "proposed",
+  "priority": "high",
+  "category": "framework",
+  "milestone": "backlog",
+  "effort": "",
+  "tags": [],
+  "dependencies": [],
+  "created": "2026-05-29",
+  "updated": "2026-05-29",
+  "author": "matanha@payoneer.com",
+  "notes": "",
+  "acceptance_criteria": [],
+  "illustration": "memory-storage"
+}

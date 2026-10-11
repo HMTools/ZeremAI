@@ -1,0 +1,19 @@
+{
+  "id": "RM-027",
+  "title": "Live step flow diagrams",
+  "description": "Show real-time inner flow diagrams for the active step, visualizing substep progress and control flow as it happens.",
+  "type": "feature",
+  "status": "proposed",
+  "priority": "medium",
+  "category": "ui",
+  "milestone": "backlog",
+  "effort": "",
+  "tags": [],
+  "dependencies": [],
+  "created": "2026-05-29",
+  "updated": "2026-05-29",
+  "author": "matanha@payoneer.com",
+  "notes": "",
+  "acceptance_criteria": [],
+  "illustration": "diagram-flow"
+}

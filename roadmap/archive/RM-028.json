@@ -1,0 +1,19 @@
+{
+  "id": "RM-028",
+  "title": "Persistent file modification tracking",
+  "description": "Create a persistent way to see which files have been modified across the entire process, not just what is in the process instance folder.",
+  "type": "improvement",
+  "status": "proposed",
+  "priority": "medium",
+  "category": "ui",
+  "milestone": "backlog",
+  "effort": "",
+  "tags": [],
+  "dependencies": [],
+  "created": "2026-05-29",
+  "updated": "2026-05-29",
+  "author": "matanha@payoneer.com",
+  "notes": "",
+  "acceptance_criteria": [],
+  "illustration": "file-document"
+}

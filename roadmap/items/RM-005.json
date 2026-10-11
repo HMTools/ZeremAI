@@ -1,0 +1,19 @@
+{
+  "id": "RM-005",
+  "title": "Dynamic context injection in continue-process skill",
+  "description": "Use dynamic context injection in the continue-process skill to load only relevant context for the current step, reducing token usage.",
+  "type": "improvement",
+  "status": "proposed",
+  "priority": "high",
+  "category": "framework",
+  "milestone": "backlog",
+  "effort": "",
+  "tags": [],
+  "dependencies": [],
+  "created": "2026-05-29",
+  "updated": "2026-05-29",
+  "author": "matanha@payoneer.com",
+  "notes": "",
+  "acceptance_criteria": [],
+  "illustration": "context-inject"
+}

@@ -1,0 +1,19 @@
+{
+  "id": "RM-015",
+  "title": "Default steps to template scope",
+  "description": "Change steps to default to process-template scope (related to specific template), with an option to set steps as global.",
+  "type": "improvement",
+  "status": "done",
+  "priority": "medium",
+  "category": "framework",
+  "milestone": "backlog",
+  "effort": "",
+  "tags": [],
+  "dependencies": [],
+  "created": "2026-05-29",
+  "updated": "2026-06-06",
+  "author": "matanha@payoneer.com",
+  "notes": "",
+  "acceptance_criteria": [],
+  "illustration": "scope-layers"
+}

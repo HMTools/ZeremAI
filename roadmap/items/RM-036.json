@@ -1,0 +1,23 @@
+{
+  "id": "RM-036",
+  "title": "Create official framework wiki on Mintlify",
+  "description": "Build a public-facing documentation site for the ZeremAI framework using Mintlify. Cover architecture, getting started guides, skill authoring, process templates, memory system, and API reference.",
+  "type": "documentation",
+  "status": "proposed",
+  "priority": "high",
+  "category": "framework",
+  "milestone": "backlog",
+  "effort": "",
+  "tags": [
+    "docs",
+    "mintlify",
+    "wiki"
+  ],
+  "dependencies": [],
+  "created": "2026-06-10",
+  "updated": "2026-06-10",
+  "author": "matanha@payoneer.com",
+  "notes": "",
+  "acceptance_criteria": [],
+  "illustration": "file-document"
+}

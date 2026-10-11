@@ -1,0 +1,19 @@
+{
+  "id": "RM-026",
+  "title": "Web-based deployment beyond Electron",
+  "description": "Support web-based deployment of the UI, moving beyond Electron to enable browser-based access and wider platform support.",
+  "type": "feature",
+  "status": "proposed",
+  "priority": "high",
+  "category": "ui",
+  "milestone": "backlog",
+  "effort": "",
+  "tags": [],
+  "dependencies": [],
+  "created": "2026-05-29",
+  "updated": "2026-05-29",
+  "author": "matanha@payoneer.com",
+  "notes": "",
+  "acceptance_criteria": [],
+  "illustration": "deploy-rocket"
+}

@@ -1,0 +1,19 @@
+{
+  "id": "RM-025",
+  "title": "Channel MCP support for UI",
+  "description": "Add the option of using Channel MCP for communication instead of directly writing to CLI, enabling richer UI interactions.",
+  "type": "feature",
+  "status": "proposed",
+  "priority": "medium",
+  "category": "ui",
+  "milestone": "backlog",
+  "effort": "",
+  "tags": [],
+  "dependencies": [],
+  "created": "2026-05-29",
+  "updated": "2026-05-29",
+  "author": "matanha@payoneer.com",
+  "notes": "",
+  "acceptance_criteria": [],
+  "illustration": "multi-channel"
+}

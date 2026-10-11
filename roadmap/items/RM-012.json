@@ -1,0 +1,19 @@
+{
+  "id": "RM-012",
+  "title": "Simple do template for ad-hoc workflows",
+  "description": "Create a simple 'do' template that dynamically builds a workflow, checks for existing steps, and includes a final step for saving new steps, guidelines, and process definitions.",
+  "type": "feature",
+  "status": "proposed",
+  "priority": "medium",
+  "category": "framework",
+  "milestone": "backlog",
+  "effort": "",
+  "tags": [],
+  "dependencies": [],
+  "created": "2026-05-29",
+  "updated": "2026-05-29",
+  "author": "matanha@payoneer.com",
+  "notes": "",
+  "acceptance_criteria": [],
+  "illustration": "template-compose"
+}

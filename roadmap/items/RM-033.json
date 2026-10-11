@@ -1,0 +1,23 @@
+{
+  "id": "RM-033",
+  "title": "Redesign continuous improvement UX with rich improvement cards",
+  "description": "Replace the current plain-text continuous improvement presentation with a polished, concept-driven UX. Each improvement should be displayed as a rich card showing: the improvement category (icon + label), a clear explanation of what/why/impact, before/after context, affected files, and approval controls. Categories like Automation Opportunities, Process Optimization, Documentation Enhancement etc. should each have distinct visual identity. The overall flow should guide the user through the improvement proposals with clear visual hierarchy - making the concept behind each improvement immediately understandable without reading dense log output.",
+  "type": "improvement",
+  "status": "proposed",
+  "priority": "high",
+  "category": "ui",
+  "milestone": "backlog",
+  "effort": "",
+  "tags": [
+    "ux",
+    "continuous-improvement",
+    "ui-redesign"
+  ],
+  "dependencies": [],
+  "created": "2026-06-06",
+  "updated": "2026-06-06",
+  "author": "matanha@payoneer.com",
+  "notes": "",
+  "acceptance_criteria": [],
+  "illustration": "brain-learning"
+}

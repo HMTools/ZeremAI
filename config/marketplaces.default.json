@@ -1,0 +1,15 @@
+{
+  "marketplaces": [
+    {
+      "name": "official",
+      "url": "https://github.com/HMTools/ZeremAI-marketplace.git",
+      "branch": "main",
+      "enabled": true,
+      "priority": 100
+    }
+  ],
+  "settings": {
+    "autoRefreshOnStale": false,
+    "staleDurationMinutes": 1440
+  }
+}

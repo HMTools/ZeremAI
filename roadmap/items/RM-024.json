@@ -1,0 +1,19 @@
+{
+  "id": "RM-024",
+  "title": "Verification subagent as optional step declaration",
+  "description": "Make the verification subagent (different context window) an optional part of the step declaration rather than a dedicated step in the process.",
+  "type": "improvement",
+  "status": "proposed",
+  "priority": "medium",
+  "category": "framework",
+  "milestone": "backlog",
+  "effort": "",
+  "tags": [],
+  "dependencies": [],
+  "created": "2026-05-29",
+  "updated": "2026-05-29",
+  "author": "matanha@payoneer.com",
+  "notes": "",
+  "acceptance_criteria": [],
+  "illustration": "validation-check"
+}

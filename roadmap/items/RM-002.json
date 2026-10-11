@@ -1,0 +1,19 @@
+{
+  "id": "RM-002",
+  "title": "Replace guidelines with compile-time flavors",
+  "description": "Replace the guidelines system with flavors that compile at process creation time, so the process instance files contain the flavor and active processes don't need to resolve it at runtime.",
+  "type": "improvement",
+  "status": "proposed",
+  "priority": "medium",
+  "category": "framework",
+  "milestone": "backlog",
+  "effort": "",
+  "tags": [],
+  "dependencies": [],
+  "created": "2026-05-29",
+  "updated": "2026-05-29",
+  "author": "matanha@payoneer.com",
+  "notes": "",
+  "acceptance_criteria": [],
+  "illustration": "flavor-compile"
+}

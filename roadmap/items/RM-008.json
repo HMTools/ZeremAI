@@ -1,0 +1,19 @@
+{
+  "id": "RM-008",
+  "title": "Event system for process lifecycle",
+  "description": "Implement events for different lifecycle acts of processes. Support framework-level (global) and template-level events with multiple subscription handlers. Can also run on the server app.",
+  "type": "feature",
+  "status": "proposed",
+  "priority": "high",
+  "category": "framework",
+  "milestone": "backlog",
+  "effort": "",
+  "tags": [],
+  "dependencies": [],
+  "created": "2026-05-29",
+  "updated": "2026-05-29",
+  "author": "matanha@payoneer.com",
+  "notes": "",
+  "acceptance_criteria": [],
+  "illustration": "event-webhooks"
+}

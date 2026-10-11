@@ -1,0 +1,19 @@
+{
+  "id": "RM-007",
+  "title": "Improve pending-interactions routing",
+  "description": "Enhance pending-interactions to show where each option routes to (next step, previous step, etc.) in both the framework and UI.",
+  "type": "improvement",
+  "status": "proposed",
+  "priority": "medium",
+  "category": "framework",
+  "milestone": "backlog",
+  "effort": "",
+  "tags": [],
+  "dependencies": [],
+  "created": "2026-05-29",
+  "updated": "2026-05-29",
+  "author": "matanha@payoneer.com",
+  "notes": "",
+  "acceptance_criteria": [],
+  "illustration": "pending-interaction"
+}

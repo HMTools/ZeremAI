@@ -1,0 +1,19 @@
+{
+  "id": "RM-016",
+  "title": "Step-level shared behaviors via hooks and skills",
+  "description": "Implement step-level shared behaviors (previously _components) through hooks and skills for cross-cutting concerns.",
+  "type": "improvement",
+  "status": "done",
+  "priority": "low",
+  "category": "framework",
+  "milestone": "backlog",
+  "effort": "",
+  "tags": [],
+  "dependencies": [],
+  "created": "2026-05-29",
+  "updated": "2026-06-06",
+  "author": "matanha@payoneer.com",
+  "notes": "",
+  "acceptance_criteria": [],
+  "illustration": "plugin-blocks"
+}

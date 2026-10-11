@@ -1,0 +1,19 @@
+{
+  "id": "RM-006",
+  "title": "Finish session hook with empty .session file",
+  "description": "Implement a finish-session hook that creates/clears a .session file to properly signal session boundaries.",
+  "type": "feature",
+  "status": "proposed",
+  "priority": "low",
+  "category": "framework",
+  "milestone": "backlog",
+  "effort": "",
+  "tags": [],
+  "dependencies": [],
+  "created": "2026-05-29",
+  "updated": "2026-05-29",
+  "author": "matanha@payoneer.com",
+  "notes": "",
+  "acceptance_criteria": [],
+  "illustration": "session-state"
+}

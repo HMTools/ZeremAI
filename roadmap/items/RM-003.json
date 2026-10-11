@@ -1,0 +1,19 @@
+{
+  "id": "RM-003",
+  "title": "Verification checklist per step",
+  "description": "Add a verification checklist for each step that can be executed by a hook or a low-cost model via subagent to validate step completion.",
+  "type": "feature",
+  "status": "proposed",
+  "priority": "medium",
+  "category": "framework",
+  "milestone": "backlog",
+  "effort": "",
+  "tags": [],
+  "dependencies": [],
+  "created": "2026-05-29",
+  "updated": "2026-05-29",
+  "author": "matanha@payoneer.com",
+  "notes": "",
+  "acceptance_criteria": [],
+  "illustration": "validation-check"
+}

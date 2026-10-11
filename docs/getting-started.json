@@ -1,0 +1,26 @@
+{
+  "type": "documentation",
+  "name": "getting-started",
+  "metadata": {
+    "title": "Getting Started Guide",
+    "purposeAndUsage": "Quick start guide for using the flow management framework. Covers basic concepts and first steps.",
+    "lastUpdated": "2026-01-19"
+  },
+  "sections": [
+    {"name": "Prerequisites", "description": "What you need before starting"},
+    {"name": "Quick Start", "description": "Getting up and running quickly"},
+    {"name": "Basic Concepts", "description": "Core concepts to understand"},
+    {"name": "First Flow", "description": "Creating your first flow"}
+  ],
+  "references": {
+    "relatedDocs": ["architecture", "flow-management", "examples"],
+    "commands": ["/flow-new", "/flow-continue"]
+  }
+}
+
+
+
+
+
+
+

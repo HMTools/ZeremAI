@@ -1,0 +1,22 @@
+{
+  "id": "RM-034",
+  "title": "Real loop-back support in processes",
+  "description": "Enable processes to jump back to a previous step based on conditions or agent decisions, supporting iterative workflows. Currently step execution is strictly linear (forward-only by array index). This would add explicit flow-control fields to the step schema (e.g. loopBackTo, loopCondition, maxIterations) and update the process-continue logic to reset a target step's status and redirect execution backward. Must include loop-depth guards to prevent infinite cycles.",
+  "type": "feature",
+  "status": "proposed",
+  "priority": "high",
+  "category": "framework",
+  "milestone": "backlog",
+  "effort": "",
+  "tags": [
+    "flow-control",
+    "processes"
+  ],
+  "dependencies": [],
+  "created": "2026-06-06",
+  "updated": "2026-06-06",
+  "author": "matanha@payoneer.com",
+  "notes": "",
+  "acceptance_criteria": [],
+  "illustration": "dynamic-workflow"
+}

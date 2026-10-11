@@ -1,0 +1,19 @@
+{
+  "id": "RM-031",
+  "title": "Template marketplace server",
+  "description": "Build a server-side template marketplace for discovering and sharing community templates across teams and organizations.",
+  "type": "feature",
+  "status": "proposed",
+  "priority": "low",
+  "category": "server",
+  "milestone": "backlog",
+  "effort": "",
+  "tags": [],
+  "dependencies": [],
+  "created": "2026-05-29",
+  "updated": "2026-05-29",
+  "author": "matanha@payoneer.com",
+  "notes": "",
+  "acceptance_criteria": [],
+  "illustration": "marketplace"
+}

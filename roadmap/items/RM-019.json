@@ -1,0 +1,19 @@
+{
+  "id": "RM-019",
+  "title": "Knowledge graph integration (graphify)",
+  "description": "Integrate graphify to generate knowledge graphs from process data, enabling visual exploration of process relationships and dependencies.",
+  "type": "feature",
+  "status": "proposed",
+  "priority": "low",
+  "category": "framework",
+  "milestone": "backlog",
+  "effort": "",
+  "tags": [],
+  "dependencies": [],
+  "created": "2026-05-29",
+  "updated": "2026-05-29",
+  "author": "matanha@payoneer.com",
+  "notes": "",
+  "acceptance_criteria": [],
+  "illustration": "graph-network"
+}

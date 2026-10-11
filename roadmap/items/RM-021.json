@@ -1,0 +1,19 @@
+{
+  "id": "RM-021",
+  "title": "Use full skills frontmatter capabilities",
+  "description": "Leverage the complete skills frontmatter specification including model selection, tool restrictions, and other metadata fields.",
+  "type": "improvement",
+  "status": "proposed",
+  "priority": "low",
+  "category": "framework",
+  "milestone": "backlog",
+  "effort": "",
+  "tags": [],
+  "dependencies": [],
+  "created": "2026-05-29",
+  "updated": "2026-05-29",
+  "author": "matanha@payoneer.com",
+  "notes": "",
+  "acceptance_criteria": [],
+  "illustration": "skill-frontmatter"
+}

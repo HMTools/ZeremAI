@@ -1,0 +1,363 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://zeremai/schema.json",
+  "title": "Agentic Flows Schema",
+  "description": "Shared JSON Schema for all flow file structures. Single source of truth for Python and TypeScript.",
+  "$defs": {
+    "FlowStatus": {
+      "type": "string",
+      "enum": ["running", "completed", "failed", "paused"]
+    },
+    "StepStatus": {
+      "type": "string",
+      "enum": ["pending", "in_progress", "completed", "skipped", "awaiting_approval"]
+    },
+    "FlowMetadata": {
+      "type": "object",
+      "required": ["template", "created", "lastUpdated"],
+      "properties": {
+        "template": { "type": "string" },
+        "templateCategory": { "type": "string" },
+        "created": { "type": "string", "format": "date-time" },
+        "lastUpdated": { "type": "string", "format": "date-time" },
+        "projectPaths": { "type": "array", "items": { "type": "string" } },
+        "flowPath": { "type": "string", "description": "Absolute path to flow folder" }
+      },
+      "additionalProperties": false
+    },
+    "ActiveStepSubstep": {
+      "type": "object",
+      "required": ["number", "name"],
+      "properties": {
+        "number": { "type": "integer", "minimum": 1 },
+        "name": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "ActiveStep": {
+      "type": "object",
+      "required": ["id", "name", "actionSummary", "totalSubsteps"],
+      "properties": {
+        "id": { "type": "string", "format": "uuid" },
+        "name": { "type": "string" },
+        "actionSummary": { "type": "string" },
+        "actionDetails": { "type": "string" },
+        "totalSubsteps": { "type": "integer", "minimum": 0 },
+        "currentSubstep": { "$ref": "#/$defs/ActiveStepSubstep" }
+      },
+      "additionalProperties": false
+    },
+    "FlowCurrentState": {
+      "type": "object",
+      "required": ["activeStep"],
+      "properties": {
+        "activeStep": { "$ref": "#/$defs/ActiveStep" }
+      },
+      "additionalProperties": false
+    },
+    "FlowStep": {
+      "type": "object",
+      "required": ["id", "number", "name", "status", "stepRef", "stepDefinition"],
+      "properties": {
+        "id": { "type": "string", "format": "uuid" },
+        "number": { "type": "integer", "minimum": 0 },
+        "name": { "type": "string" },
+        "status": { "$ref": "#/$defs/StepStatus" },
+        "stepRef": { "type": ["string", "null"], "description": "Step definition UUID, or null for orchestrator steps" },
+        "stepRefName": { "type": "string", "description": "Human-readable companion name for stepRef (display-only)" },
+        "startedAt": { "type": "string", "format": "date-time" },
+        "completedAt": { "type": "string", "format": "date-time" },
+        "approvalRequired": { "type": "boolean" },
+        "approved": { "type": "boolean" },
+        "loopBackTo": { "type": "string", "description": "Step name to loop back to when loopCondition is met" },
+        "loopCondition": { "type": "string", "description": "Condition expression for looping back" },
+        "maxIterations": { "type": "integer", "description": "Maximum number of loop iterations" },
+        "subFlowTrigger": {
+          "type": "object",
+          "properties": {
+            "condition": { "type": "string" },
+            "template": { "type": "string", "description": "Template UUID" },
+            "templateName": { "type": "string", "description": "Human-readable companion name (display-only)" },
+            "parameters": { "type": "object", "additionalProperties": { "type": "string" } },
+            "forEach": { "type": "string" },
+            "syncPoint": { "type": "string" }
+          }
+        },
+        "stepDefinition": { "type": "object", "description": "Embedded step execution definition" }
+      },
+      "additionalProperties": false
+    },
+    "ChildFlowRef": {
+      "type": "object",
+      "required": ["id", "name", "status", "spawnedAtStep", "syncPoint", "flowPath"],
+      "properties": {
+        "id": { "type": "string", "format": "uuid" },
+        "name": { "type": "string" },
+        "status": { "$ref": "#/$defs/FlowStatus" },
+        "spawnedAtStep": { "type": "string", "format": "uuid" },
+        "syncPoint": { "type": "string", "format": "uuid" },
+        "flowPath": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "ParentFlowRef": {
+      "type": "object",
+      "required": ["id", "name", "flowPath", "returnToStep"],
+      "properties": {
+        "id": { "type": "string", "format": "uuid" },
+        "name": { "type": "string" },
+        "flowPath": { "type": "string" },
+        "returnToStep": { "type": "string", "format": "uuid" }
+      },
+      "additionalProperties": false
+    },
+    "SubFlowState": {
+      "type": "object",
+      "required": ["parentFlow", "childFlows"],
+      "properties": {
+        "parentFlow": {
+          "oneOf": [
+            { "$ref": "#/$defs/ParentFlowRef" },
+            { "type": "null" }
+          ]
+        },
+        "childFlows": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/ChildFlowRef" }
+        },
+        "nextSyncPoint": { "type": "string", "format": "uuid" }
+      },
+      "additionalProperties": false
+    },
+    "StepTimestamp": {
+      "type": "object",
+      "required": ["startedAt"],
+      "properties": {
+        "startedAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" },
+        "completedAt": { "type": "string", "format": "date-time" }
+      },
+      "additionalProperties": false
+    },
+    "UserInteraction": {
+      "type": "object",
+      "required": ["request", "reason", "agentResponse", "timestamp"],
+      "properties": {
+        "request": { "type": "string" },
+        "reason": { "type": "string" },
+        "agentResponse": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "forImprovementStep": { "type": "boolean" },
+        "potentialImprovement": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "MemoryStepEntry": {
+      "type": "object",
+      "required": ["name", "informationProduced", "decisionsMade", "filesModifiedCreated"],
+      "properties": {
+        "name": { "type": "string" },
+        "status": { "$ref": "#/$defs/StepStatus" },
+        "startedAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" },
+        "informationProduced": { "type": "object" },
+        "decisionsMade": { "type": "array", "items": { "type": "string" } },
+        "filesModifiedCreated": { "type": "array", "items": { "type": "string" } },
+        "notes": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "LogStepEntry": {
+      "type": "object",
+      "required": ["timestamp"],
+      "properties": {
+        "timestamp": {
+          "oneOf": [
+            { "type": "string", "format": "date-time" },
+            { "$ref": "#/$defs/StepTimestamp" }
+          ]
+        },
+        "userInteractions": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/UserInteraction" }
+        },
+        "actionsTaken": { "type": "array", "items": { "type": "string" } },
+        "agentReasoning": { "type": "array", "items": { "type": "string" } },
+        "problemsEncountered": { "type": "array", "items": { "type": "string" } },
+        "filesModified": { "type": "array", "items": { "type": "string" } },
+        "decisionsMade": { "type": "array", "items": { "type": "string" } },
+        "performanceNotes": { "type": "array", "items": { "type": "string" } }
+      },
+      "additionalProperties": false
+    },
+    "FlowInstance": {
+      "type": "object",
+      "required": ["type", "id", "name", "metadata", "status", "parameters", "currentState", "steps"],
+      "properties": {
+        "type": { "const": "flow-instance" },
+        "id": { "type": "string", "format": "uuid" },
+        "name": { "type": "string" },
+        "metadata": { "$ref": "#/$defs/FlowMetadata" },
+        "status": { "$ref": "#/$defs/FlowStatus" },
+        "parameters": {
+          "type": "object",
+          "additionalProperties": { "type": "string" }
+        },
+        "currentState": { "$ref": "#/$defs/FlowCurrentState" },
+        "steps": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/FlowStep" }
+        },
+        "subFlowState": { "$ref": "#/$defs/SubFlowState" }
+      },
+      "additionalProperties": false
+    },
+    "MemoryFile": {
+      "type": "object",
+      "required": ["type", "metadata", "subFlowState", "steps", "crossReferences", "searchHelpers"],
+      "properties": {
+        "type": { "const": "memory-file" },
+        "metadata": {
+          "type": "object",
+          "required": ["flow", "template", "created", "lastUpdated", "currentStep"],
+          "properties": {
+            "flow": { "type": "string" },
+            "template": { "type": "string" },
+            "created": { "type": "string", "format": "date-time" },
+            "lastUpdated": { "type": "string", "format": "date-time" },
+            "currentStep": { "type": "string", "format": "uuid" }
+          },
+          "additionalProperties": false
+        },
+        "subFlowState": {
+          "type": "object",
+          "required": ["parentFlowPath", "childSubFlows", "syncPoints"],
+          "properties": {
+            "parentFlowPath": {
+              "oneOf": [
+                { "type": "string" },
+                { "type": "null" }
+              ]
+            },
+            "childSubFlows": {
+              "type": "array",
+              "items": { "$ref": "#/$defs/ChildFlowRef" }
+            },
+            "syncPoints": {
+              "type": "array",
+              "items": { "type": "string", "format": "uuid" }
+            }
+          },
+          "additionalProperties": false
+        },
+        "steps": {
+          "type": "object",
+          "additionalProperties": { "$ref": "#/$defs/MemoryStepEntry" }
+        },
+        "crossReferences": {
+          "type": "object",
+          "required": ["keyDecisions"],
+          "properties": {
+            "keyDecisions": { "type": "array", "items": { "type": "string" } },
+            "filesModified": { "type": "array", "items": { "type": "string" } },
+            "filesCreated": { "type": "array", "items": { "type": "string" } },
+            "schemaFiles": { "type": "array", "items": { "type": "string" } },
+            "targetFiles": { "type": "array", "items": { "type": "string" } },
+            "custom": { "type": "object" }
+          },
+          "additionalProperties": false
+        },
+        "searchHelpers": {
+          "type": "object",
+          "required": ["byCategory"],
+          "properties": {
+            "byCategory": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "array",
+                "items": { "type": "string" }
+              }
+            },
+            "byFileType": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "array",
+                "items": { "type": "string" }
+              }
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "LogFile": {
+      "type": "object",
+      "required": ["type", "metadata", "steps", "flowWideObservations"],
+      "properties": {
+        "type": { "const": "log-file" },
+        "metadata": {
+          "type": "object",
+          "required": ["flow", "template", "started", "completed", "parentFlowPath", "subFlowPaths"],
+          "properties": {
+            "flow": { "type": "string" },
+            "template": { "type": "string" },
+            "started": { "type": "string", "format": "date-time" },
+            "completed": {
+              "oneOf": [
+                { "type": "string", "format": "date-time" },
+                { "type": "null" }
+              ]
+            },
+            "parentFlowPath": {
+              "oneOf": [
+                { "type": "string" },
+                { "type": "null" }
+              ]
+            },
+            "subFlowPaths": {
+              "type": "array",
+              "items": { "type": "string" }
+            }
+          },
+          "additionalProperties": false
+        },
+        "executionMetrics": {
+          "type": "object",
+          "required": ["totalSteps", "stepsCompleted", "currentStep"],
+          "properties": {
+            "totalSteps": { "type": "integer" },
+            "stepsCompleted": { "type": "integer" },
+            "currentStep": { "type": "string", "format": "uuid" }
+          },
+          "additionalProperties": false
+        },
+        "steps": {
+          "type": "object",
+          "additionalProperties": { "$ref": "#/$defs/LogStepEntry" }
+        },
+        "userInteractions": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/UserInteraction" }
+        },
+        "flowWideObservations": {
+          "type": "object",
+          "required": ["patternsDetected", "userFeedbackSummary", "efficiencyMetrics", "recommendationsForFuture"],
+          "properties": {
+            "patternsDetected": { "type": "array", "items": { "type": "string" } },
+            "userFeedbackSummary": { "type": "array", "items": { "type": "string" } },
+            "efficiencyMetrics": { "type": "object" },
+            "recommendationsForFuture": { "type": "array", "items": { "type": "string" } }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "oneOf": [
+    { "$ref": "#/$defs/FlowInstance" },
+    { "$ref": "#/$defs/MemoryFile" },
+    { "$ref": "#/$defs/LogFile" }
+  ]
+}

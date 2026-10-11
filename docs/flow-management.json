@@ -1,0 +1,28 @@
+{
+  "type": "documentation",
+  "name": "flow-management",
+  "metadata": {
+    "title": "Flow Management Guide",
+    "purposeAndUsage": "Comprehensive guide to flow management including creating, running, and improving flows.",
+    "lastUpdated": "2026-01-20"
+  },
+  "sections": [
+    {"name": "Overview", "description": "Introduction to flow management"},
+    {"name": "Creating Flows", "description": "How to create new flows"},
+    {"name": "Running Flows", "description": "Executing and tracking flow progress"},
+    {"name": "Memory Management", "description": "Using topic-based memory files for continuity"},
+    {"name": "Logging", "description": "Logging conventions and requirements"},
+    {"name": "Sub-Flows", "description": "Creating and managing child flows for delegation or parallel work"},
+    {"name": "Continuous Improvement", "description": "Learning from flow execution"}
+  ],
+  "references": {
+    "relatedDocs": ["architecture", "getting-started", "examples"],
+    "templates": ["set-concept", "develop-user-story", "create-flow-template"],
+    "prompts": ["flow-new", "flow-continue"],
+    "subFlowCapabilities": ["subFlowTrigger", "subFlowConfig", "auto-parent-notification"]
+  }
+}
+
+
+
+

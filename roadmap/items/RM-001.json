@@ -1,0 +1,19 @@
+{
+  "id": "RM-001",
+  "title": "Add stepType enum with spawn and direct types",
+  "description": "Add stepType field with enum values: spawn (subprocess) and direct (regular step template). Show it in the UI and connect spawn type to target process template for UI display.",
+  "type": "feature",
+  "status": "proposed",
+  "priority": "high",
+  "category": "framework",
+  "milestone": "backlog",
+  "effort": "",
+  "tags": [],
+  "dependencies": [],
+  "created": "2026-05-29",
+  "updated": "2026-05-29",
+  "author": "matanha@payoneer.com",
+  "notes": "",
+  "acceptance_criteria": [],
+  "illustration": "process-steps"
+}

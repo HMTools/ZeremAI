@@ -1,0 +1,25 @@
+{
+  "id": "RM-035",
+  "title": "Memory Visualization UX for Templates and Instances",
+  "description": "Add rich memory visualization views to both template and instance screens in the UI app. For templates: display a clear mapping of which steps read from or write to which memory files, giving template authors visibility into the memory flow across the process. For instances: show the same step-to-memory mapping plus deeper runtime details — current memory file contents, change history per step execution, diffs between memory states, and which step last modified each memory topic. The goal is to make memory a first-class, easily explorable part of the process UX rather than a hidden implementation detail.",
+  "type": "feature",
+  "status": "proposed",
+  "priority": "medium",
+  "category": "ui",
+  "milestone": "backlog",
+  "effort": "",
+  "tags": [
+    "ui",
+    "memory",
+    "templates",
+    "instances",
+    "ux"
+  ],
+  "dependencies": [],
+  "created": "2026-06-10",
+  "updated": "2026-06-10",
+  "author": "matanha@payoneer.com",
+  "notes": "",
+  "acceptance_criteria": [],
+  "illustration": "memory-storage"
+}

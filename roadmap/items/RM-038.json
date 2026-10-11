@@ -1,0 +1,25 @@
+{
+  "id": "RM-038",
+  "title": "Multi-directory workspace support for UI-triggered processes",
+  "description": "When the UI app triggers a new process or runs process-continue, the spawned Claude Code session should support attaching multiple directories (workspaces) via --add-dir. This allows processes to operate across multiple codebases simultaneously - e.g., a process that needs access to both the main repo and a shared library. The UI should let users configure which directories to attach per process or template.",
+  "type": "feature",
+  "status": "proposed",
+  "priority": "medium",
+  "category": "ui",
+  "milestone": "backlog",
+  "effort": "",
+  "tags": [
+    "ui",
+    "workspaces",
+    "multi-directory",
+    "process-triggering",
+    "claude-code"
+  ],
+  "dependencies": [],
+  "created": "2026-06-11",
+  "updated": "2026-06-11",
+  "author": "matanha@payoneer.com",
+  "notes": "",
+  "acceptance_criteria": [],
+  "illustration": "scope-layers"
+}
