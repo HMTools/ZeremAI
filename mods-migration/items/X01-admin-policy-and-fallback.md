@@ -9,7 +9,7 @@
 ## 2. What exists today
 - Enforcement is 11 shell scripts in `hooks/hooks.json` (events `Stop`, `SubagentStop`, `PreToolUse`, `PostToolUse`, `UserPromptSubmit`). They are settings hooks of a plugin. Settings hooks "keep working" next to mods (docs `admin`, "Know which controls still apply").
 - Skills (`flow-new`, `flow-continue`) already warn that without session binding "all enforcement hooks will be silently disabled" (`skills/flow-continue/SKILL.md` line 43). There is no check that a hook ran. A disabled hook is invisible to Claude.
-- The UI app (`../agentic-flows-ui`) launches `claude` itself in a pane (`electron/agentSessionManager.ts`): argv is `claude`, plus `--dangerously-skip-permissions` for allow-all and `--resume <id>`. It sends `/flow-continue <path>` first. It does not pass `--bare`, `--safe-mode` or `-p`.
+- The UI app (`../agentic-flows-ui`) launches `claude` itself in a pane (`electron/agentSessionManager.ts`): argv is `claude`, plus `--dangerously-skip-permissions` for allow-all and `--resume <id>`. It sends `/zeremai continue <path>` first. It does not pass `--bare`, `--safe-mode` or `-p`.
 - The README of this pack already lists the risk (`allowManagedModsOnly`, `--safe-mode`).
 
 ## 3. First guess (step 3, not final)

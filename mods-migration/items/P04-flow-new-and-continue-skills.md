@@ -3,7 +3,7 @@
 > Status and result live in `../progress.html` (entry `P04`). Read `../README.md` first, then `../shared/mods-docs-reading-list.md`.
 
 ## 1. Context (no previous knowledge needed)
-`zeremai` is a Claude Code plugin that runs resumable workflows ("flows") from templates. Two skills are the "drivers": `/flow-new` creates a flow from a template and runs its steps; `/flow-continue` resumes an existing one. They are long prose instructions the main model follows: they tell it to pick a template, collect parameters, bind the session to the flow folder, call `flow_manager.py`, delegate each step to the `step-executor` subagent, handle approval checkpoints and sub-flows. Both set `disable-model-invocation: true`, so only the user starts them by typing the command. Related items: P06 (step executor and delegation skill), P03 (approve), C01 (session lookup used by all hooks), P01 (CLI), H-series for hooks.
+`zeremai` is a Claude Code plugin that runs resumable workflows ("flows") from templates. Two skills are the "drivers": `/zeremai new` creates a flow from a template and runs its steps; `/zeremai continue` resumes an existing one. They are long prose instructions the main model follows: they tell it to pick a template, collect parameters, bind the session to the flow folder, call `flow_manager.py`, delegate each step to the `step-executor` subagent, handle approval checkpoints and sub-flows. Both set `disable-model-invocation: true`, so only the user starts them by typing the command. Related items: P06 (step executor and delegation skill), P03 (approve), C01 (session lookup used by all hooks), P01 (CLI), H-series for hooks.
 
 ## 2. What exists today
 Files:
@@ -63,11 +63,11 @@ Built instead of only researched, at the owner's request (plan page "Flow Pane i
 2.1.296 (Claude Code)
 
 ### Answers per question (1-7, each with evidence)
-1. **Command plus pane, then one prompt.** `/flow` opens a pane (`$.ui.open`). A button callback sends `$.prompt.submit({ text, asUser: true })` (not awaited). Returning `{ text }` from the command was not used: the flow is chosen inside the pane, after the command ended. Test: `on-flow-pane.test.ts`.
-2. **The store holds the link, not a file.** `bindSession` (H08, C01) is called by the pane with `$.session.id()`. Not verified live: that this id equals the hook `session_id`, and what it does after `/clear`, `/resume`, `/branch` (S02). After `/clear` the user opens `/flow` again, which binds the new id.
+1. **Command plus pane, then one prompt.** `/zeremai` opens a pane (`$.ui.open`). A button callback sends `$.prompt.submit({ text, asUser: true })` (not awaited). Returning `{ text }` from the command was not used: the flow is chosen inside the pane, after the command ended. Test: `on-flow-pane.test.ts`.
+2. **The store holds the link, not a file.** `bindSession` (H08, C01) is called by the pane with `$.session.id()`. Not verified live: that this id equals the hook `session_id`, and what it does after `/clear`, `/resume`, `/branch` (S02). After `/clear` the user opens `/zeremai` again, which binds the new id.
 3. **Not used.** The pane builds the state message once (`handoff` in `hooks/infra/flow-pane/flow-pane.ts`). `prompt.context` each turn was not needed and would cost cache. Replaces steps 3-6 of flow-continue.
 4. **Mod: template list, fields, `create_flow`, binding, state summary, flow list. Model: step loop, approvals, sub-flow steps, parameter choice (now the user's).** The sub-flow steps (create child, register child) stay model-driven in the `flow-run` skill; a `start_sub_flow` tool is a later option.
-5. **Merged.** One command `/flow`, two tabs. The names `/flow-new` and `/flow-continue` are gone. The UI app is obsolete, so nothing relies on them.
+5. **Merged.** One command `/zeremai`, two tabs. The names `/zeremai new` and `/zeremai continue` are gone. The UI app is obsolete, so nothing relies on them.
 6. **Not changed.** The model still drives the step loop. A mod-driven loop (mod starts each subagent) was not built; that stays a separate decision (see H01, P06).
 7. **No fallback.** The tools are mod tools, so with mods off the plugin cannot change a flow. A skill fallback has no job. The pane needs the terminal or the Desktop app (no pane elsewhere).
 
@@ -78,19 +78,19 @@ Built instead of only researched, at the owner's request (plan page "Flow Pane i
 - Docs: mods interface (pane, `Input`, `Button`), mods api (`$.command.register`, `$.prompt.submit`), mods test (`$.ui.mount`).
 - Added: `hooks/infra/flow-pane/flow-pane.ts`, `hooks/on-flow-pane/on-flow-pane.ts`, `skills/flow-run/SKILL.md`, and the two test files next to them.
 - Changed: `hooks/register.ts`, `hooks/on-flow-tools/on-flow-tools.ts` (registers the command; a plugin can have only one `session.start` hook without a matcher, and the old `command.run` hook for the skill names is gone), `agents/flow-spawner.md` (calls `create_flow`, not the skill), `agents/step-executor.md`, `skills/step-executor-delegation`, `skills/flow-state-update`, `README.md`, `framework-steps/continuous-improvement`.
-- Deleted: `skills/flow-new`, `skills/flow-continue`.
+- Deleted: `skills/zeremai new`, `skills/zeremai continue`.
 - Found by a test: a prompt sent with `asUser: true` still has `origin.kind: "plugin"`, so `on-user-prompt` skips it. The pane raises the log flag and restarts the re-prompt count itself (`handOff`).
 - Found by a test: an `Input` must have `onSubmit`. Enter in a field creates the flow.
 - `claude plugin test .`: 218 pass, 0 fail. `claude plugin validate .`: passed with warnings.
 
 ### Open questions
 - Live run not done: the pane in a real terminal and in the Desktop app.
-- Is `/flow` free of a built-in name collision? The register call is wrapped so a clash does not stop the session.
+- Is `/zeremai` free of a built-in name collision? The register call is wrapped so a clash does not stop the session.
 - Does `$.session.id()` equal the hook `session_id`, and what changes after `/clear`, `/resume`? (S02)
 - Does the model read the `flow-run` skill when the hand-off asks for it? Not run live.
 
 ### Risks
-- The first turn after Create or Resume now starts with the link in place (this removes the H08 risk "first prompt runs before the link"). A resume after `/clear` needs the user to open `/flow` again, as before.
+- The first turn after Create or Resume now starts with the link in place (this removes the H08 risk "first prompt runs before the link"). A resume after `/clear` needs the user to open `/zeremai` again, as before.
 - The pane keeps its state in module variables: a reload of the mod closes it back to the start.
 - Create shows an error line when a required field is empty. There is no disabled button.
 - Template install is not in the pane (P09). With no template, the New tab says so.

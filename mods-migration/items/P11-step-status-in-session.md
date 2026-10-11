@@ -66,7 +66,7 @@ Built at the owner's request after the plan page "Mod Migration P06 to P12" (all
 
 ### Answers (short)
 1. The mod reads `flow.json` with `$.fs` and the home folder from `$.env.get('HOME')`.
-2. The session link is in the mod store (H08); the line uses it. After `/clear` the user opens `/flow` again, as in P04.
+2. The session link is in the mod store (H08); the line uses it. After `/clear` the user opens `/zeremai` again, as in P04.
 3. `$.ui.status(text)`; an empty text clears it. It is drawn in the terminal and the Desktop app; the call is wrapped so other surfaces do nothing.
 4. Refresh after each flow tool call, no timer: state only changes through the tools.
 5. Lines: `Step 3 of 7 · Draft the plan · part 2 of 4` and `Step 3 of 7 · Draft the plan · waits for you`. No toast per step.

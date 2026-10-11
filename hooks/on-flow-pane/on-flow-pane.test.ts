@@ -41,9 +41,9 @@ function world(on: On, disk: Record<string, unknown>, mtimes: Record<string, num
   return { files, sent, store, toasts, clock }
 }
 
-test('/flow opens the pane, and the Continue tab counts the flows', async ($, on) => {
+test('/zeremai opens the pane, and the Continue tab counts the flows', async ($, on) => {
   world(on, { [`${HOME}/active/p1/flow.json`]: flow })
-  await $.command.run({ command: 'flow', args: '' })
+  await $.command.run({ command: 'zeremai', args: '' })
   const ui = await $.ui.mount(PANE)
   expect(await ui.find({ type: 'Button', key: 'tab-continue' })).toBeDefined()
   await ui.press({ key: 'tab-continue' })
@@ -52,7 +52,7 @@ test('/flow opens the pane, and the Continue tab counts the flows', async ($, on
 
 test('Create refuses an empty required field, then starts the flow and hands it to the agent', async ($, on) => {
   const w = world(on, { [`${T}/bug.json`]: template, [`${T}/design/design.json`]: { type: 'step', id: 'r1' } })
-  await $.command.run({ command: 'flow', args: '' })
+  await $.command.run({ command: 'zeremai', args: '' })
   const ui = await $.ui.mount(PANE)
   await ui.press({ key: 'start-dev/bug' })
   await ui.press({ key: 'create' })
@@ -71,7 +71,7 @@ test('Create refuses an empty required field, then starts the flow and hands it 
 
 test('the Start form names the missing field, then says ready', async ($, on) => {
   world(on, { [`${T}/bug.json`]: template, [`${T}/design/design.json`]: { type: 'step', id: 'r1' } })
-  await $.command.run({ command: 'flow', args: '' })
+  await $.command.run({ command: 'zeremai', args: '' })
   const ui = await $.ui.mount(PANE)
   await ui.press({ key: 'start-dev/bug' })
   expect(await ui.find({ type: 'Text', text: '1 field left: workItemId' })).toBeDefined()
@@ -81,7 +81,7 @@ test('the Start form names the missing field, then says ready', async ($, on) =>
 
 test('the Start form has two headings and a hint above Create', async ($, on) => {
   world(on, { [`${T}/bug.json`]: template, [`${T}/design/design.json`]: { type: 'step', id: 'r1' } })
-  await $.command.run({ command: 'flow', args: '' })
+  await $.command.run({ command: 'zeremai', args: '' })
   const ui = await $.ui.mount(PANE)
   await ui.press({ key: 'start-dev/bug' })
   expect(await ui.find({ type: 'Text', text: 'What runs' })).toBeDefined()
@@ -90,7 +90,7 @@ test('the Start form has two headings and a hint above Create', async ($, on) =>
 
 test('Resume binds the flow and hands it to the agent', async ($, on) => {
   const w = world(on, { [`${HOME}/active/p1/flow.json`]: flow })
-  await $.command.run({ command: 'flow', args: '' })
+  await $.command.run({ command: 'zeremai', args: '' })
   const ui = await $.ui.mount(PANE)
   await ui.press({ key: 'tab-continue' })
   await ui.press({ key: 'flow-0' })
@@ -109,7 +109,7 @@ test('the New list shows the marketplace templates with a state, and Install mak
     if (e.argv[0] === 'cp') for (const p of Object.keys(w.files)) if (p.startsWith(`${e.argv[2]}/`)) w.files[e.argv[3] + p.slice(e.argv[2].length)] = w.files[p]
     return { value: { exitCode: 0, stdout: 'abc\n', stderr: '', timedOut: false } } as never
   })
-  await $.command.run({ command: 'flow', args: '' })
+  await $.command.run({ command: 'zeremai', args: '' })
   const ui = await $.ui.mount(PANE)
   expect(await ui.find({ type: 'Button', key: 'tpl-install-dev/bug' })).toBeUndefined() // the templates you do not have sit in a closed group
   await ui.press({ key: 'fold-missing' })
@@ -128,7 +128,7 @@ test('search and favorites narrow the New list; a template opens with Overview, 
     [`${T}/design/design.json`]: { type: 'step', id: 'r1', output: { description: 'a design' }, guidance: { prerequisites: ['read the bug'] }, memoryFileUsage: { writeTo: ['bug.json'] } },
     [`${other}/set.json`]: { type: 'template', name: 'set', metadata: { title: 'Set' }, parameters: {}, steps: [] },
   })
-  await $.command.run({ command: 'flow', args: '' })
+  await $.command.run({ command: 'zeremai', args: '' })
   const ui = await $.ui.mount(PANE)
   const has = async (key: string) => (await ui.find({ type: 'Button', key })) !== undefined
   expect(await has('start-dev/bug')).toBe(true)
@@ -163,7 +163,7 @@ test('marketplaces: Add saves a line, Off switches it, Remove needs two presses'
   const runs: string[][] = []
   on('process.run', async (_$, e: any) => { runs.push(e.argv); return { value: { exitCode: 0, stdout: '', stderr: '', timedOut: false } } as never })
   const saved = () => JSON.parse(w.files[`${HOME}/config/marketplaces.json`]).marketplaces
-  await $.command.run({ command: 'flow', args: '' })
+  await $.command.run({ command: 'zeremai', args: '' })
   const ui = await $.ui.mount(PANE)
   await ui.press({ key: 'tab-sources' })
   await ui.press({ key: 'mk-add' })
@@ -183,13 +183,13 @@ test('marketplaces: Add saves a line, Off switches it, Remove needs two presses'
   expect(runs).toEqual([['rm', '-rf', `${HOME}/cache/sources/team`]])
 })
 
-test('/flow templates opens that tab, and another word still goes to the first field', async ($, on) => {
+test('/zeremai templates opens that tab, and another word still goes to the first field', async ($, on) => {
   world(on, { [`${HOME}/config/marketplaces.json`]: { marketplaces: [] }, [`${T}/bug.json`]: template, [`${T}/design/design.json`]: { type: 'step', id: 'r1' } })
-  await $.command.run({ command: 'flow', args: 'templates' })
+  await $.command.run({ command: 'zeremai', args: 'templates' })
   let ui = await $.ui.mount(PANE)
   expect(await ui.find({ type: 'Button', key: 'mk-add' })).toBeDefined()
   await ui.unmount()
-  await $.command.run({ command: 'flow', args: '99' })
+  await $.command.run({ command: 'zeremai', args: '99' })
   ui = await $.ui.mount(PANE)
   await ui.press({ key: 'start-dev/bug' })
   expect(await ui.find({ type: 'Input', key: 'field-workItemId', value: '99' })).toBeDefined()
@@ -201,7 +201,7 @@ test('Delete on a Continue card asks twice, then moves the folder; the flow of t
   const mine = `${HOME}/active/mine`
   const w = world(on, { [`${HOME}/active/p1/flow.json`]: flow, [`${mine}/flow.json`]: { ...flow, name: 'Mine', metadata: { lastUpdated: '2026-01-02T10:00:00Z', projectPaths: ['/work'] } } })
   w.store['session:S1'] = [mine]
-  await $.command.run({ command: 'flow', args: 'continue' })
+  await $.command.run({ command: 'zeremai', args: 'continue' })
   const ui = await $.ui.mount(PANE)
   await ui.press({ key: 'del-0' }) // the newest card is the bound flow: it stays
   expect(await ui.find({ type: 'Text', text: 'This session works on that flow. Close it first.' })).toBeDefined()
@@ -217,7 +217,7 @@ test('the timer redraws the list only when it changed, so a redraw cannot swallo
   let redraws = 0
   on('ui.invalidate', async () => { redraws++; return { value: undefined } })
   const w = world(on, { [`${HOME}/active/p1/flow.json`]: flow })
-  await $.command.run({ command: 'flow', args: 'continue' })
+  await $.command.run({ command: 'zeremai', args: 'continue' })
   const ui = await $.ui.mount(PANE)
   await w.clock.advance(5000) // the first look
   const seen = redraws
@@ -236,7 +236,7 @@ test('a bound flow redraws only when what it reads changed', async ($, on) => {
   const dir = `${HOME}/active/p1`
   const w = world(on, { [`${dir}/flow.json`]: { ...flow, steps: [{ id: 'a', number: 1, name: 'Design', status: 'in_progress' }] } })
   w.store['session:S1'] = [dir]
-  await $.command.run({ command: 'flow', args: '' })
+  await $.command.run({ command: 'zeremai', args: '' })
   const ui = await $.ui.mount(PANE)
   await w.clock.advance(5000) // the first look
   const seen = redraws
@@ -249,18 +249,18 @@ test('a bound flow redraws only when what it reads changed', async ($, on) => {
   await ui.unmount()
 })
 
-test('/flow debug toasts each press with the button key, and /flow debug again turns it off', async ($, on) => {
+test('/zeremai debug toasts each press with the button key, and /zeremai debug again turns it off', async ($, on) => {
   const dir = `${HOME}/active/p1`
   const w = world(on, { [`${dir}/flow.json`]: { ...flow, steps: [{ id: 'a', number: 1, name: 'Design', status: 'pending' }] } })
   w.store['session:S1'] = [dir]
-  const answer = await $.command.run({ command: 'flow', args: 'debug' }) as any
+  const answer = await $.command.run({ command: 'zeremai', args: 'debug' }) as any
   expect(JSON.stringify(answer)).toContain('Click debug on')
   expect(w.store.debugClicks).toBe(true)
-  await $.command.run({ command: 'flow', args: '' })
+  await $.command.run({ command: 'zeremai', args: '' })
   const ui = await $.ui.mount(PANE)
   await ui.press({ key: 'sec-memory' })
   expect(w.toasts.some(t => t.startsWith('press sec-memory'))).toBe(true)
-  await $.command.run({ command: 'flow', args: 'debug' })
+  await $.command.run({ command: 'zeremai', args: 'debug' })
   expect(w.store.debugClicks).toBe(false)
   const count = w.toasts.length
   await ui.press({ key: 'sec-logs' })
@@ -280,7 +280,7 @@ test('Desktop draws cards, pills and chips: every screen mounts, and each contro
   })
   const desk = { ...PANE, surface: 'desktop' } as const
   // New and Continue lists
-  await $.command.run({ command: 'flow', args: 'new' })
+  await $.command.run({ command: 'zeremai', args: 'new' })
   let ui = await $.ui.mount(desk)
   expect(await ui.find({ type: 'Button', key: 'tab-new', variant: 'primary' })).toBeDefined() // the open tab is the primary button
   expect(await ui.find({ type: 'Button', key: 'tab-continue', variant: 'secondary' })).toBeDefined()
@@ -295,7 +295,7 @@ test('Desktop draws cards, pills and chips: every screen mounts, and each contro
   await ui.unmount()
   // A bound flow: step cards, a sub-flow card, and every tab
   w.store['session:S1'] = [dir]
-  await $.command.run({ command: 'flow', args: '' })
+  await $.command.run({ command: 'zeremai', args: '' })
   ui = await $.ui.mount(desk)
   expect(await ui.find({ type: 'Box', key: 'scard-a' })).toBeDefined()
   expect(await ui.find({ type: 'Box', key: 'ccard-a-0' })).toBeDefined()
@@ -311,24 +311,24 @@ test('Desktop draws cards, pills and chips: every screen mounts, and each contro
   expect(await ui.find({ type: 'Button', key: 'tab-continue' })).toBeDefined()
 })
 
-test('/flow help lists the words; a near miss asks "did you mean"; free text still opens the pane', async ($, on) => {
+test('/zeremai help lists the words; a near miss asks "did you mean"; free text still opens the pane', async ($, on) => {
   world(on, { [`${T}/bug.json`]: template, [`${T}/design/design.json`]: { type: 'step', id: 'r1' } })
-  expect(((await $.command.run({ command: 'flow', args: 'help' })) as any).text).toContain('/flow continue')
-  expect(((await $.command.run({ command: 'flow', args: 'contine' })) as any).text).toContain('Did you mean "/flow continue"?')
-  expect(((await $.command.run({ command: 'flow', args: '7' })) as any).text).toBeUndefined() // a work item number goes to the first field
-  expect(((await $.command.run({ command: 'flow', args: 'fix the login bug' })) as any).text).toBeUndefined()
+  expect(((await $.command.run({ command: 'zeremai', args: 'help' })) as any).text).toContain('/zeremai continue')
+  expect(((await $.command.run({ command: 'zeremai', args: 'contine' })) as any).text).toContain('Did you mean "/zeremai continue"?')
+  expect(((await $.command.run({ command: 'zeremai', args: '7' })) as any).text).toBeUndefined() // a work item number goes to the first field
+  expect(((await $.command.run({ command: 'zeremai', args: 'fix the login bug' })) as any).text).toBeUndefined()
 })
 
 test('the New tab hints at a first run only while there is no flow', async ($, on) => {
   world(on, { [`${T}/bug.json`]: template, [`${T}/design/design.json`]: { type: 'step', id: 'r1' } })
-  await $.command.run({ command: 'flow', args: 'new' })
+  await $.command.run({ command: 'zeremai', args: 'new' })
   const ui = await $.ui.mount(PANE)
   expect(await ui.find({ type: 'Text', text: 'Pick a template. Claude runs it and stops for your approval at gates.' })).toBeDefined()
 })
 
 test('the New tab shows no first-run hint once a flow exists', async ($, on) => {
   world(on, { [`${T}/bug.json`]: template, [`${HOME}/active/p1/flow.json`]: flow })
-  await $.command.run({ command: 'flow', args: 'new' })
+  await $.command.run({ command: 'zeremai', args: 'new' })
   const ui = await $.ui.mount(PANE)
   expect(await ui.find({ type: 'Text', text: 'Pick a template. Claude runs it and stops for your approval at gates.' })).toBeUndefined()
 })
@@ -337,7 +337,7 @@ test('the band names the bound flow and its state, and says when a running flow 
   const dir = `${HOME}/active/p1`
   const w = world(on, { [`${dir}/flow.json`]: { ...flow, steps: [{ id: 'a', number: 3, name: 'Gate', status: 'awaiting_approval' }] } })
   w.store['session:S1'] = [dir]
-  await $.command.run({ command: 'flow', args: '' })
+  await $.command.run({ command: 'zeremai', args: '' })
   const band = await $.ui.mount(BAND)
   expect(await band.find({ type: 'Text', text: '▲ Old fix · step 1/1 · approve step 3' })).toBeDefined()
 })
@@ -346,7 +346,7 @@ test('a running flow that wrote no log for 12 minutes shows an amber note, and a
   const dir = `${HOME}/active/p1`
   const run = { ...flow, status: 'running', steps: [{ id: 'a', number: 0, name: 'Design', status: 'in_progress' }] }
   world(on, { [`${dir}/flow.json`]: run, [`${dir}/log.json`]: {} }, { [`${dir}/log.json`]: Date.now() - 12 * 60_000 })
-  await $.command.run({ command: 'flow', args: 'continue' })
+  await $.command.run({ command: 'zeremai', args: 'continue' })
   const ui = await $.ui.mount(PANE)
   expect(await ui.find({ type: 'Text', text: 'no log for 12 min' })).toBeDefined()
 })
@@ -358,7 +358,7 @@ test('a failed flow shows why and a Retry button that hands the agent the flow w
     [`${dir}/log.json`]: { steps: { a: { problemsEncountered: ['tests did not pass'] } } },
   })
   w.store['session:S1'] = [dir]
-  await $.command.run({ command: 'flow', args: '' })
+  await $.command.run({ command: 'zeremai', args: '' })
   const ui = await $.ui.mount(PANE)
   expect(await ui.find({ type: 'Text', text: 'tests did not pass' })).toBeDefined()
   expect(await ui.find({ type: 'Button', key: 'retry', label: 'Retry step' })).toBeDefined()
@@ -372,7 +372,7 @@ test('the gate card has no buttons while the agent has not asked, and a line say
   const dir = `${HOME}/active/p1`
   const w = world(on, { [`${dir}/flow.json`]: gated() })
   w.store['session:S1'] = [dir]
-  await $.command.run({ command: 'flow', args: '' })
+  await $.command.run({ command: 'zeremai', args: '' })
   const ui = await $.ui.mount(PANE)
   expect(await ui.find({ type: 'Text', text: 'Step 3 "Gate" needs your approval when it is done.' })).toBeDefined()
   expect(await ui.find({ type: 'Button', key: 'gate-approve' })).toBeUndefined()
@@ -383,7 +383,7 @@ test('the gate card has no buttons while the agent\'s dialog is open', async ($,
   const w = world(on, { [`${dir}/flow.json`]: gated() })
   w.store['session:S1'] = [dir]
   w.store['gate:S1'] = { dir, stepId: 'a', dialog: true }
-  await $.command.run({ command: 'flow', args: '' })
+  await $.command.run({ command: 'zeremai', args: '' })
   const ui = await $.ui.mount(PANE)
   expect(await ui.find({ type: 'Text', text: 'Claude asked in a dialog. Answer the dialog that is open.' })).toBeDefined()
   expect(await ui.find({ type: 'Button', key: 'gate-approve' })).toBeUndefined()
@@ -394,7 +394,7 @@ test('Approve on the gate card approves the step, closes the gate and tells the 
   const w = world(on, { [`${dir}/flow.json`]: gated() })
   w.store['session:S1'] = [dir]
   w.store['gate:S1'] = { dir, stepId: 'a' }
-  await $.command.run({ command: 'flow', args: '' })
+  await $.command.run({ command: 'zeremai', args: '' })
   const ui = await $.ui.mount(PANE)
   expect(await ui.find({ type: 'Text', text: 'Approve: runs step 4 "Ship". Request changes: step 3 runs again.' })).toBeDefined()
   await ui.press({ key: 'gate-approve' })
@@ -408,7 +408,7 @@ test('Request changes on the gate card needs a reason, sends it, and approves no
   const w = world(on, { [`${dir}/flow.json`]: gated() })
   w.store['session:S1'] = [dir]
   w.store['gate:S1'] = { dir, stepId: 'a' }
-  await $.command.run({ command: 'flow', args: '' })
+  await $.command.run({ command: 'zeremai', args: '' })
   const ui = await $.ui.mount(PANE)
   await ui.press({ key: 'gate-changes' })
   await ui.press({ key: 'gate-send' }) // no reason yet: nothing is sent
@@ -422,7 +422,7 @@ test('Request changes on the gate card needs a reason, sends it, and approves no
 
 test('a result shows in one strip at the top and clears after two ticks of the timer', async ($, on) => {
   const w = world(on, { [`${T}/bug.json`]: template, [`${T}/design/design.json`]: { type: 'step', id: 'r1' } })
-  await $.command.run({ command: 'flow', args: '' })
+  await $.command.run({ command: 'zeremai', args: '' })
   const ui = await $.ui.mount(PANE)
   await ui.press({ key: 'start-dev/bug' })
   await ui.press({ key: 'create' })
@@ -436,7 +436,7 @@ test('a result shows in one strip at the top and clears after two ticks of the t
 
 test('Remove on a template needs two presses, and the first is taken back at the next tick', async ($, on) => {
   const w = world(on, { [`${T}/bug.json`]: template, [`${T}/design/design.json`]: { type: 'step', id: 'r1' } })
-  await $.command.run({ command: 'flow', args: '' })
+  await $.command.run({ command: 'zeremai', args: '' })
   const ui = await $.ui.mount(PANE)
   await ui.press({ key: 'template-dev/bug' })
   expect(await ui.find({ type: 'Button', key: 'tpl-remove-dev/bug', label: 'Remove' })).toBeDefined()
@@ -450,7 +450,7 @@ const proc = (name: string, status: string, extra = {}) => ({ ...flow, name, sta
 
 test('a Continue card says what it is, where it is, why it needs you and how long ago it changed', async ($, on) => {
   world(on, { [`${HOME}/active/p1/flow.json`]: proc('Old fix', 'awaiting_approval') })
-  await $.command.run({ command: 'flow', args: 'continue' })
+  await $.command.run({ command: 'zeremai', args: 'continue' })
   const ui = await $.ui.mount(PANE)
   expect(await ui.find({ type: 'Text', text: 'bug-fix  ·  step 1 of 1  ·  Design' })).toBeDefined()
   expect(await ui.find({ type: 'Text', text: /^approve step 0  ·  \d+ days ago$/ })).toBeDefined()
@@ -458,7 +458,7 @@ test('a Continue card says what it is, where it is, why it needs you and how lon
 
 test('the Continue chips filter by state', async ($, on) => {
   world(on, { [`${HOME}/active/a/flow.json`]: proc('Waiting one', 'awaiting_approval'), [`${HOME}/active/b/flow.json`]: proc('Running one', 'in_progress') })
-  await $.command.run({ command: 'flow', args: 'continue' })
+  await $.command.run({ command: 'zeremai', args: 'continue' })
   const ui = await $.ui.mount(PANE)
   expect(await ui.find({ type: 'Button', text: 'Waiting one' })).toBeDefined()
   expect(await ui.find({ type: 'Button', text: 'Running one' })).toBeDefined()
@@ -473,7 +473,7 @@ test('the Continue chips filter by state', async ($, on) => {
 
 test('View opens a flow read only: the session keeps no link, and the pane says so', async ($, on) => {
   const w = world(on, { [`${HOME}/active/p1/flow.json`]: proc('Old fix', 'in_progress') })
-  await $.command.run({ command: 'flow', args: 'continue' })
+  await $.command.run({ command: 'zeremai', args: 'continue' })
   const ui = await $.ui.mount(PANE)
   await ui.press({ key: 'view-0' })
   expect(await ui.find({ type: 'Text', text: 'Viewing only. The session does not work on this flow.' })).toBeDefined()
@@ -488,7 +488,7 @@ test('Close lets the session go of its flow, keeps the files, and says so', asyn
   const dir = `${HOME}/active/p1`
   const w = world(on, { [`${dir}/flow.json`]: proc('Old fix', 'in_progress') })
   w.store['session:S1'] = [dir]
-  await $.command.run({ command: 'flow', args: '' })
+  await $.command.run({ command: 'zeremai', args: '' })
   const ui = await $.ui.mount(PANE)
   await ui.press({ key: 'close-flow' })
   expect(w.store['session:S1']).toEqual([])
@@ -501,7 +501,7 @@ test('Delete of the flow this session works on is refused, and Close makes it po
   const dir = `${HOME}/active/p1`
   const w = world(on, { [`${dir}/flow.json`]: proc('Old fix', 'in_progress') })
   w.store['session:S1'] = [dir]
-  await $.command.run({ command: 'flow', args: 'continue' })
+  await $.command.run({ command: 'zeremai', args: 'continue' })
   const ui = await $.ui.mount(PANE)
   await ui.press({ key: 'del-0' })
   expect(await ui.find({ type: 'Text', text: 'This session works on that flow. Close it first.' })).toBeDefined()
@@ -514,7 +514,7 @@ test('the step detail shows an empty part as a dim dash, and each step remembers
     [`${dir}/log.json`]: { steps: { a: { actionsTaken: ['drew it'] } } },
   })
   w.store['session:S1'] = [dir]
-  await $.command.run({ command: 'flow', args: '' })
+  await $.command.run({ command: 'zeremai', args: '' })
   const ui = await $.ui.mount(PANE)
   await ui.press({ key: 'step-a' })
   expect(await ui.find({ type: 'Text', text: '  a design' })).toBeDefined()
@@ -534,7 +534,7 @@ test('Logs: Problems only keeps the steps that reported a problem; times show th
     [`${dir}/log.json`]: { steps: { a: { timestamp: { started: '2026-01-02T09:05:00Z' }, actionsTaken: ['drew it'] }, b: { problemsEncountered: ['slow'] } } },
   })
   w.store['session:S1'] = [dir]
-  await $.command.run({ command: 'flow', args: '' })
+  await $.command.run({ command: 'zeremai', args: '' })
   const ui = await $.ui.mount(PANE)
   await ui.press({ key: 'sec-logs' })
   expect(await ui.find({ type: 'Button', key: 'log-a' })).toBeDefined()
@@ -552,7 +552,7 @@ test('Memory: a long value is cut with a show more button, and Desktop draws the
     [`${dir}/memory/plan.json`]: { entries: { a: { informationProduced: { goal: long } } } },
   })
   w.store['session:S1'] = [dir]
-  await $.command.run({ command: 'flow', args: '' })
+  await $.command.run({ command: 'zeremai', args: '' })
   const ui = await $.ui.mount(PANE)
   await ui.press({ key: 'sec-memory' })
   await ui.press({ key: 'mem-topics' })
@@ -568,7 +568,7 @@ const described = { ...template, parameters: { required: ['workItemId'], optiona
 
 test('the New tab has a clear button for the search, counts on the category chips, and a hint for empty favorites', async ($, on) => {
   world(on, { [`${T}/bug.json`]: template, [`${T}/design/design.json`]: { type: 'step', id: 'r1' } })
-  await $.command.run({ command: 'flow', args: 'new' })
+  await $.command.run({ command: 'zeremai', args: 'new' })
   const ui = await $.ui.mount(PANE)
   expect(await ui.find({ type: 'Button', key: 'search-clear' })).toBeUndefined()
   await ui.input({ key: 'search', text: 'fix', kind: 'change' })
@@ -582,7 +582,7 @@ test('the New tab has a clear button for the search, counts on the category chip
 
 test('the field form shows each description, and Started <name> toasts before the pane closes', async ($, on) => {
   const w = world(on, { [`${T}/bug.json`]: described, [`${T}/design/design.json`]: { type: 'step', id: 'r1' } })
-  await $.command.run({ command: 'flow', args: 'new' })
+  await $.command.run({ command: 'zeremai', args: 'new' })
   const ui = await $.ui.mount(PANE)
   await ui.press({ key: 'start-dev/bug' })
   expect(await ui.find({ type: 'Text', text: 'the work item number' })).toBeDefined()
@@ -593,7 +593,7 @@ test('the field form shows each description, and Started <name> toasts before th
 
 test('Sources is a tab of its own; with no source it says how to add one', async ($, on) => {
   world(on, { [`${T}/bug.json`]: template, [`${T}/design/design.json`]: { type: 'step', id: 'r1' } })
-  await $.command.run({ command: 'flow', args: 'new' })
+  await $.command.run({ command: 'zeremai', args: 'new' })
   const ui = await $.ui.mount(PANE)
   await ui.press({ key: 'tab-sources' })
   expect(await ui.find({ type: 'Text', text: '0 sources' })).toBeDefined()
@@ -604,7 +604,7 @@ test('Sources is a tab of its own; with no source it says how to add one', async
 
 test('a source is a card with its address, and the editor shows a hint under each label', async ($, on) => {
   world(on, { [`${T}/bug.json`]: template, [`${T}/design/design.json`]: { type: 'step', id: 'r1' } })
-  await $.command.run({ command: 'flow', args: 'new' })
+  await $.command.run({ command: 'zeremai', args: 'new' })
   const ui = await $.ui.mount(PANE)
   await ui.press({ key: 'tab-sources' })
   await ui.press({ key: 'mk-add' })
@@ -619,7 +619,7 @@ test('parity: the same facts and the same buttons show on the terminal and on De
     [`${dir}/log.json`]: { steps: { a: { problemsEncountered: ['tests did not pass'] } } },
   }, {})
   w.store['session:S1'] = [dir]
-  await $.command.run({ command: 'flow', args: '' })
+  await $.command.run({ command: 'zeremai', args: '' })
   for (const surface of ['terminal', 'desktop'] as const) {
     const ui = await $.ui.mount({ ...PANE, surface })
     expect(await ui.find({ type: 'Text', text: 'tests did not pass' })).toBeDefined()
@@ -635,7 +635,7 @@ test('parity: the same facts and the same buttons show on the terminal and on De
 
 test('the New list shows a count line, a header for each category, and no category in the card title', async ($, on) => {
   world(on, { [`${T}/bug.json`]: template, [`${T}/design/design.json`]: { type: 'step', id: 'r1' } })
-  await $.command.run({ command: 'flow', args: 'new' })
+  await $.command.run({ command: 'zeremai', args: 'new' })
   const ui = await $.ui.mount(PANE)
   expect(await ui.find({ type: 'Text', text: '1 templates' })).toBeDefined()
   expect(await ui.find({ type: 'Text', text: 'dev' })).toBeDefined() // the group header
@@ -645,9 +645,9 @@ test('the New list shows a count line, a header for each category, and no catego
   expect(await ui.find({ type: 'Text', text: /^dev {2}·/ })).toBeDefined() // the source line of the detail
 })
 
-test('/flow look sets how much color Desktop draws, and says the range for a wrong value', async ($, on) => {
+test('/zeremai look sets how much color Desktop draws, and says the range for a wrong value', async ($, on) => {
   world(on, { [`${T}/bug.json`]: template })
-  const said = async (args: string) => ((await $.command.run({ command: 'flow', args })) as any)?.text as string
+  const said = async (args: string) => ((await $.command.run({ command: 'zeremai', args })) as any)?.text as string
   expect(await said('look')).toContain('Give 0 to 4')
   expect(await said('look 9')).toContain('Give 0 to 4')
   expect(await said('look 0')).toBe('Look 0 set.')
@@ -660,7 +660,7 @@ test('/flow look sets how much color Desktop draws, and says the range for a wro
 test('Continue shows this folder at first, and the switch shows every folder and is saved', async ($, on) => {
   const other = { ...flow, name: 'Elsewhere', metadata: { lastUpdated: '2026-01-02T10:00:00Z', projectPaths: ['/other'] } }
   const w = world(on, { [`${HOME}/active/p1/flow.json`]: flow, [`${HOME}/active/p2/flow.json`]: other })
-  await $.command.run({ command: 'flow', args: 'continue' })
+  await $.command.run({ command: 'zeremai', args: 'continue' })
   const ui = await $.ui.mount(PANE)
   expect(await ui.find({ type: 'Button', key: 'flow-0', label: 'Old fix' })).toBeDefined()
   expect(await ui.find({ type: 'Button', key: 'flow-1' })).toBeUndefined()
@@ -674,7 +674,7 @@ test('Continue shows this folder at first, and the switch shows every folder and
 test('a step that waits puts a count on the Continue tab and on the button above the prompt', async ($, on) => {
   const waiting = { ...flow, steps: [{ id: 'a', number: 0, name: 'Approve', status: 'awaiting_approval' }] }
   world(on, { [`${HOME}/active/p1/flow.json`]: waiting })
-  await $.command.run({ command: 'flow', args: 'continue' })
+  await $.command.run({ command: 'zeremai', args: 'continue' })
   const ui = await $.ui.mount(PANE)
   expect(await ui.find({ type: 'Button', key: 'tab-continue', label: 'Continue ▲1' })).toBeDefined()
   const band = await $.ui.mount(BAND)
@@ -684,7 +684,7 @@ test('a step that waits puts a count on the Continue tab and on the button above
 test('a flow that starts to wait raises one toast within 5 seconds', async ($, on) => {
   const w = world(on, { [`${HOME}/active/p1/flow.json`]: flow })
   const clock = w.clock
-  await $.command.run({ command: 'flow', args: 'continue' })
+  await $.command.run({ command: 'zeremai', args: 'continue' })
   const band = await $.ui.mount(BAND) // the first look: nothing needs the user, and no toast
   await clock.advance(5000)
   expect(w.toasts).toEqual([])
@@ -697,7 +697,7 @@ test('a flow that starts to wait raises one toast within 5 seconds', async ($, o
 
 test('the Desktop surface draws the same tabs with a rail of icons', async ($, on) => {
   world(on, { [`${HOME}/active/p1/flow.json`]: flow })
-  await $.command.run({ command: 'flow', args: 'continue' })
+  await $.command.run({ command: 'zeremai', args: 'continue' })
   const ui = await $.ui.mount({ ...PANE, surface: 'desktop' })
   expect(await ui.find({ type: 'Svg' })).toBeDefined()
   expect(await ui.find({ type: 'Svg', alt: 'Surfer panda' })).toBeDefined() // the panda stands before the tabs
@@ -709,7 +709,7 @@ test('with a flow bound to the session the pane shows its steps, and Back goes t
   const dir = `${HOME}/active/p1`
   const w = world(on, { [`${dir}/flow.json`]: { ...flow, steps: [{ id: 'a', number: 1, name: 'Design', status: 'completed' }, { id: 'b', number: 2, name: 'Build', status: 'pending' }] } })
   w.store['session:S1'] = [dir]
-  await $.command.run({ command: 'flow', args: '' })
+  await $.command.run({ command: 'zeremai', args: '' })
   const ui = await $.ui.mount(PANE)
   expect(await ui.find({ type: 'Button', key: 'step-a', label: '1. Design' })).toBeDefined()
   expect(await ui.find({ type: 'Button', key: 'step-b', label: '2. Build' })).toBeDefined()
@@ -724,7 +724,7 @@ test('on Desktop a bound flow draws the timeline, the Graph button draws a Clien
   const dir = `${HOME}/active/p1`
   const w = world(on, { [`${dir}/flow.json`]: { ...flow, steps: [{ id: 'a', number: 1, name: 'Design', status: 'completed' }, { id: 'b', number: 2, name: 'Build', status: 'pending' }] } })
   w.store['session:S1'] = [dir]
-  await $.command.run({ command: 'flow', args: '' })
+  await $.command.run({ command: 'zeremai', args: '' })
   const ui = await $.ui.mount({ ...PANE, surface: 'desktop' })
   expect(await ui.find({ type: 'Client', key: 'graph' })).toBeUndefined() // the timeline is the default on Desktop
   expect(await ui.find({ type: 'Button', key: 'step-a' })).toBeDefined()
@@ -748,7 +748,7 @@ test('a bound flow has Memory, Logs and Files tabs; a log row opens the step; a 
     [`${dir}/notes.md`]: '# Notes\nhello',
   })
   w.store['session:S1'] = [dir]
-  await $.command.run({ command: 'flow', args: '' })
+  await $.command.run({ command: 'zeremai', args: '' })
   const ui = await $.ui.mount(PANE)
   await ui.press({ key: 'sec-memory' })
   expect(await ui.find({ type: 'Text', text: 'plan  ·  written by 1  ·  read by 2' })).toBeDefined()
@@ -783,7 +783,7 @@ test('a step opens its detail with two tabs; Back and the arrows move around; a 
     [`${child}/flow.json`]: { name: 'Lookup', metadata: {}, parameters: {}, subFlowState: { parentFlow: { name: 'Old fix', flowPath: dir }, childFlows: [] }, steps: [{ id: 'x', number: 1, name: 'Find', status: 'pending' }] },
   })
   w.store['session:S1'] = [dir]
-  await $.command.run({ command: 'flow', args: '' })
+  await $.command.run({ command: 'zeremai', args: '' })
   const ui = await $.ui.mount(PANE)
   await ui.press({ key: 'step-a' })
   expect(await ui.find({ type: 'Text', text: '  a design' })).toBeDefined()
@@ -806,7 +806,7 @@ test('Describe fills the empty fields from Claude, offers Replace for a typed on
   const usage = { input_tokens: 1, output_tokens: 1 }
   on('model.fork', async () => ({ value: { isAnswered: false, reason: 'nothing-to-fork', usage } }) as never)
   on('model.complete', async (_$, e: any) => { asked.push(e.prompt); return { value: { isAnswered: true, text: 'Sure: {"workItemId":"9","title":"Fix it","zzz":"x"}', usage } } as never })
-  await $.command.run({ command: 'flow', args: 'new' })
+  await $.command.run({ command: 'zeremai', args: 'new' })
   const ui = await $.ui.mount(PANE)
   await ui.press({ key: 'start-dev/bug' })
   await ui.input({ key: 'field-workItemId', text: '7', kind: 'change' })

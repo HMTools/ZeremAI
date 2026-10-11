@@ -127,8 +127,8 @@ Scripts integrate with Claude Code's hook system:
 ```mermaid
 graph TD
     A[User Request] --> B{Command Type}
-    B -->|/flow-new| C[Template Selection]
-    B -->|/flow-continue| D[Flow Discovery]
+    B -->|/zeremai new| C[Template Selection]
+    B -->|/zeremai continue| D[Flow Discovery]
     
     C --> E[Parameter Collection]
     E --> F[Step Resolution]
@@ -334,7 +334,7 @@ graph TD
     H --> I[template_manager.py install]
     I --> J[Copy template from cache to runtime]
     I --> K[Update installed-templates.json manifest]
-    J --> L[Template available for /flow-new]
+    J --> L[Template available for /zeremai new]
 ```
 
 ### Marketplace Configuration

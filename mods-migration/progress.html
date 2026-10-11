@@ -143,7 +143,7 @@ const ITEMS = /* ITEMS:START */ [
     "status": "done",
     "verdict": "replace",
     "summary": "Replaced by a mod tool: bind_flow writes the session id (also over an old one) and create_flow uses the same function. The shell script and its hooks.json entry are deleted. The link later moved from the .session file to the mod store (C01).",
-    "open": ["Live run not done: skill calls bind_flow on a real resume (S01/S02)", "Is $.session.id() the same as the hook session_id, and does it change on /clear, /resume?", "No unbind when a session ends; a stale session:<id> store entry stays (C01)", "First prompt after /flow-continue runs before the link (H10)"],
+    "open": ["Live run not done: skill calls bind_flow on a real resume (S01/S02)", "Is $.session.id() the same as the hook session_id, and does it change on /clear, /resume?", "No unbind when a session ends; a stale session:<id> store entry stays (C01)", "First prompt after /zeremai continue runs before the link (H10)"],
     "updated": "2026-10-10"
   },
   {
@@ -217,10 +217,10 @@ const ITEMS = /* ITEMS:START */ [
     "title": "flow-new and flow-continue skills",
     "file": "items/P04-flow-new-and-continue-skills.md",
     "firstGuess": "improve",
-    "source": "skills/flow-new, skills/flow-continue",
+    "source": "skills/zeremai new, skills/zeremai continue",
     "status": "done",
     "verdict": "replace",
-    "summary": "Replaced by a pane the mod draws: /flow has a New tab (template, fields, Create) and a Continue tab. The mod creates the files, binds the session and sends one message. One shared skill, flow-run, keeps the step loop, approvals and sub-flow text. The two old skills are deleted.",
+    "summary": "Replaced by a pane the mod draws: /zeremai has a New tab (template, fields, Create) and a Continue tab. The mod creates the files, binds the session and sends one message. One shared skill, flow-run, keeps the step loop, approvals and sub-flow text. The two old skills are deleted.",
     "open": ["Live run not done: the pane in a real terminal and in the Desktop app", "Does the model read flow-run when the hand-off asks for it?", "Is $.session.id() the same as the hook session_id, and what changes after /clear, /resume? (S02)", "Sub-flow steps are still driven by the model; a start_sub_flow tool is a later option"],
     "updated": "2026-10-10"
   },
@@ -285,7 +285,7 @@ const ITEMS = /* ITEMS:START */ [
     "source": "scripts/template_manager.py",
     "status": "done",
     "verdict": "replace",
-    "summary": "The Python template manager is replaced by a TypeScript module and a Templates tab in /flow: refresh, install or update, remove. Adding a marketplace is an edit of marketplaces.json.",
+    "summary": "The Python template manager is replaced by a TypeScript module and a Templates tab in /zeremai: refresh, install or update, remove. Adding a marketplace is an edit of marketplaces.json.",
     "open": ["Live check with the real git repo not done (tests use a fake git).", "Template version is the git hash of the whole cache, as before: one new commit marks every template as updatable."],
     "updated": "2026-10-10"
   },
@@ -402,7 +402,7 @@ const ITEMS = /* ITEMS:START */ [
     "source": "../agentic-flows-ui/src/components/Layout/Sidebar.tsx, ../agentic-flows-ui/src/App.tsx",
     "status": "done",
     "verdict": "replace",
-    "summary": "One /flow pane: New, Continue, Templates before a flow is bound, that one flow after. Dashboard and overview not migrated. Waiting badge on Continue, step line, toast, and an always-on band button. Folder list becomes the session folder with an All folders switch. Desktop gets an Svg sidebar rail.",
+    "summary": "One /zeremai pane: New, Continue, Templates before a flow is bound, that one flow after. Dashboard and overview not migrated. Waiting badge on Continue, step line, toast, and an always-on band button. Folder list becomes the session folder with an All folders switch. Desktop gets an Svg sidebar rail.",
     "open": ["Does /clear keep the session id? (spike S02)", "Always-on band button costs one row in every session"],
     "updated": "2026-10-10"
   },

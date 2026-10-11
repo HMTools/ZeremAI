@@ -14,7 +14,7 @@
   ],
   "references": {
     "relatedDocs": ["architecture", "flow-management", "examples"],
-    "commands": ["/flow-new", "/flow-continue"]
+    "commands": ["/zeremai new", "/zeremai continue"]
   }
 }
 

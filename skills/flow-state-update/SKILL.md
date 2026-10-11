@@ -187,7 +187,7 @@ Append to `flowWideObservations` in `log.json`. Steps like `apply-changes`, `rev
 
 ### create_flow
 
-Create the files of a new flow from a template. Only the flow pane (`/flow`) and sub-flow steps use this.
+Create the files of a new flow from a template. Only the flow pane (`/zeremai`) and sub-flow steps use this.
 
 | Input | Required | Description |
 |-------|----------|-------------|

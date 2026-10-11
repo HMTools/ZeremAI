@@ -22,8 +22,8 @@
 
 ## 3. First guess (step 3, not final)
 - Verdict: replace (for the hook); the `.session` file may still have to be written because the UI and the CLI read it.
-- Why: a mod knows the session id (`$.session.id()`) at `session.start` and in every event. It can write `.session` itself (`$.fs.write`) at the right moment, for example when the flow is chosen or on `/flow-continue`, with no Write-tool handshake and no `PostToolUse` race. It can also keep the binding in `$.store` or `$.state`, so the 8 other scripts' directory scan becomes a map lookup (this is C01).
-- Mod abilities that might apply: `$.session.id()`; `session.start` (once per loaded mod, **not** after `/clear`, `/resume`, `/branch`); `session.end` (`e.reason`: `clear`, `resume`, `logout`, ...); `$.fs.read/write/list/exists` (non-atomic write, 4 MiB); `$.store.get/set/keys` (shared across sessions on the machine, 4 MiB); `$.state` (reactive, per session); `$.command.register` (a `/flow-continue` equivalent that binds explicitly); `classic.PostToolUse` or `tool.call` with `await next(e)` to bind on a file write like today; `$.flow.run` to run `flow_manager.py`.
+- Why: a mod knows the session id (`$.session.id()`) at `session.start` and in every event. It can write `.session` itself (`$.fs.write`) at the right moment, for example when the flow is chosen or on `/zeremai continue`, with no Write-tool handshake and no `PostToolUse` race. It can also keep the binding in `$.store` or `$.state`, so the 8 other scripts' directory scan becomes a map lookup (this is C01).
+- Mod abilities that might apply: `$.session.id()`; `session.start` (once per loaded mod, **not** after `/clear`, `/resume`, `/branch`); `session.end` (`e.reason`: `clear`, `resume`, `logout`, ...); `$.fs.read/write/list/exists` (non-atomic write, 4 MiB); `$.store.get/set/keys` (shared across sessions on the machine, 4 MiB); `$.state` (reactive, per session); `$.command.register` (a `/zeremai continue` equivalent that binds explicitly); `classic.PostToolUse` or `tool.call` with `await next(e)` to bind on a file write like today; `$.flow.run` to run `flow_manager.py`.
 
 ## 4. Research questions
 1. Does `$.session.id()` return the same string as the `session_id` field that settings hooks get and that `${CLAUDE_SESSION_ID}` expands to in skills? Does it change on `/clear`, `/resume`, `/branch`, or compaction, and does `session.start` fire again then (docs say not after `/clear`/`/resume`/`/branch`)?
@@ -83,14 +83,14 @@ Built instead of only researched, at the owner's request (plan page "Session Bin
 - Live run not done: skill calls `bind_flow` in a real resume.
 
 ### Risks
-- The first prompt after `/flow-continue` runs before the link (H10).
+- The first prompt after `/zeremai continue` runs before the link (H10).
 - A resumed session is unlinked until the agent calls the tool. If the agent skips it, the rules stay off.
 - No unbind on session end: a stale `session:<id>` entry stays, but a gone folder never answers.
 
 ### What a later plan must decide
 - Remove old `session:<id>` keys (C01 did the move to `$.store`).
 - Unbind on flow completion or `session.end`.
-- Link at `/flow-continue` start if a flow name can be known there.
+- Link at `/zeremai continue` start if a flow name can be known there.
 
 ## 8. After the research: update the progress page
 Edit `../progress.html`: find the object with `"id": "H08"` between `/* ITEMS:START */` and `/* ITEMS:END */` and set:

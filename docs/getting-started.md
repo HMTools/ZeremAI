@@ -34,7 +34,7 @@ After installing the plugin, open the Marketplace in the UI to browse available 
 
 In Claude Code, type:
 ```
-/flow-new
+/zeremai new
 ```
 
 ### Step 2: Select a Template
@@ -107,7 +107,7 @@ As you work through steps:
 
 To continue a flow:
 ```
-/flow-continue
+/zeremai continue
 ```
 
 The system will:
@@ -222,4 +222,4 @@ If you encounter issues:
 
 ---
 
-**Ready to create your first flow?** Type `/flow-new` to get started!
+**Ready to create your first flow?** Type `/zeremai new` to get started!

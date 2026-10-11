@@ -1,11 +1,11 @@
 ---
 name: flow-run
-description: Run the steps of a flow that is bound to this session. Use it when the flow pane (/flow) hands you a flow, or when a step of a flow is next. Covers the step loop, approval checkpoints and sub-flow steps.
+description: Run the steps of a flow that is bound to this session. Use it when the flow pane (/zeremai) hands you a flow, or when a step of a flow is next. Covers the step loop, approval checkpoints and sub-flow steps.
 ---
 
 # Flow Run
 
-The user started or resumed a flow with the flow pane (`/flow`). The pane created or found the flow, bound it to this session, and told you the folder, the parameters and the next step. Run the steps from there. Never work outside the flow, and never start a flow yourself: if the user wants another one, tell them to open `/flow`.
+The user started or resumed a flow with the flow pane (`/zeremai`). The pane created or found the flow, bound it to this session, and told you the folder, the parameters and the next step. Run the steps from there. Never work outside the flow, and never start a flow yourself: if the user wants another one, tell them to open `/zeremai`.
 
 All flow files change only through the flow tools (find them by tool search). Never edit `flow.json`, `log.json` or memory files by hand.
 

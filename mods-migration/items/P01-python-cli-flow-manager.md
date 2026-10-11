@@ -80,7 +80,7 @@ Planned and built 2026-10-10 (plan page: https://claude.ai/artifact/RbosiCyrHxic
 2. Not needed: the tools use `$.fs`, `$.plugin.root` and `$.session.cwd()`. `$.flow.run` is used for the folder move only.
 3. Moot: nothing in the plugin runs the script any more. A Bash command that writes a flow file is refused by a text rule (see H07).
 4. Yes. A `tool.call` hook refuses Write, Edit and MultiEdit on `flow.json`, `log.json`, `memory/*.json` and `improvement-findings/**` (path match, with `/` or `\`), and a Bash command that names one and looks like a write. A script file that edits one still passes.
-5. All 15 became tools (one for each command), behind tool search (`isDeferred: true`). They are listed only when the user runs `/flow-new` or `/flow-continue`, or the session already has a flow, so a session with no flow pays nothing. Cost of many tools: only names and short descriptions until the agent asks for a schema.
+5. All 15 became tools (one for each command), behind tool search (`isDeferred: true`). They are listed only when the user runs `/zeremai new` or `/zeremai continue`, or the session already has a flow, so a session with no flow pays nothing. Cost of many tools: only names and short descriptions until the agent asks for a schema.
 6. Stale: the UI app is obsolete, so its Q&A calls are not kept. The Q&A commands were already removed from the CLI.
 7. If mods are off, the agent cannot change flow state (no fallback, the script is gone). Item X01 decides whether a fallback is needed.
 
@@ -106,7 +106,7 @@ Planned and built 2026-10-10 (plan page: https://claude.ai/artifact/RbosiCyrHxic
 - Windows is covered by code and tests, but not run on Windows: the folder move uses one PowerShell command (`powershell -NoProfile -Command New-Item ...; Move-Item ...`) where macOS and Linux use `mkdir -p` and `mv`. Windows is detected with `OS=Windows_NT`. Paths with backslashes are turned into `/` at the tool entry, and a missing `HOME` falls back to `USERPROFILE`.
 - A crash in the middle of a write can leave a cut file (the script wrote a temp file and renamed it). The lock covers one mod, not two sessions.
 - The Bash write rule is a guess; a script file that edits a state file passes.
-- Resuming a flow in a new session (`/flow-continue`) still binds with the shell hook after an agent Write (item H08).
+- Resuming a flow in a new session (`/zeremai continue`) still binds with the shell hook after an agent Write (item H08).
 - Where mods do not run, nothing changes flow state (X01).
 
 ### What a later plan must decide

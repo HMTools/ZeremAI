@@ -88,7 +88,7 @@ Planned and built 2026-10-10 as one feature: items H07, P02 and P03 together (pl
 - New `hooks/on-approval-gate/on-approval-gate.ts` (tool, hand-edit guard) and `hooks/infra/approval-gate/approval-gate.ts` (question, answer, `reopenPanel`, `isHandEdit`). Registered in `hooks/register.ts`; `hooks/on-user-prompt/on-user-prompt.ts` calls `reopenPanel` (a plugin has one `prompt.submit` hook).
 - `findPendingBlock` now reads the gate record and lets research through; the `.approve-token` Write exception is gone. `on-agent-stopping.ts` asks the agent to call `request_approval` and to complete an approved step.
 - Removed: `scripts/block-approve-step.sh`, `scripts/hook_extract_flow_dir.py`, `skills/flow-approve/`, the `PreToolUse` entry in `hooks/hooks.json`, `cmd_approve_step`, `cmd_write_pending`, `_check_pending_approval` and the pending models (`scripts/flow_manager.py`, `scripts/models.py`, `types/`), `approve-step` and `write-pending` in the log-gated list.
-- Texts rewritten: `skills/flow-continue`, `flow-new`, `flow-state-update`, `agents/step-executor.md`, `docs/flow-management.md`.
+- Texts rewritten: `skills/zeremai continue`, `flow-new`, `flow-state-update`, `agents/step-executor.md`, `docs/flow-management.md`.
 - Tests: `claude plugin test .` 125 pass; `claude plugin validate .` passes (one `logo` warning). `scripts/test_view_resolution.py` passes without its write-pending test.
 
 ### Evidence

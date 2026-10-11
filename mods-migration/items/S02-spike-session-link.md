@@ -10,7 +10,7 @@
 - `scripts/bind-session-to-flow.sh` (`PostToolUse`, matcher `Write|StrReplace|Edit`, registered in `hooks/hooks.json`): reads `session_id` and `file_path`; if the path is inside `.../.claude/zeremai/active/<name>/...` and `.session` is missing or empty, writes `session_id` into it (lines 21-30). Never overwrites a non-empty `.session`.
 - The scan loop `for SESSION_FILE in "$AGENTIC_DIR"/active/*/.session` is copied in `block-tools-on-pending.sh` (lines 17-23), `check-approval-stop.sh` (21-27), `enforce-log-on-stop.sh` (31-39), `block-stop-pending-steps.sh` (20-26) and other scripts (see item `C01`).
 - `skills/flow-new/SKILL.md` lines 80-83 and `skills/flow-continue/SKILL.md` lines 37-43: "Session Binding", a mandatory first action: write an empty `.session`, let the hook fill it, verify. Without it "all enforcement hooks will be silently disabled for the entire session" (flow-continue line 43). Child flows are bound the same way.
-- `agentic-flows-ui/electron/agentSessionManager.ts` (read-only): launches `claude` in a Herdr pane (`argv = ['claude', ...]`, adds `--dangerously-skip-permissions` for allow-all, `--resume <id>` to resume lines 214-227), then sends `/flow-continue <path>` as the first message (`flowAttachCommand`, line 75). It does not pass `--plugin-dir`, `--bare`, `-p`, or `--safe-mode` in the code read.
+- `agentic-flows-ui/electron/agentSessionManager.ts` (read-only): launches `claude` in a Herdr pane (`argv = ['claude', ...]`, adds `--dangerously-skip-permissions` for allow-all, `--resume <id>` to resume lines 214-227), then sends `/zeremai continue <path>` as the first message (`flowAttachCommand`, line 75). It does not pass `--plugin-dir`, `--bare`, `-p`, or `--safe-mode` in the code read.
 - A resumed or continued flow gets a NEW session id, so `flow-continue` rebinds; the `.session` file only holds one id (a rebind needs it empty).
 - Weaknesses: binding is a convention Claude may forget; the scan is repeated in every script; `/clear` and `--resume` produce new or reused ids with no explicit event handled.
 
@@ -33,7 +33,7 @@
    d. `claude -p` (Agent SDK style): hooks run, drawing does not; `hooks module not loaded` goes to stderr; no `$.ui.ask`. Is anything in the plugin's flow headless?
    e. `claude --safe-mode`: expected no installed mods (and "other customizations" disabled).
 8. If the plugin is installed from a marketplace, is the mod loaded the same way as with `--plugin-dir` for these launches (`troubleshoot` "Your edits don't take effect")? Does `/reload-plugins` matter for a flow the UI started earlier?
-9. Race: `session.start` fires "before your first prompt". The UI sends `/flow-continue <path>` as a first message. Can the mod bind from the command text (`prompt.submit`, `command.run`) before the model starts, instead of Claude writing the empty file? Is `e.text` for a slash command visible in `prompt.submit` or only in `command.run`?
+9. Race: `session.start` fires "before your first prompt". The UI sends `/zeremai continue <path>` as a first message. Can the mod bind from the command text (`prompt.submit`, `command.run`) before the model starts, instead of Claude writing the empty file? Is `e.text` for a slash command visible in `prompt.submit` or only in `command.run`?
 
 ## 5. How to research
 1. Re-read these mods docs pages (see `../shared/mods-docs-reading-list.md`): `interface` (sections "Keep state", "Load a saved value again after /clear", "Save from more than one session"), `events` ("Handle the settings hook events", `classic.SessionStart`), `api` (`$.session`, `$.fs`, `$.store`), `reference` (`session.start`, `classic.*`, Limits), `overview` ("Where mods run", "Turn mods on or off"), `admin` ("Know which controls still apply"), `troubleshoot` (refusal messages, trust prompt). Note `claude --version`.
@@ -59,7 +59,7 @@
 | T7 | Start `claude` from a script in a NEW directory (as the UI does) | Trust prompt appears; no mod before answer | Mod loads only after trust |
 | T8 | `claude --bare`, `claude -p "hi"`, `claude --safe-mode` | Debug line `hooks module ... not loaded:` or the mod loads | Record exact line for each |
 | T9 | Edit nothing; install the mod as a plugin from a local marketplace folder and repeat T1, T3 | Same behaviour as `--plugin-dir` | Same |
-| T10 | Send `/flow-continue <fake path>` as the first message | Does `prompt.submit` or `command.run` see the path before the model? | Record |
+| T10 | Send `/zeremai continue <fake path>` as the first message | Does `prompt.submit` or `command.run` see the path before the model? | Record |
 
 Fail signals: id differs between mod and hook; module variable lost after resume; mod absent in T7-T8 conditions that the UI uses.
 
@@ -76,7 +76,7 @@ Closed from the built mod and its tests, at the owner's request after the plan p
 ### What the built mod proves
 - The link is `session:<id>` in `$.store` with the folders in order, a child after its parent (`flow-repository.ts`, `bind-session.ts`). No `.session` file and no scan.
 - The pane and `bind_flow` bind with `$.session.id()`; `create_flow` binds too (`on-flow-tools.test.ts`).
-- A new session after `/clear` has a new link: the user opens `/flow` again (P04).
+- A new session after `/clear` has a new link: the user opens `/zeremai` again (P04).
 - The mod needs no hook `session_id`, because it has no settings hook. Question 1 (same id as the hook) is moot.
 
 ### From the docs (troubleshoot page)
@@ -85,7 +85,7 @@ Closed from the built mod and its tests, at the owner's request after the plan p
 - `--bare`: installed plugins that are not managed load no hooks module. `claude -p` draws nothing.
 
 ### Not proven live
-Questions 3 to 5: the id after each resume path. The mod handles a changed id the same way for all: the user opens `/flow` and binds again.
+Questions 3 to 5: the id after each resume path. The mod handles a changed id the same way for all: the user opens `/zeremai` and binds again.
 
 ### Final verdict
 **replace.**

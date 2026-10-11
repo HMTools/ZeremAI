@@ -67,7 +67,7 @@ export const register: Register = on => {
     }
     await nudgeFindings($)
     // The command that opens the flow pane (see ../on-flow-pane). A name that is taken throws, so it must not stop the session.
-    await $.command.register({ name: 'flow', description: 'Start a new flow or resume one', argumentHint: '[new | continue | templates | debug | first field]' }).catch(() => {})
+    await $.command.register({ name: 'zeremai', description: 'Start a new flow or resume one', argumentHint: '[new | continue | templates | debug | first field]' }).catch(() => {})
     return next(e)
   })
 

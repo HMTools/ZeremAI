@@ -28,7 +28,7 @@ import { continueScreen } from './screens/continue'
 import { formScreen, newScreen } from './screens/new'
 import { sourcesScreen } from './screens/sources'
 
-// The command /flow opens a pane. With no flow bound to the session it has three tabs. New: pick a template, fill its fields, Create.
+// The command /zeremai opens a pane. With no flow bound to the session it has three tabs. New: pick a template, fill its fields, Create.
 // Continue: pick a flow (this folder or all folders). Templates: refresh the marketplaces, install, update or remove a template. Either way the mod does the files and the session link itself, lists the flow
 // tools, and sends the agent one message (see handoff in infra/flow-pane). The agent then runs the steps with the flow-run skill.
 // With a flow bound to the session, the pane shows that one flow and its steps. A button above the prompt opens the pane, and a timer keeps the waiting count current.
@@ -268,8 +268,8 @@ async function openInViewer($: any, path: string, surface: string): Promise<stri
   return `Could not open the file with ${tries.map(t => t[0]).join(' or ')}. The file is ${path}`
 }
 
-const HELP = ['/flow          open the pane: the bound flow, or the list', '/flow new      pick a template and start a flow', '/flow continue pick a flow to go on with',
-  '/flow templates  add or refresh marketplaces', '/flow <text>   start from a template, with the text in its first field', '/flow debug    toasts for each press, to find a lost click', '/flow look 0-4  how much color Desktop draws; 0 is none'].join('\n')
+const HELP = ['/zeremai          open the pane: the bound flow, or the list', '/zeremai new      pick a template and start a flow', '/zeremai continue pick a flow to go on with',
+  '/zeremai templates  add or refresh marketplaces', '/zeremai <text>   start from a template, with the text in its first field', '/zeremai debug    toasts for each press, to find a lost click', '/zeremai look 0-4  how much color Desktop draws; 0 is none'].join('\n')
 const WORDS = ['new', 'continue', 'templates', 'help', 'debug', 'look']
 // The number of single-letter edits between two words: enough to tell a typo from a first field.
 function distance(a: string, b: string): number {
@@ -288,13 +288,13 @@ export const register: Register = on => {
   on('command.run', { command: COMMANDS }, async ($, e) => {
     const text = String(e.args ?? '').trim()
     const [word = '', ...others] = text.split(/\s+/)
-    if (word.toLowerCase() === 'debug') { // /flow debug: show a toast for each press and focus move, to find a lost click
+    if (word.toLowerCase() === 'debug') { // /zeremai debug: show a toast for each press and focus move, to find a lost click
       await ensureLoaded($)
       st.debugClicks = !st.debugClicks
       await $.store.set('debugClicks', st.debugClicks)
       return { text: `Click debug ${st.debugClicks ? 'on: each press and focus move shows a toast' : 'off'}` } as never
     }
-    if (word.toLowerCase() === 'look') { // /flow look 0..4: if the pane draws nothing on Desktop, a color the app refuses is the cause; 0 is the old look
+    if (word.toLowerCase() === 'look') { // /zeremai look 0..4: if the pane draws nothing on Desktop, a color the app refuses is the cause; 0 is the old look
       await ensureLoaded($)
       const level = Number(others[0])
       if (!Number.isInteger(level) || level < 0 || level > 4) return { text: `Look is ${st.look}. Give 0 to 4: 0 no color, 1 cards and group titles, 2 + the ground, 3 + colored buttons and chips, 4 + the ground fills the height.` } as never
@@ -306,7 +306,7 @@ export const register: Register = on => {
     if (word.toLowerCase() === 'help') return { text: HELP } as never
     const named = TABS.find(t => t === word.toLowerCase())
     const close = !named && !others.length ? WORDS.find(w => word.length > 3 && distance(w, word.toLowerCase()) <= 2) : undefined
-    if (close) return { text: `Did you mean "/flow ${close}"? Text that is not a tab name goes into the first field of the template you pick.` } as never
+    if (close) return { text: `Did you mean "/zeremai ${close}"? Text that is not a tab name goes into the first field of the template you pick.` } as never
     await openPane($, named, named ? others.join(' ') : text)
     return {}
   })

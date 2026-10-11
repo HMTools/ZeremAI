@@ -2,7 +2,7 @@ import type { FlowInfo, TemplateInfo } from '../infra/flow-pane/flow-pane'
 import type { CatalogEntry, MarketplaceFields, MarketplaceInfo } from '../infra/templates/templates'
 
 export const PANE = 'flow-pane'
-export const COMMANDS = ['flow', 'zeremai:flow']
+export const COMMANDS = ['zeremai', 'zeremai:zeremai']
 export const TABS = ['new', 'continue', 'templates'] as const
 export const REFRESH_MS = 5000
 
@@ -36,7 +36,7 @@ export const st = {
   primed: false,
   lastPrint: undefined as string | undefined, // the fingerprint of the flow list at the last redraw
   lastViewPrint: '', // the same for what the open bound view reads
-  debugClicks: false, // /flow debug: a toast for each press and focus move
+  debugClicks: false, // /zeremai debug: a toast for each press and focus move
   lastDraw: Date.now(),
   entries: [] as CatalogEntry[],
   markets: [] as MarketplaceInfo[],

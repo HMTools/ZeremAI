@@ -12,7 +12,7 @@ You need to implement a new feature: "User Authentication" that allows users to 
 
 1. **Invoke Command**:
    ```
-   /flow-new
+   /zeremai new
    ```
 
 2. **Select Template**:
@@ -82,7 +82,7 @@ An integration test is failing and needs to be fixed.
 
 1. **Invoke Command**:
    ```
-   /flow-new
+   /zeremai new
    ```
 
 2. **Select Template**:
@@ -247,7 +247,7 @@ You started a flow yesterday but didn't finish. You want to continue today.
 
 1. **Invoke Command**:
    ```
-   /flow-continue
+   /zeremai continue
    ```
 
 2. **Flow Discovery**:

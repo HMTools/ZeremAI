@@ -15,7 +15,7 @@ Or use a local plugin directory (no marketplace needed):
 claude --plugin-dir /path/to/zeremai
 ```
 
-After installation, run `/flow` and open the **Templates** tab to refresh the marketplaces and install templates. This installs flow templates to `~/.claude/zeremai/templates/flows/`.
+After installation, run `/zeremai` and open the **Templates** tab to refresh the marketplaces and install templates. This installs flow templates to `~/.claude/zeremai/templates/flows/`.
 
 The plugin is a Claude Code mod and needs a Claude Code build with mods. With mods off (an admin policy, an untrusted new folder, a crash or `--safe-mode`) it cannot change a flow. The flow skill then tells the user and stops. Under `--safe-mode` no plugin loads at all, so the user sees nothing from this plugin.
 
@@ -52,7 +52,7 @@ ZeremAI enables structured, repeatable workflows for complex development tasks. 
 - No data loss between sessions
 
 ### AI Integration
-- Command: `/flow` (a pane with a New tab and a Continue tab)
+- Command: `/zeremai` (a pane with a New tab and a Continue tab)
 - Strict flow adherence to prevent deviation
 - Proactive guidance for next steps
 - Subagent delegation for context isolation
@@ -61,13 +61,13 @@ ZeremAI enables structured, repeatable workflows for complex development tasks. 
 
 ### 1. Install Templates from Marketplaces
 
-After installing the plugin, run `/flow` and open the **Templates** tab. Press Refresh to read the git-backed template repositories, then Install the ones you need. They go to `~/.claude/zeremai/templates/`.
+After installing the plugin, run `/zeremai` and open the **Templates** tab. Press Refresh to read the git-backed template repositories, then Install the ones you need. They go to `~/.claude/zeremai/templates/`.
 
 ### 2. Create a New Flow
 
 Use the command:
 ```
-/flow
+/zeremai
 ```
 
 On the New tab:
@@ -77,7 +77,7 @@ On the New tab:
 
 ### 3. Continue an Existing Flow
 
-To resume a flow, use `/flow` and open the Continue tab:
+To resume a flow, use `/zeremai` and open the Continue tab:
 1. Every active flow shows with its current step and last change
 2. Pick one: the plugin binds it to the session and resumes from the last incomplete step
 
@@ -194,7 +194,7 @@ Marketplaces are configured in `~/.claude/zeremai/config/marketplaces.json`:
 
 ### Managing Marketplaces
 
-The **Templates** tab of `/flow` does these:
+The **Templates** tab of `/zeremai` does these:
 - **Refresh**: Fetch the latest template catalogs from all enabled marketplaces
 - **Install / Update**: Copy a template from a marketplace cache, or update it when the marketplace has a newer version
 - **Remove**: Delete an installed template
@@ -282,7 +282,7 @@ Official templates live in the [ZeremAI-marketplace](https://github.com/HMTools/
 For local/team-specific templates, add a custom marketplace:
 
 1. Create a git repo with the standard template structure (`templates/flows/`)
-2. Add it on the Templates tab of `/flow` (Add marketplace)
+2. Add it on the Templates tab of `/zeremai` (Add marketplace)
 3. Refresh and install the templates you need
 
 ### Template Authoring

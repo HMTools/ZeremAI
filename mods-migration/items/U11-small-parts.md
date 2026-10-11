@@ -3,7 +3,7 @@
 > Status and result live in `../progress.html` (entry `U11`). Read `../README.md` first, then `../shared/mods-docs-reading-list.md`. This item belongs to the UI phase (group `U`): the UI app moves into the mod. Do `U01` first, and use its result.
 
 ## 1. Context (no previous knowledge needed)
-`zeremai` is a Claude Code plugin that runs resumable workflows ("flows") made of steps. The plugin is now a Claude Code mod: the flow rules, tools, the `/flow` pane and a step line are done (items H, C, P). A separate Electron app, `../agentic-flows-ui`, still shows the flows. Owner's decision of 2026-10-10: the whole UI moves into the mod, the connection to the app is obsolete, and the JSON files are no longer a contract for it. The owner also wants the mod UI to look less plain and more like a GUI. These are the small parts of the app shell: messages, error screens, yes/no dialogs and the update banner. Most have a direct mod equivalent. This item lists them and decides each.
+`zeremai` is a Claude Code plugin that runs resumable workflows ("flows") made of steps. The plugin is now a Claude Code mod: the flow rules, tools, the `/zeremai` pane and a step line are done (items H, C, P). A separate Electron app, `../agentic-flows-ui`, still shows the flows. Owner's decision of 2026-10-10: the whole UI moves into the mod, the connection to the app is obsolete, and the JSON files are no longer a contract for it. The owner also wants the mod UI to look less plain and more like a GUI. These are the small parts of the app shell: messages, error screens, yes/no dialogs and the update banner. Most have a direct mod equivalent. This item lists them and decides each.
 
 ## 2. What exists today
 - `Toast/index.tsx` (114): short messages.
