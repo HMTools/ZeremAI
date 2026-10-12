@@ -7,11 +7,11 @@ description: Run the steps of a flow that is bound to this session. Use it when 
 
 The user started or resumed a flow with the flow pane (`/zeremai`). The pane created or found the flow, bound it to this session, and told you the folder, the parameters and the next step. Run the steps from there. Never work outside the flow, and never start a flow yourself: if the user wants another one, tell them to open `/zeremai`.
 
-All flow files change only through the flow tools (find them by tool search). Never edit `flow.json`, `log.json` or memory files by hand.
+All flow files change only through the flow script, with the Bash command form of your first message (see the flow-state-update skill): `python3 <plugin>/scripts/flow_manager.py <subcommand> --json '<object>'`. Never edit `flow.json`, `log.json` or memory files by hand. Wherever this page says "call the tool `x_y`", run the subcommand `x-y`.
 
 ## Mods off
 
-Find the tool `create_flow` by tool search before anything else. If no flow tool exists, the mod is not loaded (an admin policy, a crash, an untrusted folder, or a rollout switch). Tell the user: "The flow tools are not here, so mods are off in this session. I cannot change a flow. Try /reload-plugins or ask your admin." Then stop. Do not edit flow files by hand.
+The flow script works only with the plugin's mod, which checks every call. If the plugin refuses every command of the script, or the first message of the flow has no command form, the mod is not loaded (an admin policy, a crash, an untrusted folder, or a rollout switch). Tell the user: "The flow script is not available, so mods are off in this session. I cannot change a flow. Try /reload-plugins or ask your admin." Then stop. Do not edit flow files by hand, and do not run the script in any other form.
 
 ## Start
 

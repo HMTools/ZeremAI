@@ -79,7 +79,7 @@ No external file resolution is needed. The step-executor reads all instructions 
 4. **Update flow files** using the `flow-state-update` skill:
    - Never use Write/Edit tools directly on flow.json, memory.json, or log.json
    - Use the `flow-state-update` skill for all state mutations
-5. **Handle approval checkpoints**: If the step has `approvalRequired: true`, prepare deliverables and return to parent for user approval. Step approval is user-only -- the agent cannot and should not approve steps. The parent asks with the tool `request_approval`. After the user clicks Approve in the dialog, the step has `approved: true`, and the tool `update_step_status` will complete it.
+5. **Handle approval checkpoints**: If the step has `approvalRequired: true`, prepare deliverables and return to parent for user approval. Step approval is user-only -- the agent cannot and should not approve steps. The parent asks with the subcommand `request-approval` of the flow script. After the user clicks Approve in the dialog, the step has `approved: true`, and the subcommand `update-step-status` will complete it.
 6. **Return completion status** with:
    - Step output/artifacts created
    - Any issues encountered

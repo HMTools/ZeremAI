@@ -1,11 +1,10 @@
 import type { Register } from 'claude-code'
 import { sessionKey } from '../infra/flow-repository/flow-repository'
 import { findLogOwed } from '../infra/log-first/log-first'
-import { LOG_GATED_TOOLS, LOG_TOOL, clearLogOwed } from '../infra/log-owed/log-owed'
 import type { FileSystem, SessionLinks } from '../infra/ports/ports'
 
-// While the agent owes a log entry, it cannot edit files, start a subagent or change the flow.
-// The tool `log_interaction` still works: when it succeeds, the log is no longer owed.
+// While the agent owes a log entry, it cannot edit files or start a subagent. (It cannot change the flow either: see on-flow-tools.)
+// The command `log-interaction` of the flow script is the way out (see on-flow-tools): when it succeeds, the log is no longer owed.
 // A subagent's own calls pass.
 
 const EDIT_TOOLS = ['Write', 'Edit', 'MultiEdit', 'NotebookEdit', 'Agent', 'Task'] // Agent is the subagent tool; Task is its old name
@@ -33,13 +32,8 @@ async function say($: any, text: string): Promise<void> {
 }
 
 export const register: Register = on => {
-  on('tool.call', { tool: [...EDIT_TOOLS, LOG_TOOL, ...LOG_GATED_TOOLS] }, async ($, e, next) => {
+  on('tool.call', { tool: EDIT_TOOLS }, async ($, e, next) => {
     const sessionId = await $.session.id()
-    if (e.tool === LOG_TOOL) {
-      const result: any = await next(e)
-      if (!result.deny && !result.isError && !result.result?.isError) clearLogOwed(sessionId)
-      return result
-    }
     if (e.agentId) return next(e)
     const logOwed = await findLogOwed(filesOf($), linksOf($), sessionId)
     if (logOwed) { await say($, 'Flow: Claude must log your last prompt before it edits files.'); return { deny: logOwed.text } }

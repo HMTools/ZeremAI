@@ -1,5 +1,5 @@
 import { test, expect } from 'claude-code/testing'
-import { raiseLogOwed, isLogOwed, clearLogOwed, LOG_TOOL, LOG_GATED_TOOLS } from './log-owed'
+import { raiseLogOwed, isLogOwed, clearLogOwed, owedPrompt } from './log-owed'
 import type { FileSystem } from '../ports/ports'
 
 const ACTIVE = '/h/.claude/zeremai/active'
@@ -28,9 +28,10 @@ test('one session does not owe for another', async () => {
   await raiseLogOwed(disk, bound('S1'), 'S1')
   expect(isLogOwed('S2')).toBe(false)
 })
-test('the log tool and the tools that change the flow are named', () => {
-  expect(LOG_TOOL).toBe('mcp__zeremai__log_interaction')
-  expect(LOG_GATED_TOOLS).toContain('mcp__zeremai__update_step_status')
-  expect(LOG_GATED_TOOLS).not.toContain(LOG_TOOL)
-  expect(LOG_GATED_TOOLS).not.toContain('mcp__zeremai__list_findings')
+test('the prompt that raised the log is kept for the session', async () => {
+  clearLogOwed('S1')
+  await raiseLogOwed(disk, bound('S1'), 'S1', 'fix the header')
+  expect(owedPrompt('S1')).toBe('fix the header')
+  clearLogOwed('S1')
+  expect(owedPrompt('S1')).toBe('')
 })

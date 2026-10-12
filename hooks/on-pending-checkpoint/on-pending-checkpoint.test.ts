@@ -20,7 +20,7 @@ const call = ($: any, tool: string, extra = {}) => $.tool.call({ tool, file_path
 const bash = ($: any, command: string) => call($, 'Bash', { command })
 
 // research passes: reads, MCP tools and a subagent
-for (const tool of ['Read', 'Glob', 'Grep', 'LS', 'WebFetch', 'WebSearch', 'Agent', 'Task', 'mcp__x__y', 'mcp__zeremai__request_approval']) {
+for (const tool of ['Read', 'Glob', 'Grep', 'LS', 'WebFetch', 'WebSearch', 'Agent', 'Task', 'mcp__x__y']) {
   test(`gate open: ${tool} passes`, async ($, on) => {
     world(on)
     expect((await call($, tool)).deny).toBeUndefined()
@@ -39,13 +39,14 @@ test('gate open: Bash is refused', async ($, on) => {
   world(on)
   expect((await bash($, 'ls')).deny).toContain('Approval needed')
 })
-test('gate open: a Bash command that logs is refused', async ($, on) => {
+test('gate open: a command of the flow script passes this check (the gate of the script decides which ones run)', async ($, on) => {
   world(on)
-  expect((await bash($, 'python3 /x/scripts/flow_manager.py log-interaction --flow-dir /p')).deny).toContain('Approval needed')
+  const r: any = await bash($, "python3 /x/scripts/flow_manager.py log-interaction --json '{}'")
+  expect(r.deny === undefined || !String(r.deny).includes('Approval needed')).toBe(true)
 })
-test('gate open: the log tool passes, as every MCP tool does', async ($, on) => {
+test('gate open: reading the script is a plain Bash command, so it is refused', async ($, on) => {
   world(on)
-  expect((await call($, 'mcp__zeremai__log_interaction')).deny).toBeUndefined()
+  expect((await bash($, 'cat /x/scripts/flow_manager.py')).deny).toContain('Approval needed')
 })
 test('gate open: a subagent writing is refused too', async ($, on) => {
   world(on)

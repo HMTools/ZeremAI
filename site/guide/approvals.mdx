@@ -8,7 +8,7 @@ A step marked `approvalRequired: true` cannot complete until **you** approve its
 ## How it works
 
 1. The agent finishes the step and presents the deliverables.
-2. It calls `request_approval`. A dialog opens with the step name and output, and the call waits.
+2. It runs the `request-approval` command. A dialog opens with the step name and output, and the call waits.
 3. You click:
    - **Approve**: the step is marked approved and can complete.
    - **Request changes**: type what to change. The agent reads it, applies only those corrections, and asks again.

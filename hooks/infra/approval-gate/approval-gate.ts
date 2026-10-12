@@ -1,10 +1,12 @@
 import type { Flow, Step } from '../flow-types/flow-types'
 import { readFlow } from '../flow-repository/flow-repository'
 import { slash } from '../flow-manager/move'
-import { locked } from '../flow-manager/flow-files'
-import type { Ask, FileSystem, FileWriter, Gate, GateStore } from '../ports/ports'
+import type { Ask, FileSystem, Gate, GateStore } from '../ports/ports'
 
-// The approval gate. The agent asks, the user answers with a click, and only the mod writes `approved` in flow.json.
+// The approval gate. The agent asks, the user answers with a click, and only the mod makes the script write `approved` (approve-step).
+
+// Writes `approved` on the step: the mod builds it from the script, so the rules of the script apply.
+export type Approver = (dir: string, stepId: string) => Promise<void>
 
 // The tool the agent calls to ask the user. It is listed with the flow tools (see ensureFlowTools).
 export const REQUEST_APPROVAL_TOOL = {
@@ -35,7 +37,7 @@ const asking = new Set<string>()
 
 // Asks the user and returns what the agent reads, or undefined when a question is already open for this session.
 // An answer of Approve sets `approved`. A dismissed question leaves the gate open.
-export async function askGate(files: FileSystem, write: FileWriter, gates: GateStore, ask: Ask, sessionId: string, gate: Gate): Promise<string | undefined> {
+export async function askGate(files: FileSystem, approve: Approver, gates: GateStore, ask: Ask, sessionId: string, gate: Gate): Promise<string | undefined> {
   if (asking.has(sessionId)) return
   asking.add(sessionId)
   try {
@@ -55,25 +57,16 @@ export async function askGate(files: FileSystem, write: FileWriter, gates: GateS
     if (answer !== APPROVE) {
       return changesText(step, answer === CHANGES ? '(no text given)' : answer)
     }
-    await markApproved(files, write, gate)
+    await markApproved(approve, gate)
     return approvedText(step)
   } finally { asking.delete(sessionId) }
 }
 
-const approvedText = (step: Step) => `The user approved step ${step.number} "${step.name}". Complete it with the tool update_step_status (status completed).`
-const changesText = (step: Step, why: string) => `The user asked for changes to step ${step.number} "${step.name}": ${why}\nChange the step. When it is ready, call request_approval again.`
+const approvedText = (step: Step) => `The user approved step ${step.number} "${step.name}". Complete it with update-step-status (status completed).`
+const changesText = (step: Step, why: string) => `The user asked for changes to step ${step.number} "${step.name}": ${why}\nChange the step. When it is ready, call request-approval again.`
 
-// Read the file again under the lock: a tool may have changed it while the user decided.
-async function markApproved(files: FileSystem, write: FileWriter, gate: Gate): Promise<void> {
-  await locked(gate.dir, async () => {
-    const latest = await readFlow(files, gate.dir)
-    const latestStep = latest?.steps?.find(s => s.id === gate.stepId)
-    if (!latest || !latestStep) return
-    latestStep.approved = true
-    if (latest.metadata) latest.metadata.lastUpdated = new Date().toISOString()
-    await write(`${gate.dir}/flow.json`, JSON.stringify(latest, null, 2) + '\n')
-  })
-}
+// The script reads the file again under its lock: a command can change it while the user decides.
+const markApproved = (approve: Approver, gate: Gate) => approve(gate.dir, gate.stepId)
 
 // ── The same answer from the pane ───────────────────────────────────────────
 
@@ -98,7 +91,7 @@ export type PaneAnswer = { text: string } | { error: string }
 
 // The user presses Approve or Request changes in the pane. Everything is checked again now, not when the card was drawn:
 // the step must still be the one that waits, the agent must have asked, and no dialog may be open.
-async function answerFromPane(files: FileSystem, write: FileWriter, gates: GateStore, sessionId: string, dir: string, stepId: string, change: string | undefined): Promise<PaneAnswer> {
+async function answerFromPane(files: FileSystem, approve: Approver, gates: GateStore, sessionId: string, dir: string, stepId: string, change: string | undefined): Promise<PaneAnswer> {
   const gate = await gates.get(sessionId)
   const now = gateForPane(await readFlow(files, dir), gate, dir)
   if (!now || now.stepId !== stepId) return { error: 'That step no longer waits for approval.' }
@@ -106,19 +99,21 @@ async function answerFromPane(files: FileSystem, write: FileWriter, gates: GateS
   if (now.state === 'working') return { error: 'The agent has not asked for approval yet.' }
   const step = (await readFlow(files, dir))?.steps?.find(s => s.id === stepId)
   if (!step) return { error: 'That step no longer waits for approval.' }
-  if (change === undefined) await markApproved(files, write, { dir, stepId })
+  if (change === undefined) {
+    try { await markApproved(approve, { dir, stepId }) } catch (error) { return { error: `The script did not approve: ${error instanceof Error ? error.message : String(error)}` } }
+  }
   await gates.clear(sessionId)
   return { text: change === undefined ? approvedText(step) : changesText(step, change.trim() || '(no text given)') }
 }
-export const approveFromPane = (files: FileSystem, write: FileWriter, gates: GateStore, sessionId: string, dir: string, stepId: string) => answerFromPane(files, write, gates, sessionId, dir, stepId, undefined)
-export const requestChangesFromPane = (files: FileSystem, write: FileWriter, gates: GateStore, sessionId: string, dir: string, stepId: string, reason: string) => answerFromPane(files, write, gates, sessionId, dir, stepId, reason)
+export const approveFromPane = (files: FileSystem, approve: Approver, gates: GateStore, sessionId: string, dir: string, stepId: string) => answerFromPane(files, approve, gates, sessionId, dir, stepId, undefined)
+export const requestChangesFromPane = (files: FileSystem, approve: Approver, gates: GateStore, sessionId: string, dir: string, stepId: string, reason: string) => answerFromPane(files, approve, gates, sessionId, dir, stepId, reason)
 
 // A prompt arrives while a gate is open: the dialog opens again. The prompt itself goes on.
 // The answer reaches the agent as a prompt of its own. Not awaited: the dialog waits for the user.
-export async function reopenPanel(files: FileSystem, write: FileWriter, gates: GateStore, ask: Ask, send: (text: string) => Promise<unknown>, sessionId: string): Promise<void> {
+export async function reopenPanel(files: FileSystem, approve: Approver, gates: GateStore, ask: Ask, send: (text: string) => Promise<unknown>, sessionId: string): Promise<void> {
   const gate = await gates.get(sessionId)
   if (!gate) return
-  askGate(files, write, gates, ask, sessionId, gate)
+  askGate(files, approve, gates, ask, sessionId, gate)
     .then(async text => { if (text && !(await hasOpenGate(gates, sessionId))) await send(text) }) // a dismissed dialog leaves the gate open and says nothing
     .catch(() => {})
 }
@@ -140,4 +135,4 @@ export function isHandEdit(call: HandEditCall): boolean {
   return STATE_NAME.test(command) && BASH_WRITE.test(command)
 }
 
-export const HAND_EDIT_TEXT = 'Flow files change only through the flow tools (update_step_status, add_log_entry, add_memory_entry and the others). Do not edit them by hand. Only the user approves a step, with a click in the approval dialog.'
+export const HAND_EDIT_TEXT = 'Flow files change only through the flow script (python3 scripts/flow_manager.py update-step-status, add-log-entry, add-memory-entry and the others). Do not edit them by hand. Only the user approves a step, with a click in the approval dialog.'

@@ -7,13 +7,17 @@ description: "## 'The flow tools are not here, so mods are off'"
 
 Mods are not loaded: admin policy, untrusted folder, a crash or a rollout switch. Try `/reload-plugins`, trust the folder, or ask your admin. The agent will not edit flow files by hand as a workaround, by design.
 
+## "flow_manager.py did not start" or "gave no JSON"
+
+Python is missing or too old. Install **Python 3.9 or newer** and make sure `python3` (Windows: `python`) runs from a terminal, then press **Resume** on the flow. See [Installation](/guide/installation).
+
 ## `/zeremai` shows no templates
 
 Open the **Templates** tab, **Refresh**, then **Install**. If Refresh fails, check you can `git clone` the marketplace URL from a terminal.
 
 ## Agent cannot edit a flow file
 
-Intended. A flow's state files and findings change only through flow tools. If a tool errors, read its message: it says what to do next.
+Intended. A flow's state files and findings change only through the flow script (`scripts/flow_manager.py`), and the plugin checks every call. If a call is refused or errors, read its message: it says what to do next.
 
 ## Step will not complete
 
@@ -21,7 +25,7 @@ It has `approvalRequired: true` and you have not approved. Open the dialog (it r
 
 ## Agent stops to log an interaction
 
-You sent a prompt in a flow session, so a log entry is owed. The agent calls `log_interaction` first. This is the mandatory logging rule: interactions are logged *before* any file change.
+You sent a prompt in a flow session, so a log entry is owed. The agent runs `log-interaction` of the flow script first. This is the mandatory logging rule: interactions are logged *before* any file change.
 
 ## Resume lands on the wrong step
 

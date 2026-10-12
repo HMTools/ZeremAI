@@ -12,7 +12,7 @@ each finding the user approves, implements the real change.
 
 ## 1. Gather open findings
 
-Call the tool `list_findings` with `status: open` (find it by tool search).
+Run the subcommand `list-findings` of the flow script with `{"status":"open"}` (the command form is in the flow-state-update skill).
 
 Add `templateId` if the user asked to focus on one template (each finding's own
 `template` field has the readable name to show the user). Group similar findings across
@@ -38,7 +38,7 @@ c. If approved: investigate the real current file(s), then implement the actual
    - Clean implementation: no "before/after" traceback comments — make it look like it was always there.
 d. Show the diff — what files were modified and what changed.
 e. Record the outcome:
-Call the tool `update_finding_status` with `flowId` (the finding's flowId), `findingId`, `status: applied`, `notes`, and `filesModified` (a list of paths). Use `status: rejected` or `status: deferred` (with `notes` explaining why) when not implementing.
+Run the subcommand `update-finding-status` with `flowId` (the finding's flowId), `findingId`, `status: applied`, `notes`, and `filesModified` (a list of paths). Use `status: rejected` or `status: deferred` (with `notes` explaining why) when not implementing.
 
 ## 4. Summarize
 

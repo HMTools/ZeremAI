@@ -1,12 +1,12 @@
 ---
 name: flow-state-update
-description: Update flow state files (flow.json, memory/<topic>.json, log.json) with the flow tools. ALWAYS use this skill when working with zeremai — whenever you need to update step status, record memory, log actions, or modify any flow state file. Never use Write/Edit or Bash on flow state files. Used by step-executor and the flow-run skill.
+description: Update flow state files (flow.json, memory/<topic>.json, log.json) with the flow script. ALWAYS use this skill when working with zeremai — whenever you need to update step status, record memory, log actions, or modify any flow state file. Never use Write/Edit or Bash on flow state files. Used by step-executor and the flow-run skill.
 user-invocable: false
 ---
 
 # Flow State Update
 
-**Critical**: All flow state changes go through the flow tools of this plugin. The tools are `mcp__zeremai__<name>`; this page names them by `<name>`. Never use Write, Edit or Bash on flow state files: the plugin refuses it, and a hand edit can corrupt the flow.
+**Critical**: All flow state changes go through one script, `scripts/flow_manager.py` of this plugin, and only through it. This page names each operation by `<name>` with underscores (for example `update_step_status`); the subcommand is the same name with dashes (`update-step-status`). Never use Write, Edit or any other Bash command on flow state files: the plugin refuses it, and a hand edit can corrupt the flow.
 
 ## When to Use
 
@@ -18,11 +18,21 @@ Use this skill whenever you need to:
 
 If you work in the ZeremAI framework and need to change any `.json` file in a flow directory, use the tools on this page.
 
-## Finding the tools
+## How to run an operation
 
-The tools are listed when the user starts or resumes a flow. They sit behind tool search: search for the tool by its name (for example `update_step_status`), then call it. Each tool answers `{"status": "ok", "files_written": [...]}` or `{"status": "error", "message": "..."}`. Read the message of an error: it says what to do next.
+The first message of every flow gives the exact command form, with the full path of the script. It is always one Bash command:
 
-Every tool takes `flowDir`, the absolute path of the flow folder (for example `~/.claude/zeremai/active/flow-name`, written out in full), except `list_findings` and `update_finding_status`. Lists and objects are real values, not JSON text.
+```
+python3 <plugin>/scripts/flow_manager.py <subcommand> --json '<one JSON object>'
+```
+
+- The input is one JSON object in single quotes. The keys are the inputs named on this page (`flowDir`, `stepId`, ...). Lists and objects are real JSON values. An apostrophe inside the JSON is written `'\''`.
+- Nothing else on the line: no pipe, no `;`, no `&&`, no redirect, nothing after the closing quote. The plugin refuses any other form.
+- Each call answers one line: `{"status": "ok", "files_written": [...]}` or `{"status": "error", "message": "..."}`. Read the message of an error: it says what to do next.
+- The plugin also refuses a call at the wrong moment: with no flow bound, while the approval dialog is open, for a folder that is not a flow of this session, or for `approve-step` (only the user approves). If the log of the user's last prompt is not written yet, the plugin writes the entry for you before it runs your call; log it yourself with `log_interaction` first to give the real reason and answer.
+- `request_approval` is the subcommand `request-approval` with `--json '{}'`. It shows the user the dialog and waits for the click.
+
+Every operation takes `flowDir`, the absolute path of the flow folder (for example `~/.claude/zeremai/active/flow-name`, written out in full), except `list_findings` and `update_finding_status`.
 
 ---
 

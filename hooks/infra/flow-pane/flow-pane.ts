@@ -1,6 +1,5 @@
 import type { FileSystem, ManagerPorts } from '../ports/ports'
 import { bindSession } from '../flow-manager/bind-session'
-import { createFlow } from '../flow-manager/create-flow'
 import { slash } from '../flow-manager/move'
 import type { Doc } from '../flow-manager/flow-files'
 import { needsUser, stepKind } from './status-look'
@@ -219,7 +218,7 @@ export const missingFields = (template: TemplateInfo, values: Record<string, str
 
 export type Started = { text: string; dir: string } | { error: string }
 
-// Create the files, bind the session, and return the message for the agent. The same code as the create_flow tool.
+// Create the files with the flow script (create-flow), bind the session, and return the message for the agent.
 export async function startFlow(ports: ManagerPorts, template: TemplateInfo, values: Record<string, string>): Promise<Started> {
   const missing = missingFields(template, values)
   if (missing.length) return { error: `Fill in: ${missing.join(', ')}` }
@@ -228,7 +227,8 @@ export async function startFlow(ports: ManagerPorts, template: TemplateInfo, val
   const params = Object.fromEntries(Object.entries(values).filter(([, v]) => v.trim()).map(([k, v]) => [k, v.trim()]))
   const dir = `${slash(home)}/.claude/zeremai/active/${dirNameFor(template.name, ports.now())}`
   try {
-    await createFlow(ports, { flowDir: dir, templatePath: template.path, params })
+    const created = await ports.script('create-flow', { flowDir: dir, templatePath: template.path, params, projectPath: await ports.cwd() })
+    if (created.status !== 'ok') return { error: created.message ?? 'create-flow failed' }
     await bindSession(ports, dir)
     return { text: handoff('new', dir, JSON.parse(await ports.files.read(`${dir}/flow.json`))), dir }
   } catch (error) { return { error: error instanceof Error ? error.message : String(error) } }

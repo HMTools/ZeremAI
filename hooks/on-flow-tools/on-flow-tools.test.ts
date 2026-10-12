@@ -4,18 +4,16 @@ import type { On } from 'claude-code'
 const ACTIVE = '/h/.claude/zeremai/active'
 const DIR = `${ACTIVE}/p1`
 const NEW = `${ACTIVE}/new1`
-const TOOL = (name: string) => `mcp__zeremai__${name}`
-const flowFile = JSON.stringify({ status: 'running', metadata: { lastUpdated: 'then' }, currentState: {}, steps: [{ id: 's1', name: 'Design', status: 'pending' }] })
+const flowFile = JSON.stringify({ status: 'running', metadata: { lastUpdated: 'then' }, currentState: { activeStep: { id: 's1' } }, steps: [{ id: 's1', name: 'Design', status: 'pending' }] })
+const OK = JSON.stringify({ status: 'ok', files_written: ['flow.json'] })
 
-// fake disk: one flow folder bound to session S1, and a template to create another from; writes land on the disk
-function world(on: On, { bound = 'S1', env = { HOME: '/h' } as Record<string, string> } = {}) {
-  const all: Record<string, string> = {
-    [`${DIR}/flow.json`]: flowFile,
-    '/t/tpl.json': JSON.stringify({ name: 'T', steps: [{ name: 'Only', stepRef: '' }] }),
-  }
-  const registered: string[] = []
+// A fake disk with one flow folder bound to session S1. `bash` collects the commands that reach Bash (the engine runs them: here a stand-in
+// answers). `script` collects what the mod itself runs with $.process.run, which is the flow script.
+function world(on: On, { bound = 'S1', stdout = OK } = {}) {
+  const all: Record<string, string> = { [`${DIR}/flow.json`]: flowFile }
+  const bash: string[] = [], script: { sub: string; input: any }[] = []
   const toasts: string[] = [], lines: string[] = []
-  mock.env(on, env)
+  mock.env(on, { HOME: '/h' })
   const store: Record<string, unknown> = { [`session:${bound}`]: [DIR] }
   on('store.get', async (_$, e: any) => ({ value: store[e.key] as never }))
   on('store.set', async (_$, e: any) => { store[e.key] = e.value; return { value: undefined } as never })
@@ -29,84 +27,116 @@ function world(on: On, { bound = 'S1', env = { HOME: '/h' } as Record<string, st
   on('fs.exists', async (_$, e) => ({ value: e.path in all || Object.keys(all).some(p => p.startsWith(`${e.path}/`)) }))
   on('fs.read', async (_$, e) => ({ value: all[e.path] }))
   on('fs.write', async (_$, e) => { all[e.path] = e.text; return { value: undefined } })
-  on('tool.register', async (_$, e: any) => { registered.push(e.name); return { value: { tool: `mcp__zeremai__${e.name}` } } as never })
+  on('process.run', async (_$, e: any) => {
+    const [, , sub, , json] = e.argv as string[]
+    script.push({ sub, input: JSON.parse(json) })
+    const out = sub === 'list-findings' ? JSON.stringify({ status: 'ok', findings: [{ id: 'f1' }, { id: 'f2' }] }) : OK
+    return { value: { exitCode: 0, stdout: out, stderr: '', timedOut: false } } as never
+  })
   on('prompt.submit', async () => ({ drop: 'test' }))
-  on('tool.call', async () => ({ result: 'done', text: 'done' }) as never)
+  on('tool.call', async (_$, e: any) => {
+    bash.push(e.command)
+    if (stdout === OK && String(e.command).includes(' create-flow ')) all[`${NEW}/flow.json`] = flowFile // the script writes the new flow
+    return { result: { stdout, stderr: '', interrupted: false } } as never
+  })
   on('session.start', async () => ({ cwd: '/work' }) as never)
   on('ui.toast', async (_$, e: any) => { toasts.push(e.text); return { value: undefined } as never })
   on('ui.status', async (_$, e: any) => { lines.push(e.text); return { value: undefined } as never })
-  return { all, registered, store, toasts, lines }
+  return { all, bash, script, store, toasts, lines }
 }
-const answer = (r: any) => JSON.parse(r.result.content[0].text)
+const cmd = (root: string, sub: string, input: unknown) => `python3 ${root}/scripts/flow_manager.py ${sub} --json '${JSON.stringify(input)}'`
+// The plugin folder of the test, read from the refusal of a command that names another script.
+async function rootOf($: any): Promise<string> {
+  const r: any = await $.tool.call({ tool: 'Bash', command: "python3 /nowhere/scripts/flow_manager.py x --json '{}'" })
+  return /script only: (.*)\/scripts\/flow_manager\.py/.exec(r.deny)![1]
+}
 
-test('a flow tool runs and answers with the script-style result', async ($, on) => {
+test('a script command that follows the rules reaches Bash, and the step line follows the step', async ($, on) => {
   const w = world(on)
-  const r = await $.tool.call({ tool: TOOL('update_step_status'), flowDir: DIR, stepId: 's1', status: 'in_progress' })
-  expect(answer(r)).toEqual({ status: 'ok', files_written: ['flow.json'] })
-  expect(JSON.parse(w.all[`${DIR}/flow.json`]).steps[0].status).toBe('in_progress')
-})
-test('a failing rule is an error result, and the model can read the message', async ($, on) => {
-  world(on)
-  const r = await $.tool.call({ tool: TOOL('update_step_status'), flowDir: DIR, stepId: 'zzz', status: 'completed' })
-  expect(r.result.isError).toBe(true)
-  expect(answer(r)).toEqual({ status: 'error', message: 'Step zzz not found' })
-})
-test('create_flow binds the new flow to the session', async ($, on) => {
-  const w = world(on)
-  const r = await $.tool.call({ tool: TOOL('create_flow'), flowDir: NEW, templatePath: '/t/tpl.json' })
-  expect(answer(r).status).toBe('ok')
-  expect(w.store['session:S1']).toEqual([DIR, NEW]) // the newest goes last, and answers first
-})
-test('bind_flow links a resumed flow to the new session', async ($, on) => {
-  const w = world(on, { bound: 'old' })
-  const r = await $.tool.call({ tool: TOOL('bind_flow'), flowDir: DIR })
-  expect(answer(r).status).toBe('ok')
-  expect(w.store['session:S1']).toEqual([DIR])
-})
-test('bind_flow on a wrong folder is an error result', async ($, on) => {
-  world(on)
-  const r = await $.tool.call({ tool: TOOL('bind_flow'), flowDir: '/h/elsewhere' })
-  expect(r.result.isError).toBe(true)
-})
-test('create_flow that fails binds nothing', async ($, on) => {
-  const w = world(on)
-  await $.tool.call({ tool: TOOL('create_flow'), flowDir: NEW, templatePath: '/nope.json' })
-  expect(w.store['session:S1']).toEqual([DIR])
-})
-test('a prompt in a session with a flow lists the tools, once', async ($, on) => {
-  const w = world(on)
-  await $.prompt.submit({ text: 'continue' })
-  await $.prompt.submit({ text: 'and again' })
-  expect(w.registered.length).toBe(17)
-  expect(w.registered).toContain('create_flow')
-  expect(w.registered).toContain('request_approval')
-})
-test('Windows has USERPROFILE and no HOME: the flow is still found', async ($, on) => {
-  const w = world(on, { env: { USERPROFILE: '/h', OS: 'Windows_NT' } })
-  await $.prompt.submit({ text: 'continue' })
-  expect(w.registered.length).toBe(17)
-})
-test('a prompt in a session with no flow lists nothing', async ($, on) => {
-  const w = world(on, { bound: 'other' })
-  await $.prompt.submit({ text: 'hello' })
-  expect(w.registered).toEqual([])
-})
-
-const finding = (status: string) => ({ id: 'f', status })
-test('a session start with open findings shows one message; with none, nothing', async ($, on) => {
-  const w = world(on)
-  w.all['/h/.claude/zeremai/improvement-findings/T/pid.json'] = JSON.stringify({ findings: [finding('open'), finding('open'), finding('applied')] })
-  await $.session.start({ source: 'startup', cwd: '/work' })
-  expect(w.toasts).toEqual(['2 improvement findings wait. Run /zeremai:apply-improvements to review them.'])
-  w.all['/h/.claude/zeremai/improvement-findings/T/pid.json'] = JSON.stringify({ findings: [finding('applied')] })
-  await $.session.start({ source: 'startup', cwd: '/work' })
-  expect(w.toasts).toHaveLength(1)
-})
-test('the line under the prompt follows the step tools, and clears when the flow finishes', async ($, on) => {
-  const w = world(on)
-  on('process.run', async () => ({ value: { exitCode: 0, stdout: '', stderr: '', timedOut: false } }) as never)
-  await $.tool.call({ tool: TOOL('update_step_status'), flowDir: DIR, stepId: 's1', status: 'in_progress' })
+  const root = await rootOf($)
+  const command = cmd(root, 'update-step-status', { flowDir: DIR, stepId: 's1', status: 'in_progress' })
+  const r: any = await $.tool.call({ tool: 'Bash', command })
+  expect(w.bash).toEqual([command])
+  expect(JSON.parse(r.result.stdout).status).toBe('ok')
   expect(w.lines.at(-1)).toBe('Step 1 of 1 · Design')
-  await $.tool.call({ tool: TOOL('update_flow_status'), flowDir: DIR, status: 'completed' })
-  expect(w.lines.at(-1)).toBe('')
+})
+test('a call with a wrong input never reaches Bash, and the model reads why', async ($, on) => {
+  const w = world(on)
+  const root = await rootOf($)
+  const r: any = await $.tool.call({ tool: 'Bash', command: cmd(root, 'update-step-status', { flowDir: DIR, stepId: 's1', status: 'nope' }) })
+  expect(r.deny).toContain('Invalid status "nope"')
+  expect(w.bash).toEqual([])
+})
+test('a call for a folder of another session never reaches Bash', async ($, on) => {
+  const w = world(on)
+  const root = await rootOf($)
+  const r: any = await $.tool.call({ tool: 'Bash', command: cmd(root, 'update-step-status', { flowDir: `${ACTIVE}/zzz`, stepId: 's1', status: 'in_progress' }) })
+  expect(r.deny).toContain('not a flow of this session')
+  expect(w.bash).toEqual([])
+})
+test('a session with no flow can run create-flow only, and the new flow is then bound', async ($, on) => {
+  const w = world(on, { bound: 'other' })
+  const root = await rootOf($)
+  const r: any = await $.tool.call({ tool: 'Bash', command: cmd(root, 'update-step-status', { flowDir: DIR, stepId: 's1', status: 'in_progress' }) })
+  expect(r.deny).toContain('No flow is bound')
+  await $.tool.call({ tool: 'Bash', command: cmd(root, 'create-flow', { flowDir: NEW, templatePath: '/h/.claude/zeremai/templates/t.json' }) })
+  expect(w.bash).toHaveLength(1)
+  expect(w.store['session:S1']).toEqual([NEW])
+})
+test('create-flow that fails binds nothing', async ($, on) => {
+  const w = world(on, { stdout: JSON.stringify({ status: 'error', message: 'Template not found' }) })
+  const root = await rootOf($)
+  await $.tool.call({ tool: 'Bash', command: cmd(root, 'create-flow', { flowDir: NEW, templatePath: '/h/.claude/zeremai/templates/t.json' }) })
+  expect(w.store['session:S1']).toEqual([DIR])
+})
+test('the agent can never run approve-step', async ($, on) => {
+  const w = world(on)
+  const root = await rootOf($)
+  const r: any = await $.tool.call({ tool: 'Bash', command: cmd(root, 'approve-step', { flowDir: DIR, stepId: 's1' }) })
+  expect(r.deny).toContain('Only the user approves')
+  expect(w.bash).toEqual([])
+})
+
+test('the log is owed: the mod logs the user\'s prompt through the script, then the call goes on; the next call needs no log', async ($, on) => {
+  const w = world(on)
+  const root = await rootOf($)
+  await $.prompt.submit({ text: 'make the header blue' })
+  const command = cmd(root, 'update-step-status', { flowDir: DIR, stepId: 's1', status: 'in_progress' })
+  await $.tool.call({ tool: 'Bash', command })
+  expect(w.script).toHaveLength(1)
+  expect(w.script[0].sub).toBe('log-interaction')
+  expect(w.script[0].input).toMatchObject({ flowDir: DIR, stepId: 's1', request: 'User requested: make the header blue' })
+  expect(w.bash).toEqual([command])
+  await $.tool.call({ tool: 'Bash', command })
+  expect(w.script).toHaveLength(1) // logged once
+})
+test('a subagent\'s own call is not logged first', async ($, on) => {
+  const w = world(on)
+  const root = await rootOf($)
+  await $.prompt.submit({ text: 'go' })
+  await $.tool.call({ tool: 'Bash', command: cmd(root, 'update-step-status', { flowDir: DIR, stepId: 's1', status: 'in_progress' }), agentId: 'a1' })
+  expect(w.script).toEqual([])
+  expect(w.bash).toHaveLength(1)
+})
+test('log-interaction by the agent clears the debt, so the next call is not logged by the mod', async ($, on) => {
+  const w = world(on)
+  const root = await rootOf($)
+  await $.prompt.submit({ text: 'go' })
+  await $.tool.call({ tool: 'Bash', command: cmd(root, 'log-interaction', { flowDir: DIR, stepId: 's1', request: 'r', reason: 'r', response: 'r' }) })
+  await $.tool.call({ tool: 'Bash', command: cmd(root, 'update-step-status', { flowDir: DIR, stepId: 's1', status: 'in_progress' }) })
+  expect(w.script).toEqual([])
+})
+test('a Bash command that does not run the script goes on as before', async ($, on) => {
+  const w = world(on)
+  await $.tool.call({ tool: 'Bash', command: 'ls' })
+  await $.tool.call({ tool: 'Bash', command: 'cat scripts/flow_manager.py' })
+  expect(w.bash).toEqual(['ls', 'cat scripts/flow_manager.py'])
+})
+
+test('a session start with open findings shows one message, read with the script; the pane command is registered', async ($, on) => {
+  const w = world(on)
+  await $.session.start({ source: 'startup', cwd: '/work' })
+  expect(w.script.map(c => c.sub)).toEqual(['list-findings'])
+  expect(w.script[0].input).toEqual({ status: 'open' })
+  expect(w.toasts).toEqual(['2 improvement findings wait. Run /zeremai:apply-improvements to review them.'])
 })

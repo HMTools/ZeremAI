@@ -7,14 +7,19 @@ const gate: Gate = { dir: DIR, stepId: 's1' }
 const step = { id: 's1', number: 1, name: 'Design', status: 'in_progress', approvalRequired: true, stepDefinition: { output: { description: 'The design', artifacts: ['design.md'] } } }
 const flowJson = (extra = {}) => JSON.stringify({ status: 'running', metadata: { lastUpdated: 'then' }, steps: [{ ...step, ...extra }] })
 
-// a fake disk with one flow.json; writes land in `written`
+// a fake disk with one flow.json; the approver (a stand-in for the script's approve-step) writes into `written`
 function world(json = flowJson()) {
   const written: Record<string, string> = {}
   const files: FileSystem = {
     home: async () => '/h', list: async () => [], exists: async p => p === `${DIR}/flow.json`,
     read: async p => { if (p !== `${DIR}/flow.json`) throw new Error('missing'); return json },
   }
-  const write = async (path: string, text: string) => { written[path] = text }
+  const write = async (dir: string, stepId: string) => { // approve-step: set approved on the step, touch lastUpdated, write the file the way the script does
+    const flow = JSON.parse(json)
+    flow.steps.find((s: any) => s.id === stepId).approved = true
+    flow.metadata.lastUpdated = 'now'
+    written[`${dir}/flow.json`] = JSON.stringify(flow, null, 2) + '\n'
+  }
   const gates = new Map<string, Gate>([['S1', gate]])
   const store: GateStore = {
     get: async id => gates.get(id), set: async (id, g) => { gates.set(id, g) }, clear: async id => { gates.delete(id) },
@@ -171,7 +176,7 @@ test('while the question is open the gate says so, and a dismissed question give
 test('Approve in the pane writes approved under the same rules as the dialog, closes the gate and returns the text for the agent', async () => {
   const w = world()
   const answer = await approveFromPane(w.files, w.write, w.store, 'S1', DIR, 's1')
-  expect(answer).toEqual({ text: 'The user approved step 1 "Design". Complete it with the tool update_step_status (status completed).' })
+  expect(answer).toEqual({ text: 'The user approved step 1 "Design". Complete it with update-step-status (status completed).' })
   expect(JSON.parse(w.written[`${DIR}/flow.json`]).steps[0].approved).toBe(true)
   expect(await hasOpenGate(w.store, 'S1')).toBe(false)
 })
@@ -197,7 +202,7 @@ test('a step approved a moment ago cannot be approved again from a card that was
 test('Request changes in the pane sends the reason, approves nothing and closes the gate', async () => {
   const w = world()
   const answer = await requestChangesFromPane(w.files, w.write, w.store, 'S1', DIR, 's1', ' use blue ')
-  expect(answer).toEqual({ text: 'The user asked for changes to step 1 "Design": use blue\nChange the step. When it is ready, call request_approval again.' })
+  expect(answer).toEqual({ text: 'The user asked for changes to step 1 "Design": use blue\nChange the step. When it is ready, call request-approval again.' })
   expect(w.written).toEqual({})
   expect(await hasOpenGate(w.store, 'S1')).toBe(false)
   expect(await requestChangesFromPane(world().files, w.write, world().store, 'S1', DIR, 's1', '  ')).toMatchObject({ text: expect.stringContaining('(no text given)') })

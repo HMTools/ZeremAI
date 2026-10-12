@@ -1,9 +1,15 @@
 ---
 title: "Flow tools"
-description: "The plugin registers these tools. The agent finds them with tool search. Each answers {'status': 'ok', ...} or {'status': 'error', 'message': '...'}. "
+description: "The operations of the flow script. Each answers {'status': 'ok', ...} or {'status': 'error', 'message': '...'}. "
 ---
 
-The plugin registers these tools. The agent finds them with tool search. Each answers `{"status": "ok", ...}` or `{"status": "error", "message": "..."}`. Every tool takes `flowDir` (absolute path of the flow folder) except the finding tools.
+These are the operations of the flow script `scripts/flow_manager.py` (Python 3.9 or newer). The agent runs one as a Bash command, with the name written with dashes (`update_step_status` is `update-step-status`):
+
+```bash
+python3 <plugin>/scripts/flow_manager.py update-step-status --json '{"flowDir":"...","stepId":"...","status":"in_progress"}'
+```
+
+The plugin checks every call before the script runs: the command form, the input, that the folder is a flow of this session, and the moment (a flow is bound, the log is written, no approval dialog is open). It refuses a bad call and says why. Each call answers `{"status": "ok", ...}` or `{"status": "error", "message": "..."}`. Every operation takes `flowDir` (absolute path of the flow folder) except the finding operations.
 
 After `update_flow_status` moves a folder, use the `relocated_to` path from the answer.
 
@@ -41,7 +47,7 @@ After `update_flow_status` moves a folder, use the `relocated_to` path from the 
 
 | Tool | Purpose |
 |---|---|
-| `request_approval` | Open the approval dialog and wait for the user's click. Returns Approve or the requested changes. |
+| `request-approval` (answered by the plugin, not the script) | Open the approval dialog and wait for the user's click. Returns Approve or the requested changes. |
 
 ## Sub-flows
 

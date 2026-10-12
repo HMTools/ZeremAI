@@ -2,7 +2,7 @@ import { findFlowDir, readFlow, hasFlowInstance } from '../flow-repository/flow-
 import { isLogOwed } from '../log-owed/log-owed'
 import type { FileSystem, SessionLinks } from '../ports/ports'
 
-// The log-first rule: the agent must log the user's request (the tool `log_interaction`) before it
+// The log-first rule: the agent must log the user's request (the command `log-interaction` of the flow script) before it
 // stops or edits. `isLogOwed` says the log is owed. Used by the turn-end hook and the edit hook.
 
 export type LogPrompt = { key: string; text: string } // key = step id + :log; the re-prompt limit counts per key
@@ -20,7 +20,8 @@ export function logInteractionPrompt(flowDir: string, stepId = '<active step id>
   return {
     key: `${stepId}:log`,
     text: `User interaction not yet logged — you cannot stop yet.\nFlow dir: ${flowDir}\nStep ID: ${stepId}\n\n` +
-      'Log it with the tool `log_interaction`:\n' +
+      'Log it with the flow script (the command is in your first message of the flow):\n' +
+      '  python3 <plugin>/scripts/flow_manager.py log-interaction --json \'{"flowDir":…,"stepId":…,"request":…,"reason":…,"response":…}\'\n' +
       `  flowDir "${flowDir}", stepId "${stepId}"\n` +
       '  request "User requested: [what the user asked]", reason "User feedback on [topic]"\n' +
       '  response "Action taken: [what you are doing]"\n\nAfter logging, you can stop.',

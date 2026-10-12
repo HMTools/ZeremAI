@@ -9,6 +9,7 @@ export function world(initial: Record<string, unknown> = {}, { failMove = false 
   const disk: Record<string, string> = {}
   for (const [path, value] of Object.entries(initial)) disk[path] = typeof value === 'string' ? value : JSON.stringify(value)
   const moved: string[][] = []
+  const scripts: { sub: string; input: Record<string, any> }[] = [] // the script calls
   const links: Record<string, string[]> = {} // session id → the folders it bound
   let counter = 0
   const under = (folder: string) => Object.keys(disk).filter(p => p.startsWith(`${folder}/`))
@@ -35,9 +36,20 @@ export function world(initial: Record<string, unknown> = {}, { failMove = false 
     cwd: async () => '/work',
     sessionId: async () => 'S1',
     links: { get: async id => links[id] ?? [], add: async (id, dir) => { links[id] = [...(links[id] ?? []).filter(d => d !== dir), dir] } },
+    // A stand-in for scripts/flow_manager.py (the real one has its own Python tests): it records the call and fakes the two commands the pane runs.
+    script: async (sub, input) => {
+      scripts.push({ sub, input })
+      if (sub === 'create-flow') {
+        if (!(input.templatePath in disk)) return { status: 'error', message: `Template not found: ${input.templatePath}` }
+        disk[`${input.flowDir}/flow.json`] = JSON.stringify(flowFile({ name: JSON.parse(disk[input.templatePath]).name, parameters: input.params ?? {} }))
+        return { status: 'ok', files_written: ['flow.json'] }
+      }
+      if (sub === 'approve-step') { const flow = JSON.parse(disk[`${input.flowDir}/flow.json`]); flow.steps.find((s: any) => s.id === input.stepId).approved = true; disk[`${input.flowDir}/flow.json`] = JSON.stringify(flow); return { status: 'ok', files_written: ['flow.json'] } }
+      return { status: 'error', message: `fake script: ${sub}` }
+    },
   }
   const json = (path: string) => JSON.parse(disk[path])
-  return { ports, disk, moved, links, json }
+  return { ports, disk, moved, links, json, scripts }
 }
 
 export const step = (extra: Record<string, unknown> = {}) => ({ id: 's1', number: 0, name: 'Design', status: 'pending', stepRef: 'r1', stepDefinition: {}, ...extra })

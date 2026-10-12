@@ -124,7 +124,7 @@ test('owed, and a flow: re-prompt asks to log, names the folder and step', async
   expect(sent[0]).toContain('User interaction not yet logged')
   expect(sent[0]).toContain(`Flow dir: ${DIR}`)
   expect(sent[0]).toContain('Step ID: s7')
-  expect(sent[0]).toContain('log_interaction')
+  expect(sent[0]).toContain('log-interaction')
 })
 test('owed, but no flow for the session: no re-prompt', async ($, on) => {
   const sent = world(on, { [json]: proc('running', [step(1, 'completed')])}, [], false, 'other')

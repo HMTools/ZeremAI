@@ -1,6 +1,7 @@
 import type { Register } from 'claude-code'
 import { findFlowDir, readFlow, sessionKey } from '../infra/flow-repository/flow-repository'
 import { approveFromPane, gateForPane, requestChangesFromPane } from '../infra/approval-gate/approval-gate'
+import type { Approver } from '../infra/approval-gate/approval-gate'
 import type { PaneAnswer } from '../infra/approval-gate/approval-gate'
 import type { Gate, GateStore } from '../infra/ports/ports'
 import { clearLogOwed, raiseLogOwed } from '../infra/log-owed/log-owed'
@@ -13,7 +14,7 @@ import { bandView } from '../infra/flow-pane/band'
 import type { Started } from '../infra/flow-pane/flow-pane'
 import { LOOK, needsUser, symbolOf } from '../infra/flow-pane/status-look'
 import { moveCommands, slash } from '../infra/flow-manager/move'
-import { ensureFlowTools } from '../infra/flow-manager/tools'
+import { approveStep, runScript, scriptNote } from '../infra/flow-manager/script'
 import { richKit } from './rich-ui'
 import { pandaSvg, poseOf } from '../infra/flow-pane/panda'
 import { filesView, logView, memoryView, tabCounts } from '../infra/flow-pane/flow-views'
@@ -63,7 +64,11 @@ const portsOf = ($: any): ManagerPorts => ({
   cwd: () => $.session.cwd(),
   sessionId: () => $.session.id(),
   links: linksOf($),
+  script: async (sub, input) => runScript(argv => $.process.run(argv, { timeoutMs: 60_000 }), await pythonOf($), slash($.plugin.root), sub, input),
 })
+async function pythonOf($: any): Promise<string> { return (await $.env.get('OS')) === 'Windows_NT' ? 'python' : 'python3' } // Windows has no python3 command
+// The script writes `approved` (approve-step).
+const approverOf = ($: any): Approver => async (dir, stepId) => approveStep(argv => $.process.run(argv, { timeoutMs: 60_000 }), await pythonOf($), slash($.plugin.root), dir, stepId)
 
 const templatePortsOf = async ($: any): Promise<TemplatePorts> => ({
   files: filesOf($),
@@ -157,6 +162,7 @@ async function closeFlow($: any): Promise<void> {
   $.ui.invalidate('ui.render')
 }
 async function resumeAndHandOff($: any, dir: string, note?: string): Promise<void> { await handOff($, await resumeFlow(portsOf($), dir, note)) }
+let ruleShown = false // the permission rule is said once for each run of the mod
 async function handOff($: any, started: Started, toast?: string): Promise<void> {
   if ('error' in started) { say('error', started.error); $.ui.invalidate('ui.render'); return }
   // The pane moves to the new flow first: a setup step that fails or hangs must not keep the user on the form (Create and Resume both come here).
@@ -167,19 +173,24 @@ async function handOff($: any, started: Started, toast?: string): Promise<void> 
   st.section = 'steps'
   st.message = ''
   $.ui.invalidate('ui.render')
+  let text = started.text
   try {
     const sessionId = await $.session.id()
-    await ensureFlowTools(spec => $.tool.register(spec), sessionId)
+    text += `\n${scriptNote(slash($.plugin.root), await pythonOf($))}` // the agent runs the flow script with Bash, one command form
     await showStepLine($, started.dir)
-    await raiseLogOwed(filesOf($), linksOf($), sessionId)
+    await raiseLogOwed(filesOf($), linksOf($), sessionId, started.text.split('\n')[0])
     startCountingAgain()
     if (toast) { try { await $.ui.toast(toast) } catch { /* a surface that cannot show a toast */ } }
+    if (!ruleShown) {
+      ruleShown = true
+      try { await $.ui.toast(`Claude runs the flow script with Bash. To skip the prompts, allow Bash(${await pythonOf($)} ${slash($.plugin.root)}/scripts/flow_manager.py *) in your settings.`) } catch { /* a surface that cannot show a toast */ }
+    }
   } catch (error) {
     say('error', `The flow started, but setup failed: ${error instanceof Error ? error.message : String(error)}. Press Resume to try again.`)
     $.ui.invalidate('ui.render')
     return // the agent gets nothing
   }
-  $.prompt.submit({ text: started.text, asUser: true }) // not awaited: it resolves when the turn starts
+  $.prompt.submit({ text, asUser: true }) // not awaited: it resolves when the turn starts
 }
 
 // Read every flow again, and say so with a toast when one starts to need the user. The first look raises none.
@@ -404,8 +415,8 @@ export const register: Register = on => {
       e, Box, Text, Button, Input, Svg, Client, line, narrow, rich, picture, k, toggle, tabRow, nav, card, redraw, cwd, bound, detail, views,
       files: filesOf($), ports: () => portsOf($), store: { set: (key: string, value: unknown) => $.store.set(key, value) },
       gate: bound ? await paneGate($, bound.dir) : undefined,
-      approve: async stepId => answerGate($, await approveFromPane(filesOf($), (path, text) => $.fs.write(path, text), gatesOf($), await $.session.id(), bound!.dir, stepId)),
-      requestChanges: async (stepId, reason) => answerGate($, await requestChangesFromPane(filesOf($), (path, text) => $.fs.write(path, text), gatesOf($), await $.session.id(), bound!.dir, stepId, reason)),
+      approve: async stepId => answerGate($, await approveFromPane(filesOf($), approverOf($), gatesOf($), await $.session.id(), bound!.dir, stepId)),
+      requestChanges: async (stepId, reason) => answerGate($, await requestChangesFromPane(filesOf($), approverOf($), gatesOf($), await $.session.id(), bound!.dir, stepId, reason)),
       close: () => closeFlow($),
       templateJob: (job, busy) => templateJob($, job, busy), fill: (template, purpose, text) => fillJob($, template, purpose, text), resume: (dir, note) => resumeAndHandOff($, dir, note), handOff: (started, toast) => handOff($, started, toast), openInViewer: (path, surface) => openInViewer($, path, surface), refresh: () => refresh($),
     }

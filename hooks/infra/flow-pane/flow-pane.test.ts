@@ -153,11 +153,13 @@ test('start creates the flow, binds the session and returns the message', async 
   const [dir] = w.links.S1
   expect(dir).toMatch(/\/active\/bug-\d{8}-\d{6}$/)
   expect(w.json(`${dir}/flow.json`).parameters).toEqual({ workItemId: '7' })
+  expect(w.scripts).toEqual([{ sub: 'create-flow', input: { flowDir: dir, templatePath: t.path, params: { workItemId: '7' }, projectPath: '/work' } }]) // the script writes the files, the mod binds
 })
-test('start answers with the error of the tool', async () => {
-  const w = world({ ...disk(), [`${T}/design/design.json`]: { type: 'other' } })
+test('start answers with the error of the script and binds nothing', async () => {
+  const w = world(disk())
   const [t] = await listTemplates(w.ports.files)
-  expect(await startFlow(w.ports, t, { workItemId: '7' })).toMatchObject({ error: expect.stringContaining('Step definition UUID not found') })
+  expect(await startFlow(w.ports, { ...t, path: '/nope.json' }, { workItemId: '7' })).toEqual({ error: 'Template not found: /nope.json' })
+  expect(w.links.S1).toBeUndefined()
 })
 
 test('resume binds the session and returns the message', async () => {

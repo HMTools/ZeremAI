@@ -37,4 +37,5 @@ export type ManagerPorts = {
   cwd(): Promise<string>
   sessionId(): Promise<string>
   links: SessionLinks & { add(sessionId: string, dir: string): Promise<void> }
+  script(sub: string, input: Record<string, unknown>): Promise<{ status: 'ok' | 'error'; [key: string]: any }> // runs scripts/flow_manager.py, the only writer of flow files
 }

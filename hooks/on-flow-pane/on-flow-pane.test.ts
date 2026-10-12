@@ -16,7 +16,7 @@ const BAND = {
 } as const
 
 // A fake disk (path → text) with the stubs a pane needs. `sent` collects the prompts the mod submits.
-function world(on: On, disk: Record<string, unknown>, mtimes: Record<string, number> = {}) {
+function world(on: On, disk: Record<string, unknown>, mtimes: Record<string, number> = {}, sid = 'S1') {
   const files: Record<string, string> = Object.fromEntries(Object.entries(disk).map(([k, v]) => [k, JSON.stringify(v)]))
   const sent: { text: string; asUser?: boolean }[] = []
   const under = (folder: string) => Object.keys(files).filter(p => p.startsWith(`${folder}/`))
@@ -26,7 +26,7 @@ function world(on: On, disk: Record<string, unknown>, mtimes: Record<string, num
   on('store.get', async (_$, e: any) => ({ value: store[e.key] }))
   on('store.set', async (_$, e: any) => { store[e.key] = e.value; return { value: undefined } })
   on('store.delete', async (_$, e: any) => { delete store[e.key]; return { value: undefined } })
-  on('session.id', async () => ({ value: 'S1' }))
+  on('session.id', async () => ({ value: sid })) // the tools are listed once for each session id: a test that needs a fresh listing gives its own
   on('session.cwd', async () => ({ value: '/work' }))
   on('fs.list', async (_$, e) => ({ value: [...new Set(under(e.path).map(p => p.slice(e.path.length + 1).split('/')[0]))].map(name => ({ name, kind: under(`${e.path}/${name}`).length ? 'dir' : 'file', size: 0, mtimeMs: mtimes[`${e.path}/${name}`] ?? 0, isLink: false })) }))
   on('fs.exists', async (_$, e) => ({ value: e.path in files || under(e.path).length > 0 }))
@@ -36,9 +36,32 @@ function world(on: On, disk: Record<string, unknown>, mtimes: Record<string, num
   on('ui.toast', async (_$, e: any) => { toasts.push(e.text); return { value: undefined } })
   on('ui.open', async () => ({ value: { isPlaced: true } }))
   on('ui.close', async () => ({ value: undefined }))
-  on('tool.register', async () => ({ value: undefined }))
   on('prompt.submit', async (_$, e) => { sent.push({ text: e.text, asUser: (e as any).origin?.asUser }); return { text: e.text } })
   return { files, sent, store, toasts, clock }
+}
+
+// A stand-in for scripts/flow_manager.py (it has its own Python tests): the two commands the pane runs. `calls` collects what the mod ran.
+function fakeScript(on: On, files: Record<string, string>, { fail = '' } = {}) {
+  const calls: { sub: string; input: any }[] = []
+  on('process.run', async (_$, e: any) => {
+    const [, script, sub, , json] = e.argv as string[]
+    const input = JSON.parse(json)
+    calls.push({ sub, input })
+    let result: Record<string, unknown> = { status: 'error', message: `fake script: ${sub}` }
+    if (fail) result = { status: 'error', message: fail }
+    else if (sub === 'create-flow') {
+      const template = JSON.parse(files[input.templatePath])
+      files[`${input.flowDir}/flow.json`] = JSON.stringify({ name: template.name, status: 'running', parameters: input.params ?? {}, metadata: { lastUpdated: 'now' }, steps: [{ id: 'a', number: 0, name: 'Design', status: 'pending' }] })
+      result = { status: 'ok', files_written: ['flow.json'] }
+    } else if (sub === 'approve-step') {
+      const flow = JSON.parse(files[`${input.flowDir}/flow.json`])
+      flow.steps.find((x: any) => x.id === input.stepId).approved = true
+      files[`${input.flowDir}/flow.json`] = JSON.stringify(flow)
+      result = { status: 'ok', files_written: ['flow.json'] }
+    }
+    return { value: { exitCode: result.status === 'ok' ? 0 : 1, stdout: JSON.stringify(result), stderr: '', timedOut: false } } as never
+  })
+  return { calls, script: (e: any) => e }
 }
 
 test('/zeremai opens the pane, and the Continue tab counts the flows', async ($, on) => {
@@ -52,6 +75,7 @@ test('/zeremai opens the pane, and the Continue tab counts the flows', async ($,
 
 test('Create refuses an empty required field, then starts the flow and hands it to the agent', async ($, on) => {
   const w = world(on, { [`${T}/bug.json`]: template, [`${T}/design/design.json`]: { type: 'step', id: 'r1' } })
+  const script = fakeScript(on, w.files)
   await $.command.run({ command: 'zeremai', args: '' })
   const ui = await $.ui.mount(PANE)
   await ui.press({ key: 'start-dev/bug' })
@@ -64,20 +88,22 @@ test('Create refuses an empty required field, then starts the flow and hands it 
   expect(w.sent).toHaveLength(1)
   expect(w.sent[0].asUser).toBe(true)
   expect(w.sent[0].text).toContain('I started the flow "bug"')
+  expect(w.sent[0].text).toContain('flow_manager.py <subcommand> --json') // the agent is told the one command form
+  expect(script.calls.map(c => c.sub)).toEqual(['create-flow']) // the script wrote the files
   expect(Object.keys(w.files).some(p => /\/active\/bug-\d{8}-\d{6}\/flow\.json$/.test(p))).toBe(true)
   expect(await ui.find({ type: 'Button', key: 'tab-new' })).toBeUndefined() // the pane moved on from the Start form to the steps of the new flow
   expect(await ui.find({ type: 'Button', key: 'sec-steps' })).toBeDefined()
 })
 
-test('Create moves the pane to the new flow even when the tool list fails, and the agent gets nothing', async ($, on) => {
+test('Create: the script refuses, the pane says why and the agent gets nothing', async ($, on) => {
   const w = world(on, { [`${T}/bug.json`]: template, [`${T}/design/design.json`]: { type: 'step', id: 'r1' } })
-  on('tool.register', async () => { throw new Error('no tools') })
+  fakeScript(on, w.files, { fail: 'Template not found' })
   await $.command.run({ command: 'zeremai', args: '' })
   const ui = await $.ui.mount(PANE)
   await ui.press({ key: 'start-dev/bug' })
   await ui.input({ key: 'field-workItemId', text: '7', kind: 'change' })
   await ui.press({ key: 'create' })
-  expect(await ui.find({ type: 'Button', key: 'sec-steps' })).toBeDefined()
+  expect(await ui.find({ type: 'Text', text: 'Template not found' })).toBeDefined()
   expect(w.sent).toEqual([])
 })
 
@@ -404,6 +430,7 @@ test('the gate card has no buttons while the agent\'s dialog is open', async ($,
 test('Approve on the gate card approves the step, closes the gate and tells the agent', async ($, on) => {
   const dir = `${HOME}/active/p1`
   const w = world(on, { [`${dir}/flow.json`]: gated() })
+  const script = fakeScript(on, w.files)
   w.store['session:S1'] = [dir]
   w.store['gate:S1'] = { dir, stepId: 'a' }
   await $.command.run({ command: 'zeremai', args: '' })
@@ -411,6 +438,7 @@ test('Approve on the gate card approves the step, closes the gate and tells the 
   expect(await ui.find({ type: 'Text', text: 'Approve: runs step 4 "Ship". Request changes: step 3 runs again.' })).toBeDefined()
   await ui.press({ key: 'gate-approve' })
   expect(JSON.parse(w.files[`${dir}/flow.json`]).steps[0].approved).toBe(true)
+  expect(script.calls).toEqual([{ sub: 'approve-step', input: { flowDir: dir, stepId: 'a' } }]) // the script wrote it
   expect(w.store['gate:S1']).toBeUndefined()
   expect(w.sent[0].text).toContain('The user approved step 3 "Gate"')
 })
@@ -594,6 +622,7 @@ test('the New tab has a clear button for the search, counts on the category chip
 
 test('the field form shows each description, and Started <name> toasts before the pane closes', async ($, on) => {
   const w = world(on, { [`${T}/bug.json`]: described, [`${T}/design/design.json`]: { type: 'step', id: 'r1' } })
+  fakeScript(on, w.files)
   await $.command.run({ command: 'zeremai', args: 'new' })
   const ui = await $.ui.mount(PANE)
   await ui.press({ key: 'start-dev/bug' })

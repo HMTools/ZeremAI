@@ -1,14 +1,16 @@
 import type { Register } from 'claude-code'
-import { findFlowDir, hasFlowInstance, sessionKey } from '../infra/flow-repository/flow-repository'
-import { FLOW_TOOLS, TOOL_PREFIX, ensureFlowTools, runTool } from '../infra/flow-manager/tools'
+import { findFlowDir, readFlow, sessionKey } from '../infra/flow-repository/flow-repository'
 import { bindSession } from '../infra/flow-manager/bind-session'
-import { listFindings } from '../infra/flow-manager/findings'
+import { LINE_COMMANDS, checkCall, runScript, runsScript } from '../infra/flow-manager/script'
+import { owedPrompt, clearLogOwed, isLogOwed } from '../infra/log-owed/log-owed'
 import { stepLine } from '../infra/flow-pane/step-line'
 import { moveCommands, slash } from '../infra/flow-manager/move'
 import type { FileSystem, ManagerPorts } from '../infra/ports/ports'
 
-// The flow tools: the agent changes flow files with them, not with shell commands. The tools are listed when
-// the flow pane starts or resumes a flow (see ../on-flow-pane) or when a session already has one.
+// The flow script (scripts/flow_manager.py) is the only writer of flow files. The agent runs it with Bash, one command form:
+//   python3 <plugin>/scripts/flow_manager.py <subcommand> --json '<one JSON object>'
+// This hook decides if a call may run: at this moment (a flow is bound, the log is not owed, no approval dialog is open) and with these
+// arguments (the schema of the subcommand, only a flow folder of this session). A call that fails a rule never reaches the script.
 
 const filesOf = ($: any): FileSystem => ({
   home: async () => (await $.env.get('HOME')) ?? (await $.env.get('USERPROFILE')), // Windows has no HOME in every shell
@@ -39,46 +41,72 @@ const portsOf = ($: any): ManagerPorts => ({
       await $.store.set(sessionKey(sessionId), [...dirs.filter(d => d !== dir), dir]) // the newest goes last, and answers first
     },
   },
+  script: async (sub, input) => runScript(argv => $.process.run(argv, { timeoutMs: 60_000 }), (await $.env.get('OS')) === 'Windows_NT' ? 'python' : 'python3', slash($.plugin.root), sub, input),
 })
 // The line under the prompt. A surface that cannot draw it (VS Code, print mode) throws or ignores: the flow goes on without it.
 async function showStepLine($: any, dir: string | undefined): Promise<void> {
   try { await $.ui.status(dir ? await stepLine(filesOf($), dir) : '') } catch { /* no line */ }
 }
-// The tools that change where the flow is.
-const LINE_TOOLS = ['create_flow', 'bind_flow', 'update_step_status', 'update_current_state', 'update_active_substep', 'update_flow_status']
 
 // One message at session start when improvement findings wait. Nothing is shown for none.
 async function nudgeFindings($: any): Promise<void> {
   try {
-    const open = ((await listFindings(portsOf($), { status: 'open' })).findings as unknown[]).length
+    const open = ((await portsOf($).script('list-findings', { status: 'open' })).findings as unknown[] | undefined)?.length ?? 0
     if (open) await $.ui.toast(`${open} improvement finding${open === 1 ? '' : 's'} wait. Run /zeremai:apply-improvements to review ${open === 1 ? 'it' : 'them'}.`)
   } catch { /* no message */ }
 }
 
-const registerOf = ($: any) => (spec: Parameters<typeof $.tool.register>[0]) => $.tool.register(spec)
+// The agent owes a log entry and runs a command that changes the flow: the mod logs the request first (the user's last prompt), then lets the call through.
+async function logForAgent($: any, ports: ManagerPorts, sessionId: string, flowDir: string): Promise<void> {
+  const flow = await readFlow(filesOf($), flowDir)
+  const stepId = flow?.currentState?.activeStep?.id ?? flow?.steps?.[0]?.id
+  if (!stepId) return
+  const prompt = owedPrompt(sessionId)
+  const logged = await ports.script('log-interaction', {
+    flowDir, stepId, request: `User requested: ${prompt || '(the prompt was not kept)'}`,
+    reason: 'The plugin logged this request: the agent went on without logging it.', response: 'The agent changed the flow before it logged. The plugin wrote this entry for it.',
+  })
+  if (logged.status === 'ok') clearLogOwed(sessionId)
+}
 
 export const register: Register = on => {
-  // A session that already has a flow lists the tools at once.
   on('session.start', async ($, e, next) => {
     const dir = await findFlowDir(filesOf($), portsOf($).links, await $.session.id())
-    if (hasFlowInstance(dir)) {
-      await ensureFlowTools(registerOf($), await $.session.id())
-      await showStepLine($, dir)
-    }
+    if (dir) await showStepLine($, dir)
     await nudgeFindings($)
     // The command that opens the flow pane (see ../on-flow-pane). A name that is taken throws, so it must not stop the session.
     await $.command.register({ name: 'zeremai', description: 'Start a new flow or resume one', argumentHint: '[new | continue | templates | debug | first field]' }).catch(() => {})
     return next(e)
   })
 
-  on('tool.call', { tool: FLOW_TOOLS.map(t => `${TOOL_PREFIX}${t.name}`) }, async ($, e) => {
-    const name = e.tool.slice(TOOL_PREFIX.length)
-    const args = e as any // the arguments of an MCP tool call sit on e itself
+  on('tool.call', { tool: 'Bash' }, async ($, e, next) => {
+    const command = (e as any).command as string
+    if (!runsScript(command)) return next(e)
+    const sessionId = await $.session.id()
     const ports = portsOf($)
-    const result = await runTool(ports, name, args)
-    if (name === 'create_flow' && result.status === 'ok') await bindSession(ports, args.flowDir)
-    if (LINE_TOOLS.includes(name)) await showStepLine($, args.flowDir)
-    const isError = result.status === 'error'
-    return { result: { content: [{ type: 'text', text: JSON.stringify(result) }], isError }, ...(isError ? { isError: true } : {}) } as never
+    const files = filesOf($)
+    const bound = await ports.links.get(sessionId)
+    const dir = await findFlowDir(files, ports.links, sessionId)
+    const verdict = checkCall(command, {
+      pluginRoot: slash($.plugin.root),
+      home: (await files.home()) ?? '',
+      bound,
+      logOwed: isLogOwed(sessionId),
+      dialogOpen: (await $.store.get(`gate:${sessionId}`)) !== undefined,
+      isSubagent: Boolean((e as any).agentId),
+      steps: (dir ? (await readFlow(files, dir))?.steps : undefined) ?? [],
+    })
+    if ('deny' in verdict) return { deny: verdict.deny } as never
+    if ('approval' in verdict) return next(e) // the approval hook answers request-approval before this one
+    if (verdict.logFirst && dir) await logForAgent($, ports, sessionId, dir)
+    const result: any = await next(e)
+    let answer: any
+    try { answer = JSON.parse(String(result?.result?.stdout ?? '').trim().split('\n').filter(Boolean).pop() ?? '') } catch { /* the script printed no JSON: the model reads Bash's own answer */ }
+    if (answer?.status === 'ok') {
+      if (verdict.sub === 'log-interaction') clearLogOwed(sessionId)
+      if (verdict.sub === 'create-flow') await bindSession(ports, verdict.input.flowDir as string)
+      if (LINE_COMMANDS.includes(verdict.sub)) await showStepLine($, verdict.input.flowDir as string)
+    }
+    return result
   })
 }

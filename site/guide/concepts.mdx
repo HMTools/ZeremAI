@@ -48,7 +48,7 @@ Each regular step runs in a **subagent** (`step-executor`) with an isolated cont
 
 ## Flow tools
 
-All state changes go through **flow tools** provided by the plugin (`update_step_status`, `add_memory_entry`, `log_interaction`, ...). The agent never edits flow files directly. See the [tool reference](/reference/tools).
+All state changes go through one Python script, `scripts/flow_manager.py` (`update-step-status`, `add-memory-entry`, `log-interaction`, ...), and the plugin checks every call before it runs. The agent never edits flow files directly. See the [reference](/reference/tools).
 
 ## Lifecycle
 
