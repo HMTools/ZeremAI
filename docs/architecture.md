@@ -266,7 +266,6 @@ AGENTS.md                            # Agent discovery
 │   └── sources/{name}/              # Git clone cache per marketplace
 ├── templates/
 │   └── flows/{category}/        # Installed flow templates (steps within each)
-├── guidelines/                      # Project-specific guidelines
 ├── flags/                           # Runtime flag files
 ├── active/                          # Running flows
 │   └── flow-{name}-{date}-{id}/

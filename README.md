@@ -42,7 +42,7 @@ ZeremAI enables structured, repeatable workflows for complex development tasks. 
 ### Modular Architecture
 - **Templates**: Define reusable workflows with placeholders
 - **Steps**: Self-contained step definitions within each template directory
-- **Pluggable Resources**: Add your own templates, steps, components, and guidelines
+- **Pluggable Resources**: Add your own templates, steps, and components
 - **Marketplaces**: Configure multiple git repositories as template marketplaces
 
 ### State Persistence
@@ -217,7 +217,6 @@ After installing templates from marketplaces:
 ├── completed/                         # Finished flows
 ├── failed/                            # Failed flows
 ├── flags/                             # Runtime flags
-└── guidelines/                        # Project-specific guidelines
 ```
 
 ## Documentation
@@ -232,7 +231,6 @@ View the full interactive roadmap: [https://hmtools.github.io/zeremai/](https://
 
 ### ZeremAI (Framework Plugin)
 - add `stepType` with enum `spawn` (subflow) `direct` (regular step template) and also show it in the UI, think if we can also connect in case of spawn what is the flow template target so we will be able to show it also in the ui
-- replace `guidelines` with `flavors` (not a must), and make it `compile` time so the flow instance files will have the flavor in it on creation so the active flow will not need to take it into account
 - verification checklist for each step with (can be done by hook or by low cost model via subagent)
 - change memory files from single file to multiple files
 - use dynamic context injection in the `continue-flow` skill
@@ -242,7 +240,7 @@ View the full interactive roadmap: [https://hmtools.github.io/zeremai/](https://
 - hook that blocks framework file changes by the agent - so only skills using python can change them
 - git managment - branches, tagging, work trees
 - dynamic flows / templates
-- simple `do` template / - dynamic built workflow that checks for exist steps and with final step for saving steps, guidelines and flow
+- simple `do` template / - dynamic built workflow that checks for exist steps and with final step for saving steps and flow
 - improve continuous learning step - guide it to find things so in the future everything will be one-shot, also guide it to find improvements for better token cost effective, and context management effective
 - set different llm model for different steps (in config)
 - change steps to be defaulted as flow template scope (related to specific template), with allowing to set global steps (maybe)

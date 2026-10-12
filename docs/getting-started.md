@@ -26,7 +26,7 @@ claude --plugin-dir /path/to/zeremai
 
 ### After Installation
 
-After installing the plugin, open the Marketplace in the UI to browse available templates and install the ones you need. This installs flow templates to `~/.claude/zeremai/templates/flows/` and creates all required runtime directories (`active/`, `completed/`, `failed/`, `flags/`, `guidelines/`, etc.).
+After installing the plugin, open the Marketplace in the UI to browse available templates and install the ones you need. This installs flow templates to `~/.claude/zeremai/templates/flows/` and creates all required runtime directories (`active/`, `completed/`, `failed/`, `flags/`, etc.).
 
 ## Your First Flow
 
