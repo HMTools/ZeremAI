@@ -1,0 +1,65 @@
+---
+title: "Stop prevention"
+description: "How the mod keeps the agent from ending its turn while a flow still has work, and why it uses a re-prompt."
+---
+
+A model often ends its turn early: it says "I will continue" and stops, or it finishes one step and waits. In a flow, that leaves work undone. **Stop prevention** sends the agent a new prompt when it stops too soon.
+
+## It is a re-prompt, not a veto
+
+The mod does not stop the agent from ending its turn. It lets the turn end, and then starts a new turn with a prompt that says what to do next.
+
+This is on purpose. Claude Code has a stop hook that could veto the end of a turn, but it is skipped for a mod that the user installed (the built-in guard `sec-default` bypasses it). Once the plugin is on the organization's list of approved mods, the re-prompt can become a real veto. The code carries a note for this change.
+
+## When it runs
+
+The rule listens to `turn.complete`. It acts only when:
+
+- the turn is the **main agent's answer** (not a subagent's turn);
+- the session has a bound flow and the flow is `running`;
+- **no approval gate is open** (an open gate is a good reason to stop).
+
+Then it picks the first case that fits, from top to bottom:
+
+```mermaid
+flowchart TD
+  A[Main agent ended its turn] --> B{Flow running and no gate open?}
+  B -- no --> Z[Do nothing: the agent may stop]
+  B -- yes --> C{Step in progress that needs approval?}
+  C -- "not approved" --> D["Run the approval path: wait for the executor, or ask for your answer"]
+  C -- "approved" --> E["Complete the step first"]
+  C -- no --> F{A step still pending?}
+  F -- yes --> G["Delegate the next step to step-executor"]
+  F -- no --> H{A step in progress?}
+  H -- yes --> I["Wait for its executor, or re-delegate if it is gone"]
+  H -- no --> Z
+```
+
+| Situation | The prompt says |
+|---|---|
+| A step needs approval and was not approved | Wait for the executor; with no executor, ask the user with `request-approval` |
+| You approved the step | Complete it with `update-step-status` before anything else |
+| A step is `pending` and no approval is open | Delegate the next step to `step-executor` |
+| A step is `in_progress` and an executor runs | Wait: do not stop yet |
+| A step is `in_progress` and no executor runs | It was lost. Delegate it again, or mark it failed |
+
+The mod finds out whether a step-executor runs by asking Claude Code for the list of agents. This is why the agent must set a step to `in_progress` **before** it starts the executor.
+
+## The limit
+
+A model that cannot do what the prompt asks would be re-prompted forever. The rule counts how many times **the same prompt** (the same step and the same situation) was sent in a row. It sends it at most **3** times. After that, it stops and lets the agent end its turn.
+
+The count starts again when:
+
+- there is nothing left to continue (the flow is done, a gate opened, and so on);
+- you send a prompt of your own.
+
+The count is a module variable. A reload of the mod starts it again, which is safe.
+
+## What you see
+
+Each re-prompt shows a toast: "Flow: Claude stopped early, so the flow asked it to carry on." The same text shows at most once in 30 seconds. The re-prompt is sent by the plugin, so the mod does not log it as one of your prompts.
+
+## Source
+
+`hooks/on-agent-stopping/on-agent-stopping.ts` (`promptToContinue`, the texts), `hooks/infra/reprompt-limiter/`, `hooks/infra/step-executors/`.

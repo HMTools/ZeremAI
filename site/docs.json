@@ -35,6 +35,29 @@
         ]
       },
       {
+        "group": "Technical design",
+        "pages": [
+          "design/overview",
+          {
+            "group": "Lifecycles",
+            "pages": [
+              "design/lifecycles/mod-events",
+              "design/lifecycles/flow-states"
+            ]
+          },
+          "design/memory",
+          {
+            "group": "Guards",
+            "pages": [
+              "design/guards/approval-gate",
+              "design/guards/stop-prevention"
+            ]
+          },
+          "design/template-sources",
+          "design/improvement-findings"
+        ]
+      },
+      {
         "group": "Authoring",
         "pages": [
           "authoring/templates",

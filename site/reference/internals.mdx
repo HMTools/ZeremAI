@@ -40,14 +40,15 @@ Each rule is a folder under `hooks/`:
 |---|---|
 | `on-flow-pane` | The `/zeremai` pane: New, Continue, Templates tabs |
 | `on-flow-tools` | Decides if the agent may run the flow script (moment and input); shows findings waiting at session start |
-| `on-agent-editing` | While a log entry is owed, the agent cannot edit files, start a subagent or change the flow |
-| `on-user-prompt` | Marks a log entry as owed after your prompt; reopens a closed approval dialog |
+| `on-user-prompt` | Logs your prompt in the flow log before the agent sees it (a small model writes the details); reopens a closed approval dialog |
 | `on-approval-gate` | Only your click sets `approved`; blocks hand edits of flow state files |
-| `on-pending-checkpoint` | While an approval waits, refuses every tool call except research and the log entry |
+| `on-pending-checkpoint` | While an approval waits, refuses every tool call except research and reading commands of the flow script |
 | `on-agent-stopping` | Re-prompts the agent if it ends a turn while the flow still has work |
 | `on-todo-tool` | While a flow runs, its steps are the task list; a second todo list is refused |
 
 When a guard blocks or re-prompts the agent, a toast tells you why.
+
+For how these rules work together, see the [Technical design](/design/overview) section: [mod events](/design/lifecycles/mod-events), [the approval gate](/design/guards/approval-gate) and [stop prevention](/design/guards/stop-prevention).
 
 ## Types
 

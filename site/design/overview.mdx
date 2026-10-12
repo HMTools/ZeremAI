@@ -1,0 +1,68 @@
+---
+title: "Architecture overview"
+description: "The four parts of ZeremAI, who owns what, and how a request moves through them."
+---
+
+This section is for people who change ZeremAI. It explains how the plugin works inside. You do not need it to use ZeremAI.
+
+## The four parts
+
+| Part | Written in | Job |
+|---|---|---|
+| **The mod** (`hooks/`) | TypeScript | Watches Claude Code. Decides what the agent may do, shows the pane and the dialogs, and keeps the rules. |
+| **The flow script** (`scripts/flow_manager.py`) | Python | The only writer of flow files. Checks every change and keeps it safe. |
+| **Skills and the agent** (`skills/`, `agents/`) | Markdown | Tell the model how to run a flow and a step. Nothing here is enforced by itself. |
+| **The files** (`~/.claude/zeremai/`) | JSON | The state: templates, flows, logs, memory, findings, config. |
+
+The model reads instructions from the skills. The mod makes sure it follows the rules that matter. The script makes sure the files stay correct.
+
+```mermaid
+flowchart LR
+  U[You] --> CC[Claude Code]
+  CC <--> M["Mod (hooks/)"]
+  CC --> A[Agent and step-executor]
+  A -- "Bash: flow script command" --> M
+  M -- "runs the command" --> S["Flow script (Python)"]
+  S --> F[("~/.claude/zeremai/")]
+  M -- "reads, never writes" --> F
+```
+
+The mod sees each Bash command of the agent. It runs a flow script command only if the call is allowed at that moment. The mod itself reads flow files to decide, but it changes them only by running the script.
+
+## Why this shape
+
+- **The model cannot be the guard.** A prompt can ask the model to follow a rule, but only code can make it. Rules that must hold (only your click approves, the agent cannot edit flow files) live in the mod and the script.
+- **One writer.** A single script changes the files, so every write goes through the same checks and the same lock. See [Memory and safe writes](/design/memory).
+- **Small context.** Each regular step runs in its own subagent, so a long flow does not fill the main conversation.
+
+## How the mod code is laid out
+
+```
+hooks/
+├── register.ts            # loads every rule
+├── on-<rule>/             # one folder for each rule: its hook, and its test
+└── infra/                 # shared code that has no Claude Code in it
+    ├── flow-repository/   # find and read the flow of a session
+    ├── flow-manager/      # check calls to the script, run the script
+    ├── approval-gate/     # the approval gate
+    ├── log-first/         # the log entry of a prompt
+    └── ...
+```
+
+A rule folder holds only the hook: which event it listens to, and what it does with the answer. The decisions are in `infra/`, as plain functions. They never touch Claude Code directly. The hook builds small objects from `$` (the Claude Code API) and hands them in: a file reader, a store, a script runner. This is why most rules have tests that run with a fake disk.
+
+## What happens in one turn
+
+1. You send a prompt. The mod logs it in the flow log, before the agent sees it.
+2. The agent works the flow with the `flow-run` skill. For a regular step it starts the `step-executor` subagent.
+3. Every flow change the agent makes is a Bash call of the flow script. The mod checks it and runs it.
+4. If a step needs approval, the agent calls `request-approval`. The mod shows the dialog. Only your click sets `approved`.
+5. When the agent ends its turn while the flow has work left, the mod sends it a new prompt to go on.
+
+The next pages go deeper:
+
+- [Mod events](/design/lifecycles/mod-events): which event reaches which rule, and what a reload loses.
+- [Flow and step states](/design/lifecycles/flow-states): the states, and where the folders move.
+- [Memory and safe writes](/design/memory): where each kind of state lives.
+- [The approval gate](/design/guards/approval-gate) and [Stop prevention](/design/guards/stop-prevention).
+- [Template sources](/design/template-sources) and [Improvement findings](/design/improvement-findings).

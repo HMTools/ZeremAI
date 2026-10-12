@@ -1,0 +1,63 @@
+---
+title: "Template sources"
+description: "How a template travels from a git marketplace to a running flow, and why a flow keeps its own copy of every step."
+---
+
+A template goes through three places before it runs.
+
+```mermaid
+flowchart LR
+  G[("Git marketplace")] -- "refresh: clone or pull" --> C["cache/sources/&lt;name&gt;/"]
+  C -- "install: copy the folder" --> T["templates/flows/&lt;category&gt;/&lt;name&gt;/"]
+  T -- "create-flow: copy each step" --> F["active/&lt;flow&gt;/flow.json"]
+```
+
+All three live under `~/.claude/zeremai/`. Each step is a copy. Nothing links back to the place it came from.
+
+## 1. Refresh: marketplace to cache
+
+The config is `config/marketplaces.json`. It is seeded from `config/marketplaces.default.json` the first time it is needed.
+
+- For each **enabled** marketplace, in order of `priority` (lower number first), the mod runs `git clone --depth 1 --branch <branch>` into `cache/sources/<name>/`, or `git pull` if the cache exists.
+- A failed pull keeps the old cache and says so. A failed clone leaves no cache.
+- The mod runs plain `git`, so it uses the credentials of your machine and holds none.
+- Removing a marketplace deletes its cache. Templates you installed stay, because they are copies.
+- A change of address or branch drops the cache. A pull would still read the old remote, so the next refresh clones again.
+
+## 2. Install: cache to templates
+
+The catalog lists every template found in the caches, at `templates/flows/<category>/<name>/` in each. For each one it computes a state:
+
+| State | Means |
+|---|---|
+| `available` | Not installed |
+| `installed` | Installed, and its version is the current commit of the cache |
+| `update` | Installed, but the cache has a newer commit |
+
+The version of a template is the **git commit** (`HEAD`) of its marketplace cache when it was installed. It is saved in `config/installed-templates.json`, with the marketplace, the install time and the category.
+
+**Install** and **Update** do the same thing: remove the installed folder, copy the folder from the cache, and write the manifest. The names in the pane (`category`, `name`, `marketplace`) must be plain names (letters, digits, `.`, `_`, `-`), because they become part of a path that the mod deletes and copies. The copy runs `mkdir -p` and `cp -R` on macOS and Linux, and one PowerShell command on Windows.
+
+## 3. Create: template to flow
+
+`create-flow` reads the installed template and builds `flow.json`:
+
+1. **Find the step files.** It reads every `<step>/<step>.json` of the template folder and indexes the ones with `type: "step"` by their `id`.
+2. **Resolve each step.** A template step has a `stepRef`: the `id` of one of those files. The script looks it up. A missing `stepRef` fails the command with "Step definition UUID not found". There is no fallback to another template.
+3. **Embed.** It copies the parts of the definition the agent needs into the flow step: `output`, `guidance`, `substeps`, `flow`, `memoryFileUsage`, `parameters`, and a few more. The flow step gets a new id, a number, a name and the status `pending`.
+4. **Add the framework steps.** Each folder of `framework-steps/` with `type: "framework-step"` becomes a step at the end: Continuous Improvement, then Complete Flow.
+5. **Write the files.** `flow.json`, `log.json` and `memory/_cross-references.json`.
+
+### Why the flow keeps its own copy
+
+A flow that runs for days must not change because someone updated a template or a marketplace. After step 3, the flow holds everything its steps need. You can update or remove the template while the flow runs, and the flow does not notice.
+
+The cost: a flow does not get a fix to its template. Start a new flow to use it.
+
+### Why `stepRef` is a UUID
+
+A template points to its steps by id, not by folder name. Renaming a step folder never breaks the template, and the `stepRefName` next to it is only a label for people. A template is self-contained: an id is looked up in the template's own folder only.
+
+## Source
+
+`hooks/infra/templates/templates.ts` (`refreshMarketplaces`, `catalog`, `installTemplate`), `scripts/flow_manager.py` (`registry`, `embed`, `create_flow`), `scripts/check_template.py`, `config/marketplaces.default.json`.

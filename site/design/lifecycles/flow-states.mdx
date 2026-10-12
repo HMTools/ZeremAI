@@ -1,0 +1,82 @@
+---
+title: "Flow and step states"
+description: "The states of a flow and of a step, where each flow folder lives, and how a sub-flow reports back."
+---
+
+## A flow
+
+A flow has one of four statuses. The status decides which folder the flow lives in.
+
+```mermaid
+stateDiagram-v2
+  [*] --> running: create-flow
+  running --> paused: update-flow-status
+  paused --> running: resume
+  running --> completed: all steps done
+  running --> failed: error
+  completed --> [*]
+  failed --> [*]
+```
+
+| Status | Folder |
+|---|---|
+| `running`, `paused` | `~/.claude/zeremai/active/<flow>/` |
+| `completed` | `~/.claude/zeremai/completed/<flow>/` |
+| `failed` | `~/.claude/zeremai/failed/<flow>/` |
+
+`update-flow-status` changes the status and moves the folder in one command. It writes the new status, moves the folder, and then writes the new `flowPath` into `flow.json`. The answer has `relocated_to`: the agent must use that path from then on. If the target folder already exists, the move fails and nothing else changes.
+
+## How a flow starts
+
+`create-flow` reads the template and builds the flow:
+
+1. It copies each step definition into `flow.json`, so a flow does not change if its template changes later. See [Template sources](/design/template-sources).
+2. It adds the framework steps (Continuous Improvement, then Complete Flow) after the template steps.
+3. It writes three files: `flow.json`, `log.json` and `memory/_cross-references.json`.
+
+The mod then binds the folder to the session. The first step starts as `pending`.
+
+## A step
+
+```mermaid
+stateDiagram-v2
+  [*] --> pending
+  pending --> in_progress: agent starts the step
+  in_progress --> completed: update-step-status
+  completed --> [*]
+```
+
+This is the normal path. The script accepts any of the five statuses (`pending`, `in_progress`, `completed`, `skipped`, `awaiting_approval`) and sets `startedAt` and `completedAt` for you. It has one rule of its own. A step with `approvalRequired: true` adds a check on the `in_progress → completed` arrow: the script refuses it until `approved` is `true`. Only your click sets `approved`. See [The approval gate](/design/guards/approval-gate).
+
+`approved` is a flag on the step, not a status. A step waiting for you is `in_progress`, with `approvalRequired` and no `approved`. The status `awaiting_approval` is allowed, and the pane shows it as "waits for you", but the gate does not depend on it.
+
+The agent sets `in_progress` **before** it starts the `step-executor` subagent. The stop guard reads this status to know that a subagent works the step. See [Stop prevention](/design/guards/stop-prevention).
+
+## Sub-flows
+
+A step with a `subFlowTrigger` starts a child flow.
+
+```mermaid
+sequenceDiagram
+  participant P as Parent flow
+  participant C as Child flow
+  P->>C: create-flow (parentFlowPath)
+  P->>P: register-child-flow (childFlows)
+  Note over C: the agent works the child steps
+  C->>P: update-flow-status completed, with a summary
+  P->>P: child marked completed
+  P->>P: summary saved in memory/sub-flows.json
+```
+
+- The child is a normal flow in `active/`. The mod binds it after its parent, and the newest bound flow answers first.
+- A child cannot complete without a `summary`. The script refuses `completed` for a sub-flow with no summary.
+- The report to the parent is best effort. If the parent cannot be told, the child still completes.
+- The summary goes into the parent's memory, in the topic `sub-flows`, under the step that started the child.
+
+## Loops
+
+A step can name `loopBackTo`, `loopCondition` and `maxIterations` in the template. The script only copies these fields into `flow.json`. The agent reads them and decides when to go back. See [Write a template](/authoring/templates).
+
+## Source
+
+`scripts/flow_manager.py`: `create_flow`, `update_step_status`, `update_flow_status`, `notify_parent`. Types: `types/flow-status.ts`.
