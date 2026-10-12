@@ -27,7 +27,7 @@ A **step** is a self-contained unit of work, stored next to its template. A step
 - numbered **substeps** with actions
 - which memory topics it reads and writes
 
-Templates reference steps by **UUID** (`stepRef`). The `stepRefName` next to it is only for humans. Renaming a step never breaks a template.
+A template points to its steps by **UUID** (`stepRef`). The UUID is the `id` of a step file in the template's own folder. The `stepRefName` next to it is only for humans. Renaming a step never breaks the template. A template is self-contained: a `stepRef` never resolves to a step in another template.
 
 ## Framework steps
 

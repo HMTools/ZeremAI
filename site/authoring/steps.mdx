@@ -86,4 +86,4 @@ If it needs an answer from you it cannot ask directly. It stops and reports the 
 
 ## Reuse
 
-The same step can be referenced by several templates through its UUID. Changing the step updates all of them the next time a flow is created. Existing flows keep the copy embedded at creation.
+Steps are not shared. A template finds its steps only in its own folder, so each template holds its own copy. To reuse a step, copy its folder into the other template and give it a new UUID. Existing flows keep the copy embedded at creation.

@@ -8,6 +8,12 @@ Executes individual flow steps with context isolation. Use when a flow step need
 
 **Location**: `agents/step-executor.md`
 
+## template-reviewer
+
+Reviews a draft flow template for the create-template skill. Read-only.
+
+**Location**: `agents/template-reviewer.md`
+
 ---
 
 For more information, see the agent files in the `agents/` directory.

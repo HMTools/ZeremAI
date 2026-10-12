@@ -1,0 +1,463 @@
+<title>Security PR Review</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;600;700&family=Fragment+Mono&display=swap">
+<style>
+  /* Layout: a line map of the flow, like a metro line. The map sits left, an inspector for the chosen step sits right, an answer bar sticks to the bottom. */
+  :root {
+    --bg: #f2f5f4; --surface: #ffffff; --fg: #14201f; --muted: #52625d; --line: #d5ddda; --line2: #a4b4ae;
+    --main: #0b7673; --main-bg: #dcf1ef; --copy: #55667a; --sub: #4a4fc4; --sub-bg: #e7e8fb; --gate: #a85f00; --gate-bg: #fcebcc;
+    --red: #b3261e; --red-bg: #fbe4e1; --green: #1b7551; --green-bg: #dcf2e7; --info: #2c5fb8; --info-bg: #e2ebfa;
+    --ink: #14201f; --on-ink: #ffffff; --on-fill: #ffffff;
+    --font-body: "Schibsted Grotesk", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --font-mono: "Fragment Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+    --bg: #0e1513; --surface: #162120; --fg: #e3ece9; --muted: #93a69f; --line: #263634; --line2: #46625c;
+    --main: #3cc4c0; --main-bg: #12383a; --copy: #93a6b8; --sub: #9ca2ff; --sub-bg: #25285a; --gate: #f0b45a; --gate-bg: #40300f;
+    --red: #ff8b82; --red-bg: #43201d; --green: #52c996; --green-bg: #12342a; --info: #8db3f5; --info-bg: #1b2c4a;
+    --ink: #e3ece9; --on-ink: #0e1513; --on-fill: #0e1513; color-scheme: dark; } }
+  :root[data-theme="dark"] {
+    --bg: #0e1513; --surface: #162120; --fg: #e3ece9; --muted: #93a69f; --line: #263634; --line2: #46625c;
+    --main: #3cc4c0; --main-bg: #12383a; --copy: #93a6b8; --sub: #9ca2ff; --sub-bg: #25285a; --gate: #f0b45a; --gate-bg: #40300f;
+    --red: #ff8b82; --red-bg: #43201d; --green: #52c996; --green-bg: #12342a; --info: #8db3f5; --info-bg: #1b2c4a;
+    --ink: #e3ece9; --on-ink: #0e1513; --on-fill: #0e1513; color-scheme: dark; }
+
+  body { background: var(--bg); color: var(--fg); font: 15px/1.5 var(--font-body); padding-inline: 16px; padding-block: 20px 0; }
+  .wrap { max-width: 1240px; margin-inline: auto; display: grid; gap: 16px; }
+  h1, h2, h3, h4, p { margin: 0; }
+  h1 { font-size: 26px; line-height: 1.15; letter-spacing: -.015em; text-wrap: balance; }
+  h4 { font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 600; margin-bottom: 6px; }
+  code, .mono { font-family: var(--font-mono); font-size: 12.5px; }
+  button { font: inherit; color: inherit; cursor: pointer; }
+  :focus-visible { outline: 2px solid var(--info); outline-offset: 2px; }
+  .muted { color: var(--muted); }
+
+  /* header */
+  .head { display: grid; gap: 6px; }
+  .headrow { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; }
+  .path { font-family: var(--font-mono); font-size: 12.5px; color: var(--muted); }
+  .status { display: inline-flex; align-items: center; gap: 7px; padding: 4px 11px; border-radius: 999px; font-size: 13px; font-weight: 600; background: var(--green-bg); color: var(--green); }
+  .status.warn { background: var(--gate-bg); color: var(--gate); } .status.bad { background: var(--red-bg); color: var(--red); }
+  .purpose { max-width: 70ch; color: var(--muted); font-size: 16px; }
+
+  /* shell */
+  .shell { display: grid; gap: 16px; grid-template-columns: minmax(0, 1fr); align-items: start; }
+  @media (min-width: 980px) { .shell { grid-template-columns: minmax(0, 1fr) 410px; } .side { position: sticky; top: 12px; max-height: calc(100vh - 96px); overflow: auto; } }
+  .panel { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; min-width: 0; }
+  .mapPanel { padding: 14px 16px 16px; display: grid; gap: 12px; }
+  .crumbs { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; font-size: 13.5px; min-height: 28px; }
+  .crumbs button { background: none; border: 0; padding: 4px 8px; border-radius: 6px; color: var(--info); font-weight: 600; }
+  .crumbs button:hover { background: var(--info-bg); } .crumbs .here { font-weight: 600; padding: 4px 8px; } .crumbs .sep { color: var(--muted); }
+
+  /* the line map */
+  .map { position: relative; display: grid; grid-template-columns: repeat(var(--cols), minmax(0, 1fr)); grid-template-rows: auto auto; padding: 0 0 2px; }
+  .line { grid-row: 2; align-self: start; height: 6px; margin-top: 12px; border-radius: 3px; background: var(--main); }
+  .line.dash { background: repeating-linear-gradient(90deg, var(--line2) 0 9px, transparent 9px 15px); height: 4px; margin-top: 13px; }
+  .loopArc { grid-row: 1; align-self: end; height: 44px; margin-bottom: 0; border: 2px dashed var(--gate); border-bottom: 0; border-radius: 16px 16px 0 0; position: relative; margin-top: 6px; }
+  .loopArc::after { content: ""; position: absolute; left: -7px; bottom: -1px; border: 6px solid transparent; border-top: 9px solid var(--gate); border-bottom: 0; }
+  .loopArc span { position: absolute; top: -11px; left: 50%; transform: translateX(-50%); background: var(--surface); padding: 0 8px; font-size: 12px; font-weight: 600; color: var(--gate); white-space: nowrap; }
+  .st { grid-row: 2; position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center; padding: 0 6px 12px; background: none; border: 0; border-radius: 12px; min-width: 0; cursor: pointer; align-self: start; }
+  .st:hover { background: var(--bg); } .st[aria-pressed="true"] { background: var(--bg); box-shadow: inset 0 0 0 2px var(--main); }
+  .mkw { position: relative; flex: none; }
+  .mk { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; background: var(--main); color: var(--on-fill); font-weight: 700; font-size: 13px; box-shadow: 0 0 0 4px var(--surface); }
+  .st[aria-pressed="true"] .mk { box-shadow: 0 0 0 4px var(--bg); }
+  .mk.copied { background: var(--surface); color: var(--copy); border: 3px solid var(--copy); }
+  .mk.sub { background: var(--sub); box-shadow: 0 0 0 4px var(--surface), 0 0 0 6.5px var(--sub); }
+  .st[aria-pressed="true"] .mk.sub { box-shadow: 0 0 0 4px var(--bg), 0 0 0 6.5px var(--sub); }
+  .mk.gate { background: var(--gate); border-radius: 8px; transform: rotate(45deg); } .mk.gate span { transform: rotate(-45deg); }
+  .mk.io { width: 22px; height: 22px; margin-block: 4px; background: var(--surface); border: 3px solid var(--line2); color: var(--muted); font-size: 11px; }
+  .mk.fw { background: var(--surface); border: 3px dashed var(--line2); color: var(--muted); }
+  .pin { font-family: system-ui, sans-serif; position: absolute; top: -9px; right: -11px; min-width: 18px; height: 18px; padding: 0 4px; border-radius: 9px; font-size: 11px; font-weight: 700; display: grid; place-items: center; color: var(--on-fill); background: var(--gate); box-shadow: 0 0 0 2px var(--surface); }
+  .pin.must { background: var(--red); } .pin.note { background: var(--info); } .pin.fixed { background: var(--green); }
+  .txt { display: grid; gap: 1px; min-width: 0; }
+  .nm { font-weight: 650; font-size: 13.5px; line-height: 1.25; overflow-wrap: anywhere; } .sb { font-size: 12px; color: var(--muted); line-height: 1.3; }
+  .st.fw .nm, .st.fw .sb { opacity: .65; }
+  .branch { white-space: nowrap; max-width: 100%; margin-top: 2px; display: inline-flex; gap: 4px; align-items: center; padding: 3px 9px; border-radius: 999px; background: var(--sub-bg); color: var(--sub); border: 0; font-size: 12px; font-weight: 600; }
+  .branch:hover { filter: brightness(.96); }
+  .loopChip { display: none; font-size: 12px; font-weight: 600; color: var(--gate); background: var(--gate-bg); padding: 2px 8px; border-radius: 999px; margin-top: 2px; }
+  .legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 12.5px; color: var(--muted); padding-top: 4px; border-top: 1px solid var(--line); }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; padding-top: 8px; }
+  .legend i { display: inline-block; width: 12px; height: 12px; border-radius: 50%; background: var(--main); }
+  .legend i.copied { background: var(--surface); border: 2px solid var(--copy); } .legend i.sub { background: var(--sub); } .legend i.gate { background: var(--gate); border-radius: 3px; transform: rotate(45deg); width: 10px; height: 10px; }
+  .legend i.fw { background: var(--surface); border: 2px dashed var(--line2); }
+
+  @media (max-width: 720px) {
+    .map { display: flex; flex-direction: column; padding-left: 2px; }
+    .map::before { content: ""; position: absolute; left: 20px; top: 18px; bottom: 26px; width: 5px; border-radius: 3px; background: var(--main); }
+    .line, .loopArc { display: none; }
+    .st { flex-direction: row; align-items: flex-start; text-align: left; gap: 16px; padding: 8px 8px; width: 100%; }
+    .mkw { margin-left: 3px; } .txt { padding-top: 2px; }
+    .loopChip { display: inline-block; justify-self: start; }
+    .pin { right: -13px; }
+  }
+
+  /* inspector */
+  .tabs { display: flex; border-bottom: 1px solid var(--line); padding: 0 6px; gap: 2px; overflow-x: auto; }
+  .tabs button { background: none; border: 0; padding: 12px 10px 10px; font-weight: 600; font-size: 14px; color: var(--muted); border-bottom: 3px solid transparent; display: inline-flex; gap: 6px; align-items: center; white-space: nowrap; }
+  .tabs button[aria-selected="true"] { color: var(--fg); border-bottom-color: var(--main); }
+  .cnt { font-size: 11px; font-weight: 700; padding: 1px 6px; border-radius: 9px; background: var(--bg); color: var(--muted); }
+  .cnt.warn { background: var(--gate-bg); color: var(--gate); } .cnt.bad { background: var(--red-bg); color: var(--red); }
+  .pane { padding: 16px; display: grid; gap: 14px; }
+  .sthead { display: flex; gap: 10px; align-items: flex-start; }
+  .sthead .num { flex: none; width: 28px; height: 28px; border-radius: 50%; background: var(--ink); color: var(--on-ink); display: grid; place-items: center; font-weight: 700; font-size: 13px; }
+  .sthead h3 { font-size: 18px; line-height: 1.2; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 5px; }
+  .chip { font-size: 11.5px; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: var(--bg); color: var(--muted); border: 1px solid var(--line); }
+  .chip.new { background: var(--main-bg); color: var(--main); border-color: transparent; } .chip.gate { background: var(--gate-bg); color: var(--gate); border-color: transparent; }
+  .chip.sub { background: var(--sub-bg); color: var(--sub); border-color: transparent; } .chip.must { background: var(--red-bg); color: var(--red); border-color: transparent; }
+  .chip.should { background: var(--gate-bg); color: var(--gate); border-color: transparent; } .chip.note { background: var(--info-bg); color: var(--info); border-color: transparent; }
+  .pane ul { margin: 0; padding-left: 18px; display: grid; gap: 3px; }
+  .callout { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; display: grid; gap: 6px; background: var(--bg); }
+  .callout.sub { border-color: transparent; background: var(--sub-bg); } .callout.gate { border-color: transparent; background: var(--gate-bg); }
+  .callout b { font-weight: 650; }
+  .link { background: none; border: 0; padding: 0; color: var(--info); font-weight: 600; text-align: left; } .link:hover { text-decoration: underline; }
+  mark { background: var(--main-bg); color: var(--fg); border-radius: 4px; padding: 0 3px; font-family: var(--font-mono); font-size: 12.5px; }
+  .ph { background: var(--bg); border: 1px dashed var(--line2); border-radius: 4px; padding: 0 3px; font-family: var(--font-mono); font-size: 12.5px; }
+  .pchips { display: flex; flex-wrap: wrap; gap: 6px; } .pchips button { border: 1px solid var(--line2); background: var(--surface); border-radius: 6px; padding: 2px 8px; font-family: var(--font-mono); font-size: 12.5px; }
+  textarea, input[type="text"] { width: 100%; font: inherit; background: var(--bg); color: var(--fg); border: 1px solid var(--line2); border-radius: 8px; padding: 9px 10px; }
+  textarea { min-height: 72px; resize: vertical; }
+  .field { display: grid; gap: 4px; padding: 10px; border: 1px solid transparent; border-radius: 10px; } .field.hl { border-color: var(--main); background: var(--main-bg); }
+  .field label { font-weight: 650; font-size: 14px; } .req { color: var(--red); } .field small { color: var(--muted); font-size: 12.5px; }
+  .find { border: 1px solid var(--line); border-left: 4px solid var(--line2); border-radius: 10px; padding: 10px 12px; display: grid; gap: 6px; }
+  .find.must { border-left-color: var(--red); } .find.should { border-left-color: var(--gate); } .find.note { border-left-color: var(--info); }
+  .frow { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; }
+  .done { color: var(--green); font-weight: 650; font-size: 13px; margin-left: auto; }
+  .seg { display: inline-flex; border: 1px solid var(--line2); border-radius: 8px; overflow: hidden; margin-left: auto; }
+  .seg button { background: var(--surface); border: 0; padding: 5px 12px; font-size: 13px; font-weight: 600; } .seg button + button { border-left: 1px solid var(--line2); }
+  .seg button[aria-pressed="true"] { background: var(--ink); color: var(--on-ink); }
+  pre.tree { margin: 0; font: 12.5px/1.65 var(--font-mono); overflow-x: auto; }
+  .empty { color: var(--muted); }
+
+  /* answer bar */
+  .bar { position: sticky; bottom: 0; z-index: 5; margin-inline: -16px; padding: 10px 16px calc(10px + env(safe-area-inset-bottom, 0px)); background: var(--surface); border-top: 1px solid var(--line); }
+  .barin { max-width: 1240px; margin-inline: auto; display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; }
+  .barin .sum { flex: 1 1 260px; font-size: 13.5px; color: var(--muted); }
+  .barin .sum b { color: var(--fg); }
+  .btn { border: 1px solid var(--line2); background: var(--surface); border-radius: 9px; padding: 9px 16px; font-weight: 650; }
+  .btn.primary { background: var(--ink); color: var(--on-ink); border-color: var(--ink); }
+  dialog { width: min(560px, calc(100vw - 32px)); border: 1px solid var(--line2); border-radius: 14px; padding: 0; background: var(--surface); color: var(--fg); }
+  dialog::backdrop { background: rgba(10, 18, 16, .55); }
+  .dlg { padding: 18px; display: grid; gap: 12px; } .dlg h3 { font-size: 18px; }
+  .dlg .actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
+  .sent { color: var(--green); font-weight: 650; }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="wrap">
+  <header class="head">
+    <div class="headrow"><span class="status" id="status"></span><span class="path" id="path"></span></div>
+    <h1 id="title"></h1>
+    <p class="purpose" id="purpose"></p>
+  </header>
+  <div class="shell">
+    <section class="panel mapPanel" aria-label="Flow map">
+      <div class="crumbs" id="crumbs"></div>
+      <div id="mapHost"></div>
+      <div class="legend" id="legend"></div>
+    </section>
+    <aside class="panel side" aria-label="Inspector">
+      <div class="tabs" role="tablist" id="tabs"></div>
+      <div class="pane" id="pane"></div>
+    </aside>
+  </div>
+  <div class="bar"><div class="barin">
+    <p class="sum" id="sum"></p>
+    <button class="btn" id="askBtn" type="button">Ask for changes</button>
+    <button class="btn primary" id="okBtn" type="button">Approve</button>
+  </div></div>
+</div>
+<dialog id="dlg"><div class="dlg" id="dlgBody"></div></dialog>
+
+<!-- DATA: the only part the agent replaces. Write "<" inside strings as <. Step "kind" is new | copied | sub. A step's "loop" is {to, max, when} with "to" a step index. A finding's "flow" is "main" or a child key, "step" is a step index. -->
+<script type="application/json" id="data">
+{
+  "title": "Security PR review",
+  "category": "development",
+  "name": "security-pr-review",
+  "purpose": "Read a pull request for security problems, one changed file at a time, then write a report. You approve the triage before the report is written.",
+  "params": [
+    {"name": "prUrl", "required": true, "type": "text", "description": "Link to the pull request", "example": "https://github.com/acme/api/pull/412"},
+    {"name": "focus", "required": false, "type": "text", "description": "An area to look at first", "example": "auth"},
+    {"name": "maxFiles", "required": false, "type": "number", "description": "Most files to review", "example": "40"}
+  ],
+  "steps": [
+    {"name": "Collect changes", "kind": "copied", "copiedFrom": "diagnose", "summary": "List the changed files of the pull request and save the diff of each.",
+     "actions": ["Read the pull request from {{prUrl}}", "Save the list of changed files", "Skip generated and vendored files"], "output": ["changed-files.md", "Memory: changedFiles"], "uses": ["prUrl", "maxFiles"]},
+    {"name": "Review changed files", "kind": "sub", "child": "review-file", "forEach": "each changed file", "summary": "Start one review-file flow for each file in changedFiles and wait for all of them.",
+     "actions": ["Pass the file and {{focus}} to each child", "Wait for every child to end", "Keep one summary from each"], "output": ["One summary from each child", "Memory: fileReviews"], "uses": ["focus"]},
+    {"name": "Triage findings", "kind": "new", "approval": true, "loop": {"to": 1, "max": 2, "when": "you ask for a deeper pass"}, "summary": "Rank what the children found and show the list. You approve it, or ask for a deeper pass.",
+     "actions": ["Merge duplicate findings", "Rank by risk, with the file and line for each", "Show the ranked list and wait for your answer"], "output": ["triage.md"], "uses": []},
+    {"name": "Write report", "kind": "new", "summary": "Write the final report from the approved triage.",
+     "actions": ["Group findings by risk", "Add a fix and a file link to each"], "output": ["security-report.md"], "uses": []}
+  ],
+  "children": {
+    "review-file": {
+      "title": "Review one file", "name": "review-file",
+      "params": [
+        {"name": "filePath", "required": true, "type": "text", "description": "The changed file to review", "example": "src/auth/login.ts"},
+        {"name": "focus", "required": false, "type": "text", "description": "An area to look at first", "example": "auth"}
+      ],
+      "steps": [
+        {"name": "Read the diff", "kind": "new", "summary": "Read what changed in {{filePath}}.", "actions": ["Open the diff of {{filePath}}", "Note each added or changed line"], "output": ["Memory: diffNotes"], "uses": ["filePath"]},
+        {"name": "Check it", "kind": "new", "summary": "Compare the changes with a short security checklist.", "actions": ["Look for injection, broken auth and secrets", "Look first at {{focus}} if it is set"], "output": ["Memory: checks"], "uses": ["focus"]},
+        {"name": "Record findings", "kind": "new", "summary": "Write each problem with its line and a fix.", "actions": ["One entry for each problem", "Give the line and a fix"], "output": ["Memory: fileFindings"], "uses": []}
+      ]
+    }
+  },
+  "findings": [
+    {"id": "f1", "flow": "main", "step": 1, "level": "should", "status": "open", "text": "Step 2 does not say what a child does with a file it cannot read, such as a binary or a very large file.", "fix": "Tell the child to skip it and list it in its summary."},
+    {"id": "f2", "flow": "main", "step": 2, "level": "must", "status": "fixed", "text": "Step 3 asks for approval but named no output file, so there was nothing to approve.", "fix": "The step now writes triage.md."},
+    {"id": "f3", "flow": "main", "step": 0, "level": "note", "status": "open", "text": "With no limit, a large pull request would start many child flows. The maxFiles example of 40 shows the idea.", "fix": "Say what happens above the limit."}
+  ],
+  "files": [
+    "~/.claude/zeremai/templates/flows/development/",
+    "├─ security-pr-review/",
+    "│  ├─ security-pr-review.json",
+    "│  ├─ collect-changes/collect-changes.json   (copied, new id)",
+    "│  ├─ triage-findings/triage-findings.json",
+    "│  └─ write-report/write-report.json",
+    "└─ review-file/",
+    "   ├─ review-file.json                       (child template)",
+    "   ├─ read-the-diff/read-the-diff.json",
+    "   ├─ check-it/check-it.json",
+    "   └─ record-findings/record-findings.json"
+  ]
+}
+</script>
+
+<script>
+(function () {
+  var D = JSON.parse(document.getElementById('data').textContent);
+  var FW = [{ label: 'Improvement findings', sub: 'added by ZeremAI' }, { label: 'Complete flow', sub: 'added by ZeremAI' }];
+  var S = { flow: 'main', sel: 0, tab: 'step', values: {}, decisions: {}, notes: {}, general: '' };
+  S.sel = firstWithOpenFinding();
+
+  function el(tag, props) {
+    var e = document.createElement(tag), kids = Array.prototype.slice.call(arguments, 2), k;
+    for (k in props || {}) {
+      var v = props[k];
+      if (v == null || v === false) continue;
+      if (k === 'class') e.className = v;
+      else if (k.slice(0, 2) === 'on') e.addEventListener(k.slice(2), v);
+      else e.setAttribute(k, v === true ? '' : v);
+    }
+    (function add(list) { list.forEach(function (c) { if (c == null || c === false) return; if (Array.isArray(c)) add(c); else e.append(c.nodeType ? c : document.createTextNode(String(c))); }); })(kids);
+    return e;
+  }
+  function flowOf(key) {
+    if (key === 'main') return { key: 'main', title: D.title, name: D.name, params: D.params, steps: D.steps };
+    var c = D.children[key]; return { key: key, title: c.title, name: c.name, params: c.params, steps: c.steps };
+  }
+  function stations(f) {
+    var out = [{ t: 'io', label: f.key === 'main' ? 'You fill in' : 'Starts with', sub: f.params.map(function (p) { return p.name; }).join(' · ') || 'nothing' }];
+    f.steps.forEach(function (st, i) { out.push({ t: 'step', i: i, st: st }); });
+    if (f.key === 'main') FW.forEach(function (x, n) { out.push({ t: 'fw', label: x.label, sub: x.sub, n: n }); });
+    else out.push({ t: 'io', end: true, label: 'Summary', sub: 'goes to the parent step' });
+    return out;
+  }
+  function findingsOf(key, i) { return D.findings.filter(function (f) { return f.flow === key && f.step === i; }); }
+  function firstWithOpenFinding() {
+    var best = 1, rank = { must: 3, should: 2, note: 1 }, top = 0;
+    D.steps.forEach(function (st, i) { findingsOf('main', i).forEach(function (f) { if (f.status === 'open' && rank[f.level] > top) { top = rank[f.level]; best = i + 1; } }); });
+    return best;
+  }
+  function pinOf(list) {
+    var open = list.filter(function (f) { return f.status === 'open'; });
+    if (!list.length) return null;
+    if (!open.length) return { cls: 'fixed', text: 'ok' };
+    var worst = open.some(function (f) { return f.level === 'must'; }) ? 'must' : open.some(function (f) { return f.level === 'should'; }) ? '' : 'note';
+    return { cls: worst, text: String(open.length) };
+  }
+  // {{name}} becomes the value typed in the form, or a dashed placeholder.
+  function fill(text, f) {
+    var parts = String(text).split(/(\{\{\w+\}\})/);
+    return parts.map(function (p) {
+      var m = /^\{\{(\w+)\}\}$/.exec(p); if (!m) return p;
+      var v = ((S.values[f.key] || {})[m[1]] || '').trim();
+      return v ? el('mark', null, v) : el('span', { class: 'ph' }, p);
+    });
+  }
+  var KIND = { new: 'new step', copied: 'copied step', sub: 'child flow' };
+
+  function renderAll() { renderHead(); renderCrumbs(); renderMap(); renderTabs(); renderPane(); renderSum(); }
+
+  function renderHead() {
+    var open = D.findings.filter(function (f) { return f.status === 'open'; });
+    var must = open.filter(function (f) { return f.level === 'must'; }).length, should = open.filter(function (f) { return f.level === 'should'; }).length;
+    var s = document.getElementById('status');
+    s.className = 'status' + (must ? ' bad' : should ? ' warn' : '');
+    s.textContent = 'Reviewed · ' + must + ' must-fix open · ' + should + ' should-fix open';
+    document.getElementById('path').textContent = D.category + ' / ' + D.name;
+    document.getElementById('title').textContent = D.title;
+    document.getElementById('purpose').textContent = D.purpose;
+    document.title = D.title;
+  }
+  function renderCrumbs() {
+    var c = document.getElementById('crumbs'); c.textContent = '';
+    if (S.flow === 'main') { c.append(el('span', { class: 'here' }, D.name)); return; }
+    c.append(el('button', { type: 'button', onclick: function () { go('main', 1); } }, D.name), el('span', { class: 'sep' }, '›'), el('span', { class: 'here' }, flowOf(S.flow).name));
+  }
+  function go(flow, sel, tab) { S.flow = flow; S.sel = sel; if (tab) S.tab = tab; renderAll(); }
+
+  function renderMap() {
+    var f = flowOf(S.flow), list = stations(f), n = list.length, host = document.getElementById('mapHost');
+    var lastSolid = 0; list.forEach(function (x, k) { if (x.t !== 'fw') lastSolid = k; });
+    var map = el('div', { class: 'map', role: 'group', 'aria-label': 'Steps of ' + f.name });
+    map.style.setProperty('--cols', String(n * 2));
+    var solid = el('div', { class: 'line' }); solid.style.gridColumn = '2 / ' + (2 * lastSolid + 2); map.append(solid);
+    if (lastSolid < n - 1) { var dash = el('div', { class: 'line dash' }); dash.style.gridColumn = (2 * lastSolid + 2) + ' / ' + (2 * (n - 1) + 2); map.append(dash); }
+    list.forEach(function (x, k) {
+      if (x.t === 'step' && x.st.loop) {
+        var a = x.st.loop.to + 1, arc = el('div', { class: 'loopArc', 'aria-hidden': 'true' }, el('span', null, '↺ up to ' + x.st.loop.max + '×'));
+        arc.style.gridColumn = (2 * a + 2) + ' / ' + (2 * k + 2); map.append(arc);
+      }
+      var kind = x.t === 'step' ? (x.st.approval ? 'gate' : x.st.kind) : x.t;
+      var mkInner = x.t === 'step' ? String(x.i + 1) : x.t === 'io' ? (x.end ? '■' : '▶') : '+';
+      var pin = x.t === 'step' ? pinOf(findingsOf(f.key, x.i)) : null;
+      var sub = x.t === 'step' ? (x.st.approval ? 'you approve first' : x.st.kind === 'copied' ? 'copied from ' + (x.st.copiedFrom || 'another template') : x.st.kind === 'sub' ? 'child flow' + (x.st.forEach ? ' · ' + x.st.forEach : '') : 'new step') : x.sub;
+      var pick = function () { S.sel = k; S.tab = 'step'; renderMap(); renderTabs(); renderPane(); };
+      var b = el('div', { class: 'st ' + x.t, role: 'button', tabindex: '0', 'aria-pressed': String(S.sel === k), 'aria-label': (x.t === 'step' ? 'Step ' + (x.i + 1) + ', ' : '') + (x.st ? x.st.name : x.label) + '. ' + sub,
+          onclick: pick, onkeydown: function (ev) { if (ev.target === ev.currentTarget && (ev.key === 'Enter' || ev.key === ' ')) { ev.preventDefault(); pick(); } } },
+        el('span', { class: 'mkw' }, el('span', { class: 'mk ' + kind }, el('span', null, mkInner)), pin ? el('span', { class: 'pin ' + pin.cls }, pin.text) : null),
+        el('span', { class: 'txt' },
+          el('span', { class: 'nm' }, x.st ? x.st.name : x.label),
+          el('span', { class: 'sb' }, sub),
+          x.t === 'step' && x.st.child ? el('span', { class: 'branch', role: 'link', tabindex: '0', onclick: function (ev) { ev.stopPropagation(); go(x.st.child, 1, 'step'); },
+            onkeydown: function (ev) { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); ev.stopPropagation(); go(x.st.child, 1, 'step'); } } }, '↳ ' + x.st.child + ' ›') : null,
+          x.t === 'step' && x.st.loop ? el('span', { class: 'loopChip' }, '↺ back to step ' + (x.st.loop.to + 1) + ', up to ' + x.st.loop.max + ' times') : null));
+      b.style.gridColumn = (2 * k + 1) + ' / span 2';
+      map.append(b);
+    });
+    host.textContent = ''; host.append(map);
+    var lg = document.getElementById('legend'); lg.textContent = '';
+    lg.append(el('span', null, el('i'), 'Step in this template'), el('span', null, el('i', { class: 'copied' }), 'Copied step'), el('span', null, el('i', { class: 'gate' }), 'You approve'),
+      el('span', null, el('i', { class: 'sub' }), 'Child flow'), f.key === 'main' ? el('span', null, el('i', { class: 'fw' }), 'Added by ZeremAI') : null, el('span', null, 'Numbered dots are review findings'));
+  }
+
+  var TABS = [['step', 'Step'], ['form', 'Form'], ['review', 'Review'], ['files', 'Files']];
+  function renderTabs() {
+    var t = document.getElementById('tabs'); t.textContent = '';
+    var open = D.findings.filter(function (f) { return f.status === 'open'; }).length;
+    TABS.forEach(function (x) {
+      t.append(el('button', { type: 'button', role: 'tab', 'aria-selected': String(S.tab === x[0]), onclick: function () { S.tab = x[0]; S.hl = null; renderTabs(); renderPane(); } }, x[1],
+        x[0] === 'review' && open ? el('span', { class: 'cnt warn' }, String(open)) : x[0] === 'form' ? el('span', { class: 'cnt' }, String(flowOf(S.flow).params.length)) : null));
+    });
+  }
+  function renderPane() {
+    var p = document.getElementById('pane'); p.textContent = '';
+    var f = flowOf(S.flow);
+    if (S.tab === 'step') p.append.apply(p, stepPane(f));
+    else if (S.tab === 'form') p.append.apply(p, formPane(f));
+    else if (S.tab === 'review') p.append.apply(p, reviewPane());
+    else p.append(el('div', null, el('h4', null, 'Files that will be written'), el('pre', { class: 'tree' }, D.files.join('\n'))));
+  }
+
+  function chipsOf(st) {
+    return [el('span', { class: 'chip ' + (st.kind === 'sub' ? 'sub' : st.kind === 'new' ? 'new' : '') }, KIND[st.kind]), st.approval ? el('span', { class: 'chip gate' }, 'you approve') : null,
+      st.loop ? el('span', { class: 'chip' }, 'can loop back') : null];
+  }
+  function stepPane(f) {
+    var x = stations(f)[S.sel];
+    if (!x) return [el('p', { class: 'empty' }, 'Choose a step on the map.')];
+    if (x.t === 'io') return [el('div', null, el('h4', null, x.end ? 'How the child ends' : 'You fill in'), x.end ? el('p', null, 'The child ends with a short summary. The parent step waits for it.') : el('p', null, 'The form has ' + f.params.length + ' parameters. Open the Form tab to try values.'))];
+    if (x.t === 'fw') return [el('div', null, el('h4', null, 'Added by ZeremAI'), el('p', null, x.n === 0 ? 'After the last step, ZeremAI saves what it learned as improvement findings. It never blocks the flow.' : 'ZeremAI removes the temporary files and moves the flow to completed.'), el('p', { class: 'muted' }, 'Template authors do not write these two steps.'))];
+    var st = x.st, key = f.key + ':' + x.i, fl = findingsOf(f.key, x.i), out = [];
+    out.push(el('div', { class: 'sthead' }, el('span', { class: 'num' }, String(x.i + 1)), el('div', null, el('h3', null, st.name), el('div', { class: 'chips' }, chipsOf(st)))));
+    out.push(el('p', null, fill(st.summary, f)));
+    if (st.child) out.push(el('div', { class: 'callout sub' }, el('b', null, 'Starts a child flow ' + (st.forEach || '')), el('span', null, 'The child template ' + st.child + ' runs once for each item. This step waits for all of them.'),
+      el('button', { class: 'link', type: 'button', onclick: function () { go(st.child, 1, 'step'); } }, 'Open ' + st.child + ' ›')));
+    if (st.approval) out.push(el('div', { class: 'callout gate' }, el('b', null, 'You approve before the flow goes on'), el('span', null, 'The agent shows the result and waits for your click. It cannot approve for you.')));
+    if (st.loop) out.push(el('div', { class: 'callout' }, el('b', null, 'Can go back to step ' + (st.loop.to + 1)), el('span', null, 'When ' + st.loop.when + ', up to ' + st.loop.max + ' times.')));
+    out.push(el('div', null, el('h4', null, 'Actions'), el('ul', null, st.actions.map(function (a) { return el('li', null, fill(a, f)); }))));
+    out.push(el('div', null, el('h4', null, 'Output'), el('ul', null, st.output.map(function (o) { return el('li', null, o); }))));
+    if (st.uses && st.uses.length) out.push(el('div', null, el('h4', null, 'Uses from the form'), el('div', { class: 'pchips' }, st.uses.map(function (u) { return el('button', { type: 'button', onclick: function () { S.tab = 'form'; S.hl = st.uses; renderTabs(); renderPane(); } }, u); }))));
+    if (fl.length) out.push(el('div', null, el('h4', null, 'Review findings'), el('div', { style: 'display:grid;gap:8px' }, fl.map(findingCard))));
+    out.push(el('div', null, el('h4', null, 'Your note for this step'), el('textarea', { id: 'note-' + key.replace(/\W/g, '_'), placeholder: 'Anything to change here? Claude reads it.', 'aria-label': 'Your note for ' + st.name,
+      oninput: function (e) { S.notes[key] = e.target.value; renderSum(); } }, null)));
+    var ta = out[out.length - 1].querySelector('textarea'); ta.value = S.notes[key] || '';
+    return out;
+  }
+  function findingCard(fd) {
+    var f = flowOf(fd.flow), where = (fd.flow === 'main' ? '' : f.name + ' · ') + 'step ' + (fd.step + 1) + ' · ' + f.steps[fd.step].name;
+    var LV = { must: 'must fix', should: 'should fix', note: 'note' }, d = S.decisions[fd.id];
+    function pick(v) { return el('button', { type: 'button', 'aria-pressed': String(d === v), onclick: function () { S.decisions[fd.id] = d === v ? undefined : v; renderMap(); renderPane(); renderSum(); } }, v === 'fix' ? 'Fix it' : 'Ignore'); }
+    return el('div', { class: 'find ' + fd.level },
+      el('div', { class: 'frow' }, el('span', { class: 'chip ' + fd.level }, LV[fd.level]), el('button', { class: 'link', type: 'button', onclick: function () { go(fd.flow, fd.step + 1, 'step'); } }, where),
+        fd.status === 'fixed' ? el('span', { class: 'done' }, '✓ Fixed') : el('span', { class: 'seg', role: 'group', 'aria-label': 'Your decision' }, pick('fix'), pick('ignore'))),
+      el('p', null, fd.text), fd.fix ? el('p', { class: 'muted' }, (fd.status === 'fixed' ? 'Fix: ' : 'Suggested fix: ') + fd.fix) : null);
+  }
+  function reviewPane() {
+    var open = D.findings.filter(function (f) { return f.status === 'open'; }), fixed = D.findings.filter(function (f) { return f.status === 'fixed'; });
+    var out = [el('p', { class: 'muted' }, 'A separate reviewer read the draft. Choose what Claude should do with each open finding.')];
+    if (!D.findings.length) return [el('p', { class: 'empty' }, 'The reviewer found nothing.')];
+    if (open.length) out.push(el('div', null, el('h4', null, 'Open · ' + open.length), el('div', { style: 'display:grid;gap:8px' }, open.map(findingCard))));
+    if (fixed.length) out.push(el('div', null, el('h4', null, 'Fixed · ' + fixed.length), el('div', { style: 'display:grid;gap:8px' }, fixed.map(findingCard))));
+    return out;
+  }
+  function formPane(f) {
+    var vals = S.values[f.key] = S.values[f.key] || {}, cur = S.tab === 'form' ? (S.hl || []) : [];
+    var req = f.params.filter(function (p) { return p.required; }), opt = f.params.filter(function (p) { return !p.required; });
+    function field(p) {
+      var id = 'p-' + f.key + '-' + p.name;
+      return el('div', { class: 'field' + (cur.indexOf(p.name) >= 0 ? ' hl' : '') }, el('label', { for: id }, p.name, p.required ? el('span', { class: 'req', title: 'Required' }, ' *') : null),
+        el('input', { id: id, type: p.type === 'number' ? 'text' : 'text', inputmode: p.type === 'number' ? 'numeric' : null, placeholder: p.example, value: vals[p.name] || '', oninput: function (e) { vals[p.name] = e.target.value; } }),
+        el('small', null, p.description + ' · ' + p.type + (p.required ? '' : ' · optional')));
+    }
+    return [el('p', { class: 'muted' }, 'This is the form the flow pane shows. Type a value to see it inside the steps.')].concat(req.concat(opt).map(field));
+  }
+
+  function counts() {
+    var notes = Object.keys(S.notes).filter(function (k) { return (S.notes[k] || '').trim(); }).length + (S.general.trim() ? 1 : 0);
+    var dec = Object.keys(S.decisions).filter(function (k) { return S.decisions[k]; }).length;
+    return { notes: notes, dec: dec };
+  }
+  function renderSum() {
+    var c = counts(), s = document.getElementById('sum'); s.textContent = '';
+    s.append('Nothing is written until you approve. ', el('b', null, c.notes + (c.notes === 1 ? ' note' : ' notes')), ' · ', el('b', null, c.dec + (c.dec === 1 ? ' decision' : ' decisions')));
+  }
+
+  function answerOf(verdict) {
+    var lines = ['# Re: ' + D.title, '## Verdict', '**' + verdict + '**'], decisions = {}, notes = {};
+    var dl = D.findings.filter(function (f) { return S.decisions[f.id]; });
+    if (dl.length) { lines.push('## Finding decisions'); dl.forEach(function (f) { decisions[f.id] = S.decisions[f.id]; lines.push('- [' + f.id + '] ' + f.flow + ' step ' + (f.step + 1) + ': ' + f.text + ' → **' + (S.decisions[f.id] === 'fix' ? 'Fix it' : 'Ignore') + '**'); }); }
+    var nk = Object.keys(S.notes).filter(function (k) { return (S.notes[k] || '').trim(); });
+    if (nk.length) { lines.push('## Notes on steps'); nk.forEach(function (k) { var p = k.split(':'), f = flowOf(p[0]); notes[k] = S.notes[k].trim(); lines.push('- ' + f.name + ' step ' + (Number(p[1]) + 1) + ' (' + f.steps[p[1]].name + '): ' + S.notes[k].trim()); }); }
+    if (S.general.trim()) { lines.push('## Notes'); lines.push(S.general.trim()); }
+    return { verdict: verdict, decisions: decisions, notes: notes, general: S.general.trim(), text: lines.join('\n') + '\n', title: D.title, at: new Date().toISOString() };
+  }
+  function openDialog(verdict) {
+    var a = answerOf(verdict), body = document.getElementById('dlgBody'), dlg = document.getElementById('dlg'), c = counts();
+    var openMust = D.findings.filter(function (f) { return f.status === 'open' && f.level === 'must' && !S.decisions[f.id]; }).length;
+    body.textContent = '';
+    var general = el('textarea', { id: 'general', 'aria-label': 'Anything else', placeholder: 'Anything else for Claude? (optional)', oninput: function (e) { S.general = e.target.value; } }); general.value = S.general;
+    var msg = el('p', { class: 'muted', id: 'sendMsg', role: 'status', 'aria-live': 'polite' }), fb = el('textarea', { id: 'fallback', readonly: true, hidden: true, 'aria-label': 'Response to copy' });
+    var send = el('button', { class: 'btn primary', type: 'button', id: 'sendBtn' }, verdict === 'Approve' ? 'Approve and send' : 'Send for changes');
+    send.addEventListener('click', function () { submit(verdict, msg, fb, send); });
+    body.append(el('h3', null, verdict === 'Approve' ? 'Approve this template?' : 'Ask for changes?'),
+      el('p', null, c.dec + ' finding decisions and ' + c.notes + ' notes will go with your answer.'),
+      verdict === 'Approve' ? el('p', { class: 'muted' }, 'Claude then asks where to save the files. Nothing is written before that.') : el('p', { class: 'muted' }, 'Claude changes the draft, has it reviewed again, and sends you a new page.'),
+      openMust ? el('p', { style: 'color:var(--red);font-weight:600' }, openMust + ' must-fix finding' + (openMust === 1 ? ' is' : 's are') + ' still open with no decision.') : null,
+      general, msg, fb, el('div', { class: 'actions' }, el('button', { class: 'btn', type: 'button', onclick: function () { dlg.close(); } }, 'Back'), send));
+    dlg.showModal();
+  }
+  function submit(verdict, msg, fb, btn) {
+    var a = answerOf(verdict); btn.disabled = true;
+    function manual(why) {
+      fb.hidden = false; fb.value = a.text; msg.textContent = why + ' Copy this and paste it in the chat.';
+      var cp = el('button', { class: 'btn', type: 'button' }, 'Copy');
+      cp.addEventListener('click', function () { try { navigator.clipboard.writeText(a.text).then(function () { msg.textContent = 'Copied. Paste it in the chat.'; }, function () { fb.select(); }); } catch (e) { fb.select(); } });
+      msg.after(cp); fb.select(); btn.disabled = false;
+    }
+    var cl = window.claude && window.claude.use ? window.claude.use('db') : null;
+    if (!cl) return manual('This page cannot send the answer by itself.');
+    cl.then(function (db) {
+      if (!db) return manual('This page cannot send the answer by itself.');
+      return db.doc('answers/latest').set(a).then(function () { msg.className = 'sent'; msg.textContent = 'Sent. Now tell Claude in the chat that you answered.'; });
+    }).catch(function () { manual('Sending failed.'); });
+  }
+  document.getElementById('okBtn').addEventListener('click', function () { openDialog('Approve'); });
+  document.getElementById('askBtn').addEventListener('click', function () { openDialog('Ask for changes'); });
+  renderAll();
+})();
+</script>
