@@ -159,13 +159,7 @@ async function closeFlow($: any): Promise<void> {
 async function resumeAndHandOff($: any, dir: string, note?: string): Promise<void> { await handOff($, await resumeFlow(portsOf($), dir, note)) }
 async function handOff($: any, started: Started, toast?: string): Promise<void> {
   if ('error' in started) { say('error', started.error); $.ui.invalidate('ui.render'); return }
-  const sessionId = await $.session.id()
-  await ensureFlowTools(spec => $.tool.register(spec), sessionId)
-  await showStepLine($, started.dir)
-  await raiseLogOwed(filesOf($), linksOf($), sessionId)
-  startCountingAgain()
-  if (toast) { try { await $.ui.toast(toast) } catch { /* a surface that cannot show a toast */ } }
-  // The pane stays open and shows the steps of this flow (Create and Resume both come here).
+  // The pane moves to the new flow first: a setup step that fails or hangs must not keep the user on the form (Create and Resume both come here).
   st.boundDir = started.dir
   st.view = 'flow'
   st.shown = started.dir
@@ -173,6 +167,18 @@ async function handOff($: any, started: Started, toast?: string): Promise<void> 
   st.section = 'steps'
   st.message = ''
   $.ui.invalidate('ui.render')
+  try {
+    const sessionId = await $.session.id()
+    await ensureFlowTools(spec => $.tool.register(spec), sessionId)
+    await showStepLine($, started.dir)
+    await raiseLogOwed(filesOf($), linksOf($), sessionId)
+    startCountingAgain()
+    if (toast) { try { await $.ui.toast(toast) } catch { /* a surface that cannot show a toast */ } }
+  } catch (error) {
+    say('error', `The flow started, but setup failed: ${error instanceof Error ? error.message : String(error)}. Press Resume to try again.`)
+    $.ui.invalidate('ui.render')
+    return // the agent gets nothing
+  }
   $.prompt.submit({ text: started.text, asUser: true }) // not awaited: it resolves when the turn starts
 }
 

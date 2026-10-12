@@ -69,6 +69,18 @@ test('Create refuses an empty required field, then starts the flow and hands it 
   expect(await ui.find({ type: 'Button', key: 'sec-steps' })).toBeDefined()
 })
 
+test('Create moves the pane to the new flow even when the tool list fails, and the agent gets nothing', async ($, on) => {
+  const w = world(on, { [`${T}/bug.json`]: template, [`${T}/design/design.json`]: { type: 'step', id: 'r1' } })
+  on('tool.register', async () => { throw new Error('no tools') })
+  await $.command.run({ command: 'zeremai', args: '' })
+  const ui = await $.ui.mount(PANE)
+  await ui.press({ key: 'start-dev/bug' })
+  await ui.input({ key: 'field-workItemId', text: '7', kind: 'change' })
+  await ui.press({ key: 'create' })
+  expect(await ui.find({ type: 'Button', key: 'sec-steps' })).toBeDefined()
+  expect(w.sent).toEqual([])
+})
+
 test('the Start form names the missing field, then says ready', async ($, on) => {
   world(on, { [`${T}/bug.json`]: template, [`${T}/design/design.json`]: { type: 'step', id: 'r1' } })
   await $.command.run({ command: 'zeremai', args: '' })
