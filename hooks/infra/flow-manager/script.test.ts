@@ -6,7 +6,7 @@ const ROOT = '/p'
 const DIR = '/h/.claude/zeremai/active/p1'
 const NEW = '/h/.claude/zeremai/active/new1'
 const moment = (extra: Partial<Moment> = {}): Moment => ({
-  pluginRoot: ROOT, home: '/h', bound: [DIR], logOwed: false, dialogOpen: false, isSubagent: false,
+  pluginRoot: ROOT, home: '/h', bound: [DIR], dialogOpen: false,
   steps: [{ id: 's1', status: 'in_progress', approvalRequired: false }], ...extra,
 })
 const cmd = (sub: string, input: unknown, path = `${ROOT}/scripts/flow_manager.py`) => `python3 ${path} ${sub} --json '${JSON.stringify(input).replace(/'/g, "'\\''")}'`
@@ -15,7 +15,7 @@ const step = (status: string, extra = {}) => cmd('update-step-status', { flowDir
 // ── the one command form ─────────────────────────────────────────────────
 
 test('the one form runs: python3, this plugin\'s script, a subcommand, --json and one object', () => {
-  expect(checkCall(step('in_progress'), moment())).toEqual({ allow: true, sub: 'update-step-status', input: { flowDir: DIR, stepId: 's1', status: 'in_progress' }, logFirst: false })
+  expect(checkCall(step('in_progress'), moment())).toEqual({ allow: true, sub: 'update-step-status', input: { flowDir: DIR, stepId: 's1', status: 'in_progress' } })
 })
 test('every other form is refused: more shell, another quote, no --json, another script, another interpreter', () => {
   const ok = step('in_progress')
@@ -84,15 +84,6 @@ test('no flow bound: only create-flow runs, and only into active/ from a templat
   expect(checkCall(create({ templatePath: '/tmp/evil.json' }), moment({ bound: [] }))).toEqual({ deny: expect.stringContaining('A template comes from') })
   expect(checkCall(create({ parentFlowPath: '/h/.claude/zeremai/active/zzz' }), moment())).toEqual({ deny: 'The parent flow is not bound to this session.' })
   expect('allow' in checkCall(create({ parentFlowPath: DIR }), moment())).toBe(true)
-})
-test('the log is owed: a command that changes the flow is logged first; log-interaction and reads are not', () => {
-  const owed = moment({ logOwed: true })
-  expect(checkCall(step('in_progress'), owed)).toMatchObject({ allow: true, logFirst: true })
-  expect(checkCall(cmd('add-memory-entry', { flowDir: DIR, stepId: 's1', topic: 'context' }), owed)).toMatchObject({ logFirst: true })
-  expect(checkCall(cmd('log-interaction', { flowDir: DIR, stepId: 's1', request: 'r', reason: 'r', response: 'r' }), owed)).toMatchObject({ allow: true, logFirst: false })
-  expect(checkCall(cmd('add-log-entry', { flowDir: DIR, stepId: 's1' }), owed)).toMatchObject({ logFirst: false })
-  expect(checkCall(cmd('read-memory-topic', { flowDir: DIR, stepId: 's1', topic: 'context' }), owed)).toMatchObject({ logFirst: false })
-  expect(checkCall(step('in_progress'), moment({ logOwed: true, isSubagent: true }))).toMatchObject({ logFirst: false }) // a subagent's own call
 })
 test('the approval dialog is open: nothing that changes the flow runs, notes and logs still do', () => {
   const open = moment({ dialogOpen: true })

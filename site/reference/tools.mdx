@@ -40,8 +40,9 @@ After `update_flow_status` moves a folder, use the `relocated_to` path from the 
 | Tool | Purpose |
 |---|---|
 | `add_log_entry` | Append actions, reasoning, files modified, problems, decisions, performance notes for a step |
-| `log_interaction` | Record a user request: `request`, `reason`, `response`. Optional `forImprovement`, `potentialImprovement`. Must precede changes after a user prompt. |
 | `update_log_observations` | Append flow-wide patterns and recommendations |
+
+The plugin logs each prompt of the user, and each answer in the approval dialog, by itself. A small model (Haiku) writes the reason, the answer and the improvement flag of the entry. There is no tool for it.
 
 ## Approval
 

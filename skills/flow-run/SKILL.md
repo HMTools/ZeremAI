@@ -36,13 +36,13 @@ The last two steps of every flow are framework steps (Continuous Improvement and
 
 ## Approval Checkpoints
 
-A "yes" to a mid-step question (an assumption, a clarification, a suggested approach) is NOT approval of the deliverable. Typing "approved" in chat is not approval either. Ask a mid-step question with the built-in question tool, then record the answer with `log_interaction`.
+A "yes" to a mid-step question (an assumption, a clarification, a suggested approach) is NOT approval of the deliverable. Typing "approved" in chat is not approval either. Ask a mid-step question with the built-in question tool. The plugin logs your prompts and the answers in the approval dialog; you do not log them.
 
 1. Make sure the deliverable files are complete.
 2. Present the deliverables to the user.
 3. Call the tool `request_approval`. It shows a dialog and waits for the click. The answer is the result.
-4. Log the user's answer with the tool `log_interaction`.
-5. If the user approved, call `update_step_status` with status `completed`. If the user asked for changes, log the request, invoke `step-executor-delegation "<flow-dir>" "<step-id>" "<user corrections>"`, present the new deliverables and call `request_approval` again. Repeat until the user approves.
+4. The plugin logs the answer of the user in the dialog.
+5. If the user approved, call `update_step_status` with status `completed`. If the user asked for changes, invoke `step-executor-delegation "<flow-dir>" "<step-id>" "<user corrections>"`, present the new deliverables and call `request_approval` again. Repeat until the user approves.
 
 Only the user's click sets `approved: true`. While the dialog waits, you can only research (read, search, MCP tools, subagents). If the user closes the dialog, it opens again with their next prompt.
 

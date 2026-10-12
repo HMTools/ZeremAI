@@ -2,7 +2,9 @@ import type { Register } from 'claude-code'
 import { findFlowDir, readFlow, sessionKey } from '../infra/flow-repository/flow-repository'
 import { askGate, findApprovalStep, isHandEdit, HAND_EDIT_TEXT } from '../infra/approval-gate/approval-gate'
 import type { Approver } from '../infra/approval-gate/approval-gate'
-import { REQUEST_APPROVAL, approveStep, bashAnswer, parseCommand, runsScript } from '../infra/flow-manager/script'
+import { REQUEST_APPROVAL, approveStep, bashAnswer, parseCommand, runScript, runsScript } from '../infra/flow-manager/script'
+import { logInteraction } from '../infra/log-first/log-first'
+import type { LogDeps } from '../infra/log-first/log-first'
 import { slash } from '../infra/flow-manager/move'
 import type { Ask, FileSystem, Gate, GateStore, SessionLinks } from '../infra/ports/ports'
 
@@ -21,6 +23,11 @@ const linksOf = ($: any): SessionLinks => ({
 })
 // The script writes `approved` (approve-step).
 const approverOf = ($: any): Approver => async (dir, stepId) => approveStep(argv => $.process.run(argv, { timeoutMs: 60_000 }), (await $.env.get('OS')) === 'Windows_NT' ? 'python' : 'python3', slash($.plugin.root), dir, stepId)
+const logDepsOf = ($: any): LogDeps => ({
+  files: filesOf($), links: linksOf($),
+  complete: request => $.model.complete(request),
+  script: async (sub, input) => runScript(argv => $.process.run(argv, { timeoutMs: 60_000 }), (await $.env.get('OS')) === 'Windows_NT' ? 'python' : 'python3', slash($.plugin.root), sub, input),
+})
 const askOf = ($: any): Ask => (question, options) => $.ui.ask(question, options)
 const gatesOf = ($: any): GateStore => ({
   get: async sessionId => ((await $.store.get(`gate:${sessionId}`)) as Gate | undefined) ?? undefined,
@@ -52,7 +59,7 @@ async function requestApproval($: any): Promise<string> {
   const gates = gatesOf($)
   const gate = { dir, stepId: step.id }
   await gates.set(sessionId, gate)
-  return (await askGate(files, approverOf($), gates, askOf($), sessionId, gate)) ?? 'The approval dialog is already open. Wait for the user.'
+  return (await askGate(files, approverOf($), gates, askOf($), sessionId, gate, (d, request) => logInteraction(logDepsOf($), d, request))) ?? 'The approval dialog is already open. Wait for the user.'
 }
 
 export const register: Register = on => {

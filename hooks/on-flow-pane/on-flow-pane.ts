@@ -1,10 +1,11 @@
 import type { Register } from 'claude-code'
 import { findFlowDir, readFlow, sessionKey } from '../infra/flow-repository/flow-repository'
 import { approveFromPane, gateForPane, requestChangesFromPane } from '../infra/approval-gate/approval-gate'
+import type { AnswerLog } from '../infra/approval-gate/approval-gate'
+import { logInteraction } from '../infra/log-first/log-first'
 import type { Approver } from '../infra/approval-gate/approval-gate'
 import type { PaneAnswer } from '../infra/approval-gate/approval-gate'
 import type { Gate, GateStore } from '../infra/ports/ports'
-import { clearLogOwed, raiseLogOwed } from '../infra/log-owed/log-owed'
 import type { FileSystem, ManagerPorts } from '../infra/ports/ports'
 import { fillFields, fillQuestion, parseAnswer } from '../infra/flow-pane/fill-fields'
 import type { TemplateInfo } from '../infra/flow-pane/flow-pane'
@@ -67,6 +68,8 @@ const portsOf = ($: any): ManagerPorts => ({
   script: async (sub, input) => runScript(argv => $.process.run(argv, { timeoutMs: 60_000 }), await pythonOf($), slash($.plugin.root), sub, input),
 })
 async function pythonOf($: any): Promise<string> { return (await $.env.get('OS')) === 'Windows_NT' ? 'python' : 'python3' } // Windows has no python3 command
+// The answer of the user in the pane is logged by the mod, like a prompt (a model writes the details).
+const answerLog = ($: any): AnswerLog => (dir, request) => logInteraction({ files: filesOf($), links: linksOf($), complete: r => $.model.complete(r), script: portsOf($).script }, dir, request)
 // The script writes `approved` (approve-step).
 const approverOf = ($: any): Approver => async (dir, stepId) => approveStep(argv => $.process.run(argv, { timeoutMs: 60_000 }), await pythonOf($), slash($.plugin.root), dir, stepId)
 
@@ -151,7 +154,6 @@ async function closeFlow($: any): Promise<void> {
   const id = await $.session.id()
   const dirs = (((await $.store.get(sessionKey(id))) as string[] | undefined) ?? []).filter(d => d !== st.boundDir)
   await $.store.set(sessionKey(id), dirs)
-  clearLogOwed(id)
   try { await $.ui.status(undefined) } catch { /* a surface that cannot draw it */ }
   st.boundDir = await findFlowDir(filesOf($), linksOf($), id)
   st.view = 'list'
@@ -175,10 +177,8 @@ async function handOff($: any, started: Started, toast?: string): Promise<void> 
   $.ui.invalidate('ui.render')
   let text = started.text
   try {
-    const sessionId = await $.session.id()
     text += `\n${scriptNote(slash($.plugin.root), await pythonOf($))}` // the agent runs the flow script with Bash, one command form
     await showStepLine($, started.dir)
-    await raiseLogOwed(filesOf($), linksOf($), sessionId, started.text.split('\n')[0])
     startCountingAgain()
     if (toast) { try { await $.ui.toast(toast) } catch { /* a surface that cannot show a toast */ } }
     if (!ruleShown) {
@@ -415,8 +415,8 @@ export const register: Register = on => {
       e, Box, Text, Button, Input, Svg, Client, line, narrow, rich, picture, k, toggle, tabRow, nav, card, redraw, cwd, bound, detail, views,
       files: filesOf($), ports: () => portsOf($), store: { set: (key: string, value: unknown) => $.store.set(key, value) },
       gate: bound ? await paneGate($, bound.dir) : undefined,
-      approve: async stepId => answerGate($, await approveFromPane(filesOf($), approverOf($), gatesOf($), await $.session.id(), bound!.dir, stepId)),
-      requestChanges: async (stepId, reason) => answerGate($, await requestChangesFromPane(filesOf($), approverOf($), gatesOf($), await $.session.id(), bound!.dir, stepId, reason)),
+      approve: async stepId => answerGate($, await approveFromPane(filesOf($), approverOf($), gatesOf($), await $.session.id(), bound!.dir, stepId, answerLog($))),
+      requestChanges: async (stepId, reason) => answerGate($, await requestChangesFromPane(filesOf($), approverOf($), gatesOf($), await $.session.id(), bound!.dir, stepId, reason, answerLog($))),
       close: () => closeFlow($),
       templateJob: (job, busy) => templateJob($, job, busy), fill: (template, purpose, text) => fillJob($, template, purpose, text), resume: (dir, note) => resumeAndHandOff($, dir, note), handOff: (started, toast) => handOff($, started, toast), openInViewer: (path, surface) => openInViewer($, path, surface), refresh: () => refresh($),
     }

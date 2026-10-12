@@ -68,6 +68,9 @@
   .tabs button { background: none; border: 0; padding: 14px 8px 11px; font-weight: 550; font-size: 14px; color: var(--muted); border-bottom: 2px solid transparent; white-space: nowrap; }
   .tabs button[aria-selected="true"] { color: var(--fg); border-bottom-color: var(--accent); }
   .pane { padding: 18px; display: grid; gap: 18px; }
+  .pnav { display: flex; align-items: center; gap: 8px; } .pnav .arrows { margin-left: auto; display: inline-flex; gap: 4px; }
+  .pnav .arrows button { width: 28px; height: 28px; padding: 0; border: 1px solid var(--line2); border-radius: 8px; background: none; font-size: 17px; line-height: 1; }
+  .pnav .arrows button:hover:not(:disabled) { background: var(--hover); } .pnav .arrows button:disabled { opacity: .4; cursor: default; }
   .sthead { display: grid; gap: 4px; } .sthead h3 { font-size: 19px; line-height: 1.25; font-weight: 650; } .sub { color: var(--muted); font-size: 13.5px; }
   .pane ul { margin: 0; padding-left: 18px; display: grid; gap: 4px; }
   .note { border-left: 2px solid var(--line2); padding: 2px 0 2px 12px; color: var(--fg); display: grid; gap: 4px; } .note b { font-weight: 600; }
@@ -777,8 +780,21 @@
   function renderPane() {
     var p = $('pane'); p.textContent = ''; var f = flowOf(S.flow);
     var list = S.tab === 'step' ? stepPane(f) : S.tab === 'form' ? formPane(f) : S.tab === 'review' ? reviewPane() : [el('div', null, el('h4', null, 'Files that will be written'), el('pre', { class: 'tree' }, D.files.join('\n')))];
-    p.append(el('button', { class: 'link backbtn', type: 'button', onclick: function () { $('list').scrollIntoView({ behavior: 'smooth', block: 'start' }); } }, '↑ Back to the steps'));
+    // The row has the link to the list and, on the Step tab, the arrows. With no arrows the row is the old link alone: it hides in a wide window, as before.
+    var nav = S.tab === 'step' && f.steps.length;
+    p.append(el('div', { class: 'pnav' + (nav ? '' : ' backbtn') },
+      el('button', { class: 'link', type: 'button', onclick: function () { $('list').scrollIntoView({ behavior: 'smooth', block: 'start' }); } }, '↑ Back to the steps'),
+      nav ? el('span', { class: 'arrows' }, stepArrow(f, -1, '‹', 'Previous step'), stepArrow(f, 1, '›', 'Next step')) : null));
     p.append.apply(p, list);
+  }
+  function stepArrow(f, delta, icon, label) {
+    var to = S.idx + delta;
+    return el('button', { type: 'button', 'aria-label': label, title: label, disabled: to < 0 || to >= f.steps.length, onclick: function () { goStep(delta); } }, icon);
+  }
+  /* one step back or on in the open flow; it stops at both ends. The arrows and the j and k keys both come here. */
+  function goStep(delta) {
+    var f = flowOf(S.flow); S.idx = Math.max(0, Math.min(f.steps.length - 1, S.idx + delta)); S.tab = 'step'; S.hl = null;
+    renderList(); renderPane(); renderTabs();
   }
   function stepPane(f) {
     var st = f.steps[S.idx]; if (!st) return [el('p', { class: 'muted' }, 'Pick a step.')];
@@ -902,7 +918,7 @@
   /* ---- keyboard ---- */
   document.addEventListener('keydown', function (e) {
     var t = e.target; if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA') || e.metaKey || e.ctrlKey || e.altKey) return;
-    if (e.key === 'j' || e.key === 'k') { var f0 = flowOf(S.flow); S.idx = Math.max(0, Math.min(f0.steps.length - 1, S.idx + (e.key === 'j' ? 1 : -1))); S.tab = 'step'; e.preventDefault(); renderList(); renderPane(); renderTabs(); }
+    if (e.key === 'j' || e.key === 'k') { e.preventDefault(); goStep(e.key === 'j' ? 1 : -1); }
   });
   $('more').addEventListener('click', function () { S.details = !S.details; renderHead(); });
   function setView(v) { S.view = v; $('vRun').setAttribute('aria-pressed', String(v === 'runbook')); $('vLane').setAttribute('aria-pressed', String(v === 'lanes')); renderList(); }

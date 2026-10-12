@@ -83,7 +83,7 @@ test('a prompt from the user starts the count again', async ($, on) => {
   for (let i = 0; i < 4; i++) await end($)
   await $.prompt.submit({ text: 'continue' })
   await end($)
-  expect(sent.length).toBe(4) // the 4th is the log prompt: the user's prompt owes a log
+  expect(sent.length).toBe(4) // the 4th: the count started again
 })
 
 // approval checkpoint rule
@@ -107,57 +107,6 @@ test('approved step: re-prompt asks to complete it, before the pending rule', as
 })
 test('approval step with an open gate: no re-prompt', async ($, on) => {
   const sent = world(on, { [json]: proc('running', [approvalStep()]) }, [], true)
-  await end($)
-  expect(sent).toEqual([])
-})
-
-// log rule: the user's prompt has no log entry yet
-// the log is owed: the user sent a prompt and the agent has not logged it
-// the prompt hook raises it; our own re-prompts do not
-const owe = ($: any) => $.prompt.submit({ text: 'please change the plan' })
-const procWithActiveStep = (steps: unknown[]) => JSON.stringify({ status: 'running', steps, currentState: { activeStep: { id: 's7' } } })
-test('owed, and a flow: re-prompt asks to log, names the folder and step', async ($, on) => {
-  const sent = world(on, { [json]: procWithActiveStep([step(1, 'completed')]) })
-  await owe($)
-  await end($)
-  expect(sent.length).toBe(1)
-  expect(sent[0]).toContain('User interaction not yet logged')
-  expect(sent[0]).toContain(`Flow dir: ${DIR}`)
-  expect(sent[0]).toContain('Step ID: s7')
-  expect(sent[0]).toContain('log-interaction')
-})
-test('owed, but no flow for the session: no re-prompt', async ($, on) => {
-  const sent = world(on, { [json]: proc('running', [step(1, 'completed')])}, [], false, 'other')
-  await owe($)
-  await end($)
-  expect(sent).toEqual([])
-})
-test('owed, pending step and approval checkpoint: the log comes first', async ($, on) => {
-  const sent = world(on, { [json]: proc('running', [step(1, 'pending')]) }, [], true)
-  await owe($)
-  await end($)
-  expect(sent.length).toBe(1)
-  expect(sent[0]).toContain('User interaction not yet logged')
-})
-test('owed, flow has no active step: the text still names the folder', async ($, on) => {
-  const sent = world(on, { [json]: proc('paused', []) })
-  await owe($)
-  await end($)
-  expect(sent[0]).toContain('Step ID: <active step id>')
-})
-test('owed, on a subagent turn: no re-prompt', async ($, on) => {
-  const sent = world(on, { [json]: proc('running', []) })
-  await end($, { agentId: 'a1' })
-  expect(sent).toEqual([])
-})
-test('log prompt at most 3 times in a row', async ($, on) => {
-  const sent = world(on, { [json]: proc('running', []) })
-  await owe($)
-  for (let i = 0; i < 5; i++) await end($)
-  expect(sent.length).toBe(3)
-})
-test('nothing owed: no log prompt', async ($, on) => {
-  const sent = world(on, { [json]: procWithActiveStep([step(1, 'completed')]) })
   await end($)
   expect(sent).toEqual([])
 })

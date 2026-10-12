@@ -29,7 +29,7 @@ python3 <plugin>/scripts/flow_manager.py <subcommand> --json '<one JSON object>'
 - The input is one JSON object in single quotes. The keys are the inputs named on this page (`flowDir`, `stepId`, ...). Lists and objects are real JSON values. An apostrophe inside the JSON is written `'\''`.
 - Nothing else on the line: no pipe, no `;`, no `&&`, no redirect, nothing after the closing quote. The plugin refuses any other form.
 - Each call answers one line: `{"status": "ok", "files_written": [...]}` or `{"status": "error", "message": "..."}`. Read the message of an error: it says what to do next.
-- The plugin also refuses a call at the wrong moment: with no flow bound, while the approval dialog is open, for a folder that is not a flow of this session, or for `approve-step` (only the user approves). If the log of the user's last prompt is not written yet, the plugin writes the entry for you before it runs your call; log it yourself with `log_interaction` first to give the real reason and answer.
+- The plugin also refuses a call at the wrong moment: with no flow bound, while the approval dialog is open, for a folder that is not a flow of this session, or for `approve-step` (only the user approves). The plugin logs each prompt of the user itself: you never log a prompt.
 - `request_approval` is the subcommand `request-approval` with `--json '{}'`. It shows the user the dialog and waits for the click.
 
 Every operation takes `flowDir`, the absolute path of the flow folder (for example `~/.claude/zeremai/active/flow-name`, written out in full), except `list_findings` and `update_finding_status`.
@@ -124,21 +124,6 @@ Append to the entry of a step in `log.json`. Only the inputs you give are append
 | `performanceNotes` | List of performance observations |
 
 **Important**: Log every issue, error, workaround or surprise in `problems`. The `continuous-improvement` step reads `problemsEncountered` from the log to find systemic issues and save them as findings (see `write_finding`).
-
----
-
-### log_interaction
-
-Log a user interaction in `log.json`. The plugin sees this call succeed and stops asking for a log. Do this before anything else changes after a user prompt.
-
-| Input | Required | Description |
-|-------|----------|-------------|
-| `flowDir`, `stepId` | Yes | Flow folder and step |
-| `request` | Yes | What the user asked |
-| `reason` | Yes | Why the user asked |
-| `response` | Yes | What you did |
-| `forImprovement` | No | `true` when the request points to an improvement of the flow |
-| `potentialImprovement` | No | The improvement, in words |
 
 ---
 

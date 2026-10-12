@@ -53,7 +53,8 @@ function fakeScript(on: On, files: Record<string, string>, { fail = '' } = {}) {
       const template = JSON.parse(files[input.templatePath])
       files[`${input.flowDir}/flow.json`] = JSON.stringify({ name: template.name, status: 'running', parameters: input.params ?? {}, metadata: { lastUpdated: 'now' }, steps: [{ id: 'a', number: 0, name: 'Design', status: 'pending' }] })
       result = { status: 'ok', files_written: ['flow.json'] }
-    } else if (sub === 'approve-step') {
+    } else if (sub === 'log-interaction') result = { status: 'ok', files_written: ['log'] }
+    else if (sub === 'approve-step') {
       const flow = JSON.parse(files[`${input.flowDir}/flow.json`])
       flow.steps.find((x: any) => x.id === input.stepId).approved = true
       files[`${input.flowDir}/flow.json`] = JSON.stringify(flow)
@@ -428,6 +429,7 @@ test('the gate card has no buttons while the agent\'s dialog is open', async ($,
 })
 
 test('Approve on the gate card approves the step, closes the gate and tells the agent', async ($, on) => {
+  on('model.complete', async () => ({ value: { isAnswered: true, text: '{"reason":"r","response":"Action taken: x"}', usage: { input_tokens: 1, output_tokens: 1 } } }) as never)
   const dir = `${HOME}/active/p1`
   const w = world(on, { [`${dir}/flow.json`]: gated() })
   const script = fakeScript(on, w.files)
@@ -438,14 +440,17 @@ test('Approve on the gate card approves the step, closes the gate and tells the 
   expect(await ui.find({ type: 'Text', text: 'Approve: runs step 4 "Ship". Request changes: step 3 runs again.' })).toBeDefined()
   await ui.press({ key: 'gate-approve' })
   expect(JSON.parse(w.files[`${dir}/flow.json`]).steps[0].approved).toBe(true)
-  expect(script.calls).toEqual([{ sub: 'approve-step', input: { flowDir: dir, stepId: 'a' } }]) // the script wrote it
+  expect(script.calls.map(c => c.sub)).toEqual(['log-interaction', 'approve-step']) // the mod logged the click, then the script wrote `approved`
+  expect(script.calls[0].input).toMatchObject({ request: 'User approved step 3 "Gate"', reason: 'r' })
   expect(w.store['gate:S1']).toBeUndefined()
   expect(w.sent[0].text).toContain('The user approved step 3 "Gate"')
 })
 
 test('Request changes on the gate card needs a reason, sends it, and approves nothing', async ($, on) => {
+  on('model.complete', async () => ({ value: { isAnswered: true, text: '{"reason":"r","response":"Action taken: x"}', usage: { input_tokens: 1, output_tokens: 1 } } }) as never)
   const dir = `${HOME}/active/p1`
   const w = world(on, { [`${dir}/flow.json`]: gated() })
+  fakeScript(on, w.files)
   w.store['session:S1'] = [dir]
   w.store['gate:S1'] = { dir, stepId: 'a' }
   await $.command.run({ command: 'zeremai', args: '' })

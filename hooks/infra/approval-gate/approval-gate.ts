@@ -5,6 +5,9 @@ import type { Ask, FileSystem, Gate, GateStore } from '../ports/ports'
 
 // The approval gate. The agent asks, the user answers with a click, and only the mod makes the script write `approved` (approve-step).
 
+// Logs the user's answer in the flow log (the mod builds it from the log module). Resolves the problem, or undefined when it is logged.
+export type AnswerLog = (dir: string, request: string) => Promise<string | undefined>
+
 // Writes `approved` on the step: the mod builds it from the script, so the rules of the script apply.
 export type Approver = (dir: string, stepId: string) => Promise<void>
 
@@ -37,7 +40,7 @@ const asking = new Set<string>()
 
 // Asks the user and returns what the agent reads, or undefined when a question is already open for this session.
 // An answer of Approve sets `approved`. A dismissed question leaves the gate open.
-export async function askGate(files: FileSystem, approve: Approver, gates: GateStore, ask: Ask, sessionId: string, gate: Gate): Promise<string | undefined> {
+export async function askGate(files: FileSystem, approve: Approver, gates: GateStore, ask: Ask, sessionId: string, gate: Gate, log?: AnswerLog): Promise<string | undefined> {
   if (asking.has(sessionId)) return
   asking.add(sessionId)
   try {
@@ -54,6 +57,8 @@ export async function askGate(files: FileSystem, approve: Approver, gates: GateS
       return 'The user did not answer. The gate stays open, and only the user can approve.'
     }
     await gates.clear(sessionId)
+    const problem = await log?.(gate.dir, answerRequest(step, answer === APPROVE ? undefined : answer === CHANGES ? '(no text given)' : answer))
+    if (problem) return logFailedText(problem)
     if (answer !== APPROVE) {
       return changesText(step, answer === CHANGES ? '(no text given)' : answer)
     }
@@ -62,6 +67,9 @@ export async function askGate(files: FileSystem, approve: Approver, gates: GateS
   } finally { asking.delete(sessionId) }
 }
 
+const answerRequest = (step: Step, change: string | undefined) =>
+  change === undefined ? `User approved step ${step.number} "${step.name}"` : `User asked for changes to step ${step.number} "${step.name}": ${change}`
+const logFailedText = (problem: string) => `The mod could not log the answer of the user: ${problem}\nStop and tell the user about this problem. Do not go on.`
 const approvedText = (step: Step) => `The user approved step ${step.number} "${step.name}". Complete it with update-step-status (status completed).`
 const changesText = (step: Step, why: string) => `The user asked for changes to step ${step.number} "${step.name}": ${why}\nChange the step. When it is ready, call request-approval again.`
 
@@ -91,7 +99,7 @@ export type PaneAnswer = { text: string } | { error: string }
 
 // The user presses Approve or Request changes in the pane. Everything is checked again now, not when the card was drawn:
 // the step must still be the one that waits, the agent must have asked, and no dialog may be open.
-async function answerFromPane(files: FileSystem, approve: Approver, gates: GateStore, sessionId: string, dir: string, stepId: string, change: string | undefined): Promise<PaneAnswer> {
+async function answerFromPane(files: FileSystem, approve: Approver, gates: GateStore, sessionId: string, dir: string, stepId: string, change: string | undefined, log?: AnswerLog): Promise<PaneAnswer> {
   const gate = await gates.get(sessionId)
   const now = gateForPane(await readFlow(files, dir), gate, dir)
   if (!now || now.stepId !== stepId) return { error: 'That step no longer waits for approval.' }
@@ -99,21 +107,23 @@ async function answerFromPane(files: FileSystem, approve: Approver, gates: GateS
   if (now.state === 'working') return { error: 'The agent has not asked for approval yet.' }
   const step = (await readFlow(files, dir))?.steps?.find(s => s.id === stepId)
   if (!step) return { error: 'That step no longer waits for approval.' }
+  const problem = await log?.(dir, answerRequest(step, change === undefined ? undefined : change.trim() || '(no text given)'))
+  if (problem) return { error: `The log of your answer failed: ${problem}` }
   if (change === undefined) {
     try { await markApproved(approve, { dir, stepId }) } catch (error) { return { error: `The script did not approve: ${error instanceof Error ? error.message : String(error)}` } }
   }
   await gates.clear(sessionId)
   return { text: change === undefined ? approvedText(step) : changesText(step, change.trim() || '(no text given)') }
 }
-export const approveFromPane = (files: FileSystem, approve: Approver, gates: GateStore, sessionId: string, dir: string, stepId: string) => answerFromPane(files, approve, gates, sessionId, dir, stepId, undefined)
-export const requestChangesFromPane = (files: FileSystem, approve: Approver, gates: GateStore, sessionId: string, dir: string, stepId: string, reason: string) => answerFromPane(files, approve, gates, sessionId, dir, stepId, reason)
+export const approveFromPane = (files: FileSystem, approve: Approver, gates: GateStore, sessionId: string, dir: string, stepId: string, log?: AnswerLog) => answerFromPane(files, approve, gates, sessionId, dir, stepId, undefined, log)
+export const requestChangesFromPane = (files: FileSystem, approve: Approver, gates: GateStore, sessionId: string, dir: string, stepId: string, reason: string, log?: AnswerLog) => answerFromPane(files, approve, gates, sessionId, dir, stepId, reason, log)
 
 // A prompt arrives while a gate is open: the dialog opens again. The prompt itself goes on.
 // The answer reaches the agent as a prompt of its own. Not awaited: the dialog waits for the user.
-export async function reopenPanel(files: FileSystem, approve: Approver, gates: GateStore, ask: Ask, send: (text: string) => Promise<unknown>, sessionId: string): Promise<void> {
+export async function reopenPanel(files: FileSystem, approve: Approver, gates: GateStore, ask: Ask, send: (text: string) => Promise<unknown>, sessionId: string, log?: AnswerLog): Promise<void> {
   const gate = await gates.get(sessionId)
   if (!gate) return
-  askGate(files, approve, gates, ask, sessionId, gate)
+  askGate(files, approve, gates, ask, sessionId, gate, log)
     .then(async text => { if (text && !(await hasOpenGate(gates, sessionId))) await send(text) }) // a dismissed dialog leaves the gate open and says nothing
     .catch(() => {})
 }

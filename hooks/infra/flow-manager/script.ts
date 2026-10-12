@@ -19,8 +19,7 @@ export const SCRIPT_SUBCOMMANDS = [...AGENT_SUBCOMMANDS, 'approve-step']
 export const REQUEST_APPROVAL = 'request-approval'
 const schemaOf = (sub: string) => !AGENT_SUBCOMMANDS.includes(sub) ? undefined : FLOW_TOOLS.find(t => dashed(t.name) === sub)?.inputSchema as { properties: Doc; required: string[] } | undefined
 
-// The commands that change the flow and wait for the log (log-first) and for the approval dialog.
-export const LOG_GATED = ['update-step-status', 'update-current-state', 'update-active-substep', 'add-memory-entry', 'update-flow-status']
+// The commands that change the flow and wait for the approval dialog.
 export const DIALOG_GATED = ['update-step-status', 'update-current-state', 'update-active-substep', 'update-flow-status']
 export const LINE_COMMANDS = ['create-flow', 'update-step-status', 'update-current-state', 'update-active-substep', 'update-flow-status']
 
@@ -78,14 +77,12 @@ export type Moment = {
   pluginRoot: string
   home: string // the user's home folder, for the state root
   bound: string[] // the flow folders of this session, the parent first
-  logOwed: boolean // the agent owes a log entry for the user's last prompt
   dialogOpen: boolean // the approval dialog is on screen
-  isSubagent: boolean // a subagent's own call: the log-first rule does not apply to it
   steps: { id: string; status?: string; approvalRequired?: boolean; approved?: boolean }[] // the steps of the newest bound flow
 }
 
 export type Verdict =
-  | { allow: true; sub: string; input: Doc; logFirst: boolean } // logFirst: run log-interaction before this call (the answer to "the log is owed")
+  | { allow: true; sub: string; input: Doc }
   | { approval: true } // the mod answers it with the approval dialog; the script does not run
   | { deny: string }
 
@@ -108,19 +105,19 @@ export function checkCall(command: string, moment: Moment): Verdict {
     if (!new RegExp(`^${state.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}/active/[^/]+$`).test(input.flowDir as string)) return { deny: `A new flow goes in ${state}/active/<name>, one folder deep.` }
     if (!(input.templatePath as string).startsWith(`${state}/templates/`)) return { deny: `A template comes from ${state}/templates/.` }
     if (input.parentFlowPath !== undefined && !moment.bound.includes(input.parentFlowPath as string)) return { deny: 'The parent flow is not bound to this session.' }
-    return { allow: true, sub, input, logFirst: false }
+    return { allow: true, sub, input }
   }
   if (!moment.bound.length) return { deny: 'No flow is bound to this session. Start one from the flow pane (/zeremai), or create one with create-flow.' }
-  if (sub === 'list-findings' || sub === 'update-finding-status') return { allow: true, sub, input, logFirst: false } // not about one flow folder
+  if (sub === 'list-findings' || sub === 'update-finding-status') return { allow: true, sub, input } // not about one flow folder
   if (typeof input.flowDir === 'string' && !moment.bound.includes(input.flowDir)) return { deny: `That folder is not a flow of this session. Flows of this session: ${moment.bound.join(', ')}` }
 
-  if (sub === 'log-interaction') return { allow: true, sub, input, logFirst: false }
+  if (sub === 'log-interaction') return { allow: true, sub, input }
   if (moment.dialogOpen && DIALOG_GATED.includes(sub)) return { deny: 'The approval dialog is open. Wait for the user to answer, then go on.' }
   if (sub === 'update-step-status' && input.status === 'completed') {
     const step = moment.steps.find(s => s.id === input.stepId)
     if (step?.approvalRequired && step.approved !== true) return { deny: 'This step needs the approval of the user. Call request-approval first; the user approves with a click.' }
   }
-  return { allow: true, sub, input, logFirst: moment.logOwed && !moment.isSubagent && LOG_GATED.includes(sub) }
+  return { allow: true, sub, input }
 }
 
 // An answer of the mod to a Bash call, as the Bash output (the call is not run).

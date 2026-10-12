@@ -45,11 +45,6 @@ export const FLOW_TOOLS: Tool[] = [
     filesModified: list('Files modified'), problems: list('Problems met'), decisions: list('Decisions made'),
     performanceNotes: list('Performance notes'),
   }, ['flowDir', 'stepId']),
-  tool('log_interaction', "Log the user's request and the agent's answer in the log. Do this before anything else changes.", {
-    flowDir, stepId: str('Step id'), request: str("The user's request"), reason: str('Why the user asked'),
-    response: str("The agent's response"), forImprovement: { type: 'boolean', description: 'The request points to an improvement of the flow' },
-    potentialImprovement: str('The improvement'),
-  }, ['flowDir', 'stepId', 'request', 'reason', 'response']),
   tool('update_flow_status', 'Change the status of the flow. Completing a sub-flow needs a summary. A finished flow moves to its status folder.', {
     flowDir, status: { type: 'string', enum: FLOW_STATUSES }, summary: str('What was done; needed to complete a sub-flow'),
   }, ['flowDir', 'status']),

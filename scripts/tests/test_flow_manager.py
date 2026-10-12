@@ -100,7 +100,7 @@ class ToolsTest(FlowBase):
         for name in ['tools.ts', 'findings-tools.ts']:
             with open(os.path.join(REPO, 'hooks/infra/flow-manager', name), encoding='utf-8') as f:
                 names += re.findall(r"tool\('([a-z_]+)'", f.read())
-        self.assertGreaterEqual(len(names), 16)
+        self.assertGreaterEqual(len(names), 15)
         for name in names:
             if name == 'bind_flow':
                 continue  # the session link lives in the mod's store, not in files

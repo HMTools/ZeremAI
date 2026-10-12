@@ -1,18 +1,20 @@
 import type { Register } from 'claude-code'
-import { raiseLogOwed } from '../infra/log-owed/log-owed'
+import { logInteraction, logPrompt } from '../infra/log-first/log-first'
+import type { LogDeps } from '../infra/log-first/log-first'
 import { isPromptFromPlugin } from '../infra/mod-events/mod-events'
 import type { FileSystem, Gate, GateStore, SessionLinks } from '../infra/ports/ports'
 import { startCountingAgain } from '../on-agent-stopping/on-agent-stopping'
 import { reopenPanel } from '../infra/approval-gate/approval-gate'
 import type { Approver } from '../infra/approval-gate/approval-gate'
-import { approveStep } from '../infra/flow-manager/script'
+import { approveStep, runScript } from '../infra/flow-manager/script'
 import { slash } from '../infra/flow-manager/move'
 import { findFlowDir, hasFlowInstance, sessionKey } from '../infra/flow-repository/flow-repository'
 
 // The one hook on prompts (a plugin cannot have two without a matcher). A prompt that the plugin sends
 // itself, as a re-prompt, changes nothing. A prompt from anywhere else:
 //  - starts the turn-end re-prompt count again;
-//  - in a session that has a flow, makes the agent owe a log entry (read by the turn-end hook and the edit hook);
+//  - in a session that has a flow, is logged by the mod before the agent sees it (a model writes the details, see ../infra/log-first).
+//    If the log fails, the prompt is dropped and the user is told why;
 //  - while an approval gate is open, opens the approval dialog again;
 
 const filesOf = ($: any): FileSystem => ({
@@ -23,6 +25,13 @@ const filesOf = ($: any): FileSystem => ({
 })
 const linksOf = ($: any): SessionLinks => ({
   get: async sessionId => ((await $.store.get(sessionKey(sessionId))) as string[] | undefined) ?? [],
+})
+
+const pythonOf = async ($: any) => (await $.env.get('OS')) === 'Windows_NT' ? 'python' : 'python3'
+const logDepsOf = ($: any): LogDeps => ({
+  files: filesOf($), links: linksOf($),
+  complete: request => $.model.complete(request),
+  script: async (sub, input) => runScript(argv => $.process.run(argv, { timeoutMs: 60_000 }), await pythonOf($), slash($.plugin.root), sub, input),
 })
 
 const gatesOf = ($: any): GateStore => ({
@@ -38,8 +47,9 @@ export const register: Register = on => {
     if (!isPromptFromPlugin(e)) {
       startCountingAgain()
       const sessionId = await $.session.id()
-      await raiseLogOwed(filesOf($), linksOf($), sessionId, e.text)
-      await reopenPanel(filesOf($), approverOf($), gatesOf($), (q, options) => $.ui.ask(q, options), text => $.prompt.submit({ text }), sessionId)
+      const problem = await logPrompt(logDepsOf($), sessionId, e.text)
+      if (problem) return { drop: `Flow log failed, so your prompt was not sent: ${problem} Send it again, or close the flow.` }
+      await reopenPanel(filesOf($), approverOf($), gatesOf($), (q, options) => $.ui.ask(q, options), text => $.prompt.submit({ text }), sessionId, (dir, request) => logInteraction(logDepsOf($), dir, request))
     }
     return next(e)
   })

@@ -97,35 +97,6 @@ test('the agent can never run approve-step', async ($, on) => {
   expect(w.bash).toEqual([])
 })
 
-test('the log is owed: the mod logs the user\'s prompt through the script, then the call goes on; the next call needs no log', async ($, on) => {
-  const w = world(on)
-  const root = await rootOf($)
-  await $.prompt.submit({ text: 'make the header blue' })
-  const command = cmd(root, 'update-step-status', { flowDir: DIR, stepId: 's1', status: 'in_progress' })
-  await $.tool.call({ tool: 'Bash', command })
-  expect(w.script).toHaveLength(1)
-  expect(w.script[0].sub).toBe('log-interaction')
-  expect(w.script[0].input).toMatchObject({ flowDir: DIR, stepId: 's1', request: 'User requested: make the header blue' })
-  expect(w.bash).toEqual([command])
-  await $.tool.call({ tool: 'Bash', command })
-  expect(w.script).toHaveLength(1) // logged once
-})
-test('a subagent\'s own call is not logged first', async ($, on) => {
-  const w = world(on)
-  const root = await rootOf($)
-  await $.prompt.submit({ text: 'go' })
-  await $.tool.call({ tool: 'Bash', command: cmd(root, 'update-step-status', { flowDir: DIR, stepId: 's1', status: 'in_progress' }), agentId: 'a1' })
-  expect(w.script).toEqual([])
-  expect(w.bash).toHaveLength(1)
-})
-test('log-interaction by the agent clears the debt, so the next call is not logged by the mod', async ($, on) => {
-  const w = world(on)
-  const root = await rootOf($)
-  await $.prompt.submit({ text: 'go' })
-  await $.tool.call({ tool: 'Bash', command: cmd(root, 'log-interaction', { flowDir: DIR, stepId: 's1', request: 'r', reason: 'r', response: 'r' }) })
-  await $.tool.call({ tool: 'Bash', command: cmd(root, 'update-step-status', { flowDir: DIR, stepId: 's1', status: 'in_progress' }) })
-  expect(w.script).toEqual([])
-})
 test('a Bash command that does not run the script goes on as before', async ($, on) => {
   const w = world(on)
   await $.tool.call({ tool: 'Bash', command: 'ls' })

@@ -2,14 +2,13 @@ import type { Register } from 'claude-code'
 import { findFlowDir, readFlow, sessionKey } from '../infra/flow-repository/flow-repository'
 import { bindSession } from '../infra/flow-manager/bind-session'
 import { LINE_COMMANDS, checkCall, runScript, runsScript } from '../infra/flow-manager/script'
-import { owedPrompt, clearLogOwed, isLogOwed } from '../infra/log-owed/log-owed'
 import { stepLine } from '../infra/flow-pane/step-line'
 import { moveCommands, slash } from '../infra/flow-manager/move'
 import type { FileSystem, ManagerPorts } from '../infra/ports/ports'
 
 // The flow script (scripts/flow_manager.py) is the only writer of flow files. The agent runs it with Bash, one command form:
 //   python3 <plugin>/scripts/flow_manager.py <subcommand> --json '<one JSON object>'
-// This hook decides if a call may run: at this moment (a flow is bound, the log is not owed, no approval dialog is open) and with these
+// This hook decides if a call may run: at this moment (a flow is bound, no approval dialog is open) and with these
 // arguments (the schema of the subcommand, only a flow folder of this session). A call that fails a rule never reaches the script.
 
 const filesOf = ($: any): FileSystem => ({
@@ -56,19 +55,6 @@ async function nudgeFindings($: any): Promise<void> {
   } catch { /* no message */ }
 }
 
-// The agent owes a log entry and runs a command that changes the flow: the mod logs the request first (the user's last prompt), then lets the call through.
-async function logForAgent($: any, ports: ManagerPorts, sessionId: string, flowDir: string): Promise<void> {
-  const flow = await readFlow(filesOf($), flowDir)
-  const stepId = flow?.currentState?.activeStep?.id ?? flow?.steps?.[0]?.id
-  if (!stepId) return
-  const prompt = owedPrompt(sessionId)
-  const logged = await ports.script('log-interaction', {
-    flowDir, stepId, request: `User requested: ${prompt || '(the prompt was not kept)'}`,
-    reason: 'The plugin logged this request: the agent went on without logging it.', response: 'The agent changed the flow before it logged. The plugin wrote this entry for it.',
-  })
-  if (logged.status === 'ok') clearLogOwed(sessionId)
-}
-
 export const register: Register = on => {
   on('session.start', async ($, e, next) => {
     const dir = await findFlowDir(filesOf($), portsOf($).links, await $.session.id())
@@ -91,19 +77,15 @@ export const register: Register = on => {
       pluginRoot: slash($.plugin.root),
       home: (await files.home()) ?? '',
       bound,
-      logOwed: isLogOwed(sessionId),
       dialogOpen: (await $.store.get(`gate:${sessionId}`)) !== undefined,
-      isSubagent: Boolean((e as any).agentId),
       steps: (dir ? (await readFlow(files, dir))?.steps : undefined) ?? [],
     })
     if ('deny' in verdict) return { deny: verdict.deny } as never
     if ('approval' in verdict) return next(e) // the approval hook answers request-approval before this one
-    if (verdict.logFirst && dir) await logForAgent($, ports, sessionId, dir)
     const result: any = await next(e)
     let answer: any
     try { answer = JSON.parse(String(result?.result?.stdout ?? '').trim().split('\n').filter(Boolean).pop() ?? '') } catch { /* the script printed no JSON: the model reads Bash's own answer */ }
     if (answer?.status === 'ok') {
-      if (verdict.sub === 'log-interaction') clearLogOwed(sessionId)
       if (verdict.sub === 'create-flow') await bindSession(ports, verdict.input.flowDir as string)
       if (LINE_COMMANDS.includes(verdict.sub)) await showStepLine($, verdict.input.flowDir as string)
     }

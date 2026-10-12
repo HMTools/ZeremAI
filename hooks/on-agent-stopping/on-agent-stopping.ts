@@ -2,7 +2,6 @@ import type { Register } from 'claude-code'
 import type { Step } from '../infra/flow-types/flow-types'
 import { findFlowDir, readFlow, hasFlowInstance, isFlowRunning, sessionKey } from '../infra/flow-repository/flow-repository'
 import { isStepExecutorRunning } from '../infra/step-executors/step-executors'
-import { findLogOwed } from '../infra/log-first/log-first'
 import { createRepromptLimiter } from '../infra/reprompt-limiter/reprompt-limiter'
 import { isMainAgentAnswer } from '../infra/mod-events/mod-events'
 import { hasOpenGate } from '../infra/approval-gate/approval-gate'
@@ -77,10 +76,6 @@ export const register: Register = on => {
 // What the agent must do next, or undefined when it may stop.
 async function promptToContinue($: any, sessionId: string): Promise<Prompt | undefined> {
   const files = filesOf($)
-
-  // The user's last prompt has no log entry yet. Even at an approval checkpoint the agent must log it first.
-  const logOwed = await findLogOwed(files, linksOf($), sessionId)
-  if (logOwed) return logOwed
 
   const flowDir = await findFlowDir(files, linksOf($), sessionId)
   if (!hasFlowInstance(flowDir)) return
