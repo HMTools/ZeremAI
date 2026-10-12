@@ -21,23 +21,12 @@ The rule listens to `turn.complete`. It acts only when:
 
 Then it picks the first case that fits, from top to bottom:
 
-```mermaid
-flowchart TD
-  A([Agent ended its turn]) --> B{Flow running,<br/>no gate open?}
-  B -- no --> Z([Agent may stop]):::stop
-  B -- yes --> C{Approval step<br/>in progress?}
-  C -- "not approved" --> D["Wait for executor<br/>or ask you"]:::go
-  C -- approved --> E["Complete the step"]:::go
-  C -- no --> F{A step pending?}
-  F -- yes --> G["Delegate the next step"]:::go
-  F -- no --> H{A step in progress?}
-  H -- yes --> I["Wait for executor<br/>or delegate again"]:::go
-  H -- no --> Z
-  classDef go fill:#4F46E5,stroke:#4338CA,color:#fff
-  classDef stop fill:#64748B,stroke:#475569,color:#fff
-```
+<Frame caption="Stop prevention: what happens when the agent ends a turn">
+  <img className="dark:hidden" src="/images/diagrams/stop-decision-light.svg" alt="Diagram: Stop prevention: what happens when the agent ends a turn. Open the interactive version for the details." />
+  <img className="hidden dark:block" src="/images/diagrams/stop-decision-dark.svg" alt="Diagram: Stop prevention: what happens when the agent ends a turn. Open the interactive version for the details." />
+</Frame>
 
-Indigo boxes: the mod sends a re-prompt. Grey: the agent may stop.
+[Open the interactive diagram](/diagrams/stop-decision.html)
 
 | Situation | The prompt says |
 |---|---|

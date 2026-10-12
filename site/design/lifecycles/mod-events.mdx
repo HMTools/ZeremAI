@@ -18,25 +18,12 @@ The mod is a set of hooks. Claude Code calls a hook when something happens. Each
 
 ## One turn, as the mod sees it
 
-```mermaid
-sequenceDiagram
-  autonumber
-  participant You
-  participant Mod
-  participant Agent
-  participant Script as Flow script
-  You->>Mod: prompt.submit
-  Mod->>Script: log the prompt (Haiku)
-  Mod->>Agent: the prompt goes on
-  Agent->>Mod: tool.call (Bash)
-  rect rgba(79, 70, 229, 0.18)
-    Mod->>Mod: check moment and input
-    Mod->>Script: run the command
-  end
-  Script-->>Agent: one line of JSON
-  Agent->>Mod: turn.complete
-  Mod->>Agent: re-prompt if work is left
-```
+<Frame caption="One turn, as the mod sees it">
+  <img className="dark:hidden" src="/images/diagrams/mod-turn-light.svg" alt="Diagram: One turn, as the mod sees it. Open the interactive version for the details." />
+  <img className="hidden dark:block" src="/images/diagrams/mod-turn-dark.svg" alt="Diagram: One turn, as the mod sees it. Open the interactive version for the details." />
+</Frame>
+
+[Open the interactive diagram](/diagrams/mod-turn.html)
 
 ## How hooks combine
 

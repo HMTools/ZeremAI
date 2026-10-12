@@ -7,17 +7,12 @@ A step with `approvalRequired: true` cannot complete until you approve it. The *
 
 ## The gate, in states
 
-```mermaid
-stateDiagram-v2
-  direction LR
-  [*] --> working
-  working --> dialog: request-approval
-  dialog --> approved: Approve
-  dialog --> working: Request changes
-  dialog --> waiting: close
-  waiting --> dialog: next prompt
-  approved --> [*]
-```
+<Frame caption="States of an approval gate">
+  <img className="dark:hidden" src="/images/diagrams/approval-gate-light.svg" alt="Diagram: States of an approval gate. Open the interactive version for the details." />
+  <img className="hidden dark:block" src="/images/diagrams/approval-gate-dark.svg" alt="Diagram: States of an approval gate. Open the interactive version for the details." />
+</Frame>
+
+[Open the interactive diagram](/diagrams/approval-gate.html)
 
 In the pane, **Approve** and **Request changes** also work from `waiting`. They end the gate in the same way as the dialog.
 
@@ -32,24 +27,12 @@ The gate is in the mod store, so a restart or a reload does not lose it.
 
 ## The path of one approval
 
-```mermaid
-sequenceDiagram
-  autonumber
-  participant A as Agent
-  participant G as Mod (on-approval-gate)
-  participant U as You
-  participant S as Flow script
-  A->>G: Bash: request-approval
-  G->>G: find the step, open the gate
-  G->>U: dialog: Approve / Request changes
-  rect rgba(79, 70, 229, 0.18)
-    U-->>G: Approve (your click)
-    G->>S: approve-step (only the mod can)
-    S-->>G: approved: true written
-  end
-  G-->>A: "The user approved step N. Complete it."
-  A->>S: update-step-status completed
-```
+<Frame caption="The path of one approval">
+  <img className="dark:hidden" src="/images/diagrams/approval-path-light.svg" alt="Diagram: The path of one approval. Open the interactive version for the details." />
+  <img className="hidden dark:block" src="/images/diagrams/approval-path-dark.svg" alt="Diagram: The path of one approval. Open the interactive version for the details." />
+</Frame>
+
+[Open the interactive diagram](/diagrams/approval-path.html)
 
 - `request-approval` is not run by the script. The mod answers the call itself, and the call waits for your click. The answer is the text the agent reads.
 - **Approve** makes the mod run `approve-step`. The script writes `approved: true`. No other command writes it.

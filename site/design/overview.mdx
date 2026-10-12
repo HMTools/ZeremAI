@@ -17,9 +17,11 @@ This section is for people who change ZeremAI. It explains how the plugin works 
 The model reads instructions from the skills. The mod makes sure it follows the rules that matter. The script makes sure the files stay correct.
 
 <Frame caption="The mod checks and runs every flow script call. The mod reads files but never writes them.">
-  <img className="dark:hidden" src="/images/architecture-light.svg" alt="You send a prompt to Claude Code. The agent makes a Bash call to the mod. The mod runs the flow script, which writes the files. The mod only reads the files." />
-  <img className="hidden dark:block" src="/images/architecture-dark.svg" alt="You send a prompt to Claude Code. The agent makes a Bash call to the mod. The mod runs the flow script, which writes the files. The mod only reads the files." />
+  <img className="dark:hidden" src="/images/diagrams/overview-light.svg" alt="You send a prompt to Claude Code. The agent makes a Bash call to the mod. The mod runs the flow script, which writes the files. The mod only reads the files." />
+  <img className="hidden dark:block" src="/images/diagrams/overview-dark.svg" alt="You send a prompt to Claude Code. The agent makes a Bash call to the mod. The mod runs the flow script, which writes the files. The mod only reads the files." />
 </Frame>
+
+[Open the interactive diagram](/diagrams/overview.html)
 
 The mod sees each Bash command of the agent. It runs a flow script command only if the call is allowed at that moment. The mod itself reads flow files to decide, but it changes them only by running the script.
 

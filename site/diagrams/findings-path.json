@@ -1,0 +1,136 @@
+{
+ "schema_version": 1,
+ "diagram_type": "dataflow",
+ "meta": {
+  "title": "From the flow log to an applied improvement",
+  "output": "findings-path.html",
+  "quality_profile": "standard",
+  "viewBox": [
+   1100,
+   670
+  ]
+ },
+ "stages": [
+  {
+   "label": "Evidence"
+  },
+  {
+   "label": "Log"
+  },
+  {
+   "label": "Step"
+  },
+  {
+   "label": "Findings"
+  },
+  {
+   "label": "Review"
+  }
+ ],
+ "nodes": [
+  {
+   "id": "prompts",
+   "type": "frontend",
+   "label": "Your prompts",
+   "sublabel": "and agent problems",
+   "stage": 0,
+   "row": 0,
+   "width": 140,
+   "height": 58
+  },
+  {
+   "id": "log",
+   "type": "database",
+   "label": "log.json",
+   "stage": 1,
+   "row": 2,
+   "width": 168,
+   "height": 58
+  },
+  {
+   "id": "ci",
+   "type": "backend",
+   "label": "Continuous Improvement",
+   "sublabel": "framework step, no approval",
+   "stage": 2,
+   "row": 0,
+   "width": 168,
+   "height": 58
+  },
+  {
+   "id": "fs",
+   "type": "database",
+   "label": "Findings store",
+   "sublabel": "improvement-findings/{template}/{flow}.json",
+   "stage": 3,
+   "row": 2,
+   "width": 168,
+   "height": 58
+  },
+  {
+   "id": "you",
+   "type": "frontend",
+   "label": "You",
+   "stage": 4,
+   "row": 0,
+   "width": 168,
+   "height": 58
+  },
+  {
+   "id": "skill",
+   "type": "security",
+   "label": "apply-improvements",
+   "sublabel": "skill",
+   "stage": 4,
+   "row": 3,
+   "width": 168,
+   "height": 58
+  }
+ ],
+ "flows": [
+  {
+   "from": "prompts",
+   "to": "log",
+   "label": "recorded",
+   "variant": "default",
+   "route": "vertical-channel"
+  },
+  {
+   "from": "log",
+   "to": "ci",
+   "label": "read",
+   "variant": "default",
+   "route": "vertical-channel"
+  },
+  {
+   "from": "ci",
+   "to": "fs",
+   "label": "write-finding",
+   "variant": "emphasis",
+   "route": "vertical-channel"
+  },
+  {
+   "from": "fs",
+   "to": "you",
+   "label": "toast at start",
+   "classification": "the mod",
+   "variant": "default",
+   "route": "vertical-channel"
+  },
+  {
+   "from": "you",
+   "to": "skill",
+   "label": "/apply-improvements",
+   "variant": "default",
+   "route": "straight",
+   "labelDy": 40
+  },
+  {
+   "from": "skill",
+   "to": "fs",
+   "label": "update-finding-status",
+   "classification": "applied, rejected or deferred",
+   "variant": "dashed"
+  }
+ ]
+}

@@ -1,0 +1,117 @@
+{
+  "schema_version": 2,
+  "diagram_type": "lifecycle",
+  "meta": {
+    "title": "States of an approval gate",
+    "output": "site/diagrams/approval-gate.html"
+  },
+  "lanes": [
+    {
+      "id": "main",
+      "label": "Gate"
+    },
+    {
+      "id": "closed",
+      "label": "Dialog closed"
+    }
+  ],
+  "states": [
+    {
+      "id": "working",
+      "type": "start",
+      "label": "working",
+      "sublabel": "no gate open",
+      "lane": "main",
+      "col": 0
+    },
+    {
+      "id": "dialog",
+      "type": "decision",
+      "label": "dialog",
+      "sublabel": "dialog on screen",
+      "lane": "main",
+      "col": 2
+    },
+    {
+      "id": "approved",
+      "type": "success",
+      "label": "approved",
+      "tag": "terminal",
+      "lane": "main",
+      "col": 4
+    },
+    {
+      "id": "waiting",
+      "type": "waiting",
+      "label": "waiting",
+      "sublabel": "pane shows buttons",
+      "lane": "closed",
+      "col": 2
+    }
+  ],
+  "transitions": [
+    {
+      "id": "t1",
+      "from": "working",
+      "to": "dialog",
+      "label": "request-approval"
+    },
+    {
+      "id": "t2",
+      "from": "dialog",
+      "to": "approved",
+      "label": "Approve",
+      "variant": "emphasis"
+    },
+    {
+      "id": "t3",
+      "from": "dialog",
+      "to": "working",
+      "label": "Request changes",
+      "variant": "dashed",
+      "route": "top-channel"
+    },
+    {
+      "id": "t4",
+      "from": "dialog",
+      "to": "waiting",
+      "label": "close the dialog",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "route": "straight",
+      "labelAt": [
+        538,
+        135
+      ]
+    },
+    {
+      "id": "t5",
+      "from": "waiting",
+      "to": "dialog",
+      "label": "your next prompt",
+      "variant": "dashed",
+      "fromSide": "right",
+      "toSide": "right",
+      "via": [
+        [
+          760,
+          272
+        ],
+        [
+          760,
+          88
+        ]
+      ]
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Also true in the pane",
+      "items": [
+        "Approve and Request changes also work from waiting",
+        "They end the gate the same way as the dialog"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,119 @@
+{
+  "schema_version": 2,
+  "diagram_type": "lifecycle",
+  "meta": {
+    "title": "States of a flow",
+    "output": "site/diagrams/flow-status.html"
+  },
+  "lanes": [
+    {
+      "id": "main",
+      "label": "Normal path"
+    },
+    {
+      "id": "paused",
+      "label": "Paused"
+    },
+    {
+      "id": "terminal",
+      "label": "Ends"
+    }
+  ],
+  "states": [
+    {
+      "id": "new",
+      "type": "start",
+      "label": "New flow",
+      "lane": "main",
+      "col": 0
+    },
+    {
+      "id": "running",
+      "type": "active",
+      "label": "running",
+      "sublabel": "folder active/",
+      "lane": "main",
+      "col": 1
+    },
+    {
+      "id": "completed",
+      "type": "success",
+      "label": "completed",
+      "sublabel": "folder completed/",
+      "tag": "terminal",
+      "lane": "main",
+      "col": 3
+    },
+    {
+      "id": "paused",
+      "type": "waiting",
+      "label": "paused",
+      "sublabel": "folder active/",
+      "lane": "paused",
+      "col": 1
+    },
+    {
+      "id": "failed",
+      "type": "failure",
+      "label": "failed",
+      "sublabel": "folder failed/",
+      "tag": "terminal",
+      "lane": "terminal",
+      "col": 3
+    }
+  ],
+  "transitions": [
+    {
+      "id": "t1",
+      "from": "new",
+      "to": "running",
+      "label": "create-flow"
+    },
+    {
+      "id": "t2",
+      "from": "running",
+      "to": "paused",
+      "label": "pause",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "route": "straight",
+      "labelAt": [
+        360,
+        135
+      ]
+    },
+    {
+      "id": "t3",
+      "from": "paused",
+      "to": "running",
+      "label": "resume",
+      "variant": "dashed",
+      "fromSide": "right",
+      "toSide": "right",
+      "via": [
+        [
+          470,
+          272
+        ],
+        [
+          470,
+          88
+        ]
+      ]
+    },
+    {
+      "id": "t4",
+      "from": "running",
+      "to": "completed",
+      "label": "all steps done",
+      "variant": "emphasis"
+    },
+    {
+      "id": "t5",
+      "from": "running",
+      "to": "failed",
+      "label": "error",
+      "variant": "security"
+    }
+  ]
+}

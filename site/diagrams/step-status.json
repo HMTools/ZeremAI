@@ -1,0 +1,67 @@
+{
+  "schema_version": 2,
+  "diagram_type": "lifecycle",
+  "meta": {
+    "title": "States of a step",
+    "output": "site/diagrams/step-status.html"
+  },
+  "lanes": [
+    {
+      "id": "main",
+      "label": "Normal path"
+    }
+  ],
+  "states": [
+    {
+      "id": "pending",
+      "type": "start",
+      "label": "pending",
+      "lane": "main",
+      "col": 0
+    },
+    {
+      "id": "in_progress",
+      "type": "active",
+      "label": "in_progress",
+      "lane": "main",
+      "col": 2
+    },
+    {
+      "id": "completed",
+      "type": "success",
+      "label": "completed",
+      "tag": "terminal",
+      "lane": "main",
+      "col": 4
+    }
+  ],
+  "transitions": [
+    {
+      "id": "t1",
+      "from": "pending",
+      "to": "in_progress",
+      "label": "agent starts the step"
+    },
+    {
+      "id": "t2",
+      "from": "in_progress",
+      "to": "completed",
+      "label": "update-step-status",
+      "note": "needs approved = true if approvalRequired",
+      "variant": "security",
+      "labelAt": [
+        742,
+        135
+      ]
+    }
+  ],
+  "cards": [
+    {
+      "dot": "amber",
+      "title": "Condition on in_progress to completed",
+      "items": [
+        "With approvalRequired, completed needs approved = true"
+      ]
+    }
+  ]
+}

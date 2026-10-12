@@ -1,0 +1,99 @@
+{
+ "schema_version": 1,
+ "diagram_type": "sequence",
+ "meta": {
+  "title": "The path of one approval",
+  "output": "approval-path.html",
+  "viewBox": [
+   960,
+   480
+  ],
+  "column_fit": "spread"
+ },
+ "participants": [
+  {
+   "id": "agent",
+   "type": "backend",
+   "label": "Agent"
+  },
+  {
+   "id": "mod",
+   "type": "security",
+   "label": "Mod",
+   "sublabel": "on-approval-gate"
+  },
+  {
+   "id": "you",
+   "type": "external",
+   "label": "You"
+  },
+  {
+   "id": "script",
+   "type": "backend",
+   "label": "Flow script"
+  }
+ ],
+ "segments": [
+  {
+   "from": 200,
+   "to": 315,
+   "label": "Only your click starts this"
+  }
+ ],
+ "messages": [
+  {
+   "id": "m1",
+   "from": "agent",
+   "to": "mod",
+   "y": 165,
+   "label": "Bash: request-approval",
+   "note": "the mod finds the step, opens the gate"
+  },
+  {
+   "id": "m3",
+   "from": "mod",
+   "to": "you",
+   "y": 201,
+   "label": "dialog: Approve / Request changes"
+  },
+  {
+   "id": "m4",
+   "from": "you",
+   "to": "mod",
+   "y": 237,
+   "label": "Approve (your click)",
+   "variant": "security"
+  },
+  {
+   "id": "m5",
+   "from": "mod",
+   "to": "script",
+   "y": 273,
+   "label": "approve-step (only the mod can)",
+   "variant": "security"
+  },
+  {
+   "id": "m6",
+   "from": "script",
+   "to": "mod",
+   "y": 309,
+   "label": "approved: true written",
+   "variant": "return"
+  },
+  {
+   "id": "m7",
+   "from": "mod",
+   "to": "agent",
+   "y": 345,
+   "label": "\"The user approved step N. Complete it.\"",
+   "variant": "return"
+  },
+  {
+   "id": "m8",
+   "from": "agent",
+   "to": "script",
+   "y": 381,
+   "label": "update-step-status completed"
+  }
+ ]
+}

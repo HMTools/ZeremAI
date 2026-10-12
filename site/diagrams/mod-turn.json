@@ -1,0 +1,103 @@
+{
+ "schema_version": 1,
+ "diagram_type": "sequence",
+ "meta": {
+  "title": "One turn, as the mod sees it",
+  "output": "mod-turn.html",
+  "viewBox": [
+   960,
+   560
+  ],
+  "column_fit": "spread"
+ },
+ "participants": [
+  {
+   "id": "you",
+   "type": "external",
+   "label": "You"
+  },
+  {
+   "id": "mod",
+   "type": "security",
+   "label": "Mod"
+  },
+  {
+   "id": "agent",
+   "type": "backend",
+   "label": "Agent"
+  },
+  {
+   "id": "script",
+   "type": "backend",
+   "label": "Flow script"
+  }
+ ],
+ "segments": [
+  {
+   "from": 262,
+   "to": 334,
+   "label": "The mod's check"
+  }
+ ],
+ "messages": [
+  {
+   "id": "m1",
+   "from": "you",
+   "to": "mod",
+   "y": 170,
+   "label": "prompt.submit"
+  },
+  {
+   "id": "m2",
+   "from": "mod",
+   "to": "script",
+   "y": 205,
+   "label": "log the prompt (Haiku)"
+  },
+  {
+   "id": "m3",
+   "from": "mod",
+   "to": "agent",
+   "y": 240,
+   "label": "the prompt goes on"
+  },
+  {
+   "id": "m4",
+   "from": "agent",
+   "to": "mod",
+   "y": 275,
+   "label": "tool.call (Bash)",
+   "note": "then: check moment and input"
+  },
+  {
+   "id": "m6",
+   "from": "mod",
+   "to": "script",
+   "y": 320,
+   "label": "run the command",
+   "variant": "security"
+  },
+  {
+   "id": "m7",
+   "from": "script",
+   "to": "agent",
+   "y": 355,
+   "label": "one line of JSON",
+   "variant": "return"
+  },
+  {
+   "id": "m8",
+   "from": "agent",
+   "to": "mod",
+   "y": 390,
+   "label": "turn.complete"
+  },
+  {
+   "id": "m9",
+   "from": "mod",
+   "to": "agent",
+   "y": 425,
+   "label": "re-prompt if work is left"
+  }
+ ]
+}

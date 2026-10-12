@@ -1,0 +1,50 @@
+{
+ "schema_version": 1,
+ "diagram_type": "sequence",
+ "meta": {
+  "title": "A sub-flow reports to its parent",
+  "output": "subflow-report.html",
+  "viewBox": [
+   960,
+   480
+  ]
+ },
+ "participants": [
+  {
+   "id": "p",
+   "type": "backend",
+   "label": "Parent flow"
+  },
+  {
+   "id": "c",
+   "type": "backend",
+   "label": "Child flow"
+  }
+ ],
+ "segments": [
+  {
+   "from": 205,
+   "to": 265,
+   "label": "The agent works the child steps"
+  }
+ ],
+ "messages": [
+  {
+   "id": "m1",
+   "from": "p",
+   "to": "c",
+   "y": 170,
+   "label": "create-flow (parentFlowPath)",
+   "note": "then register-child-flow"
+  },
+  {
+   "id": "m3",
+   "from": "c",
+   "to": "p",
+   "y": 280,
+   "label": "update-flow-status completed + summary",
+   "variant": "emphasis",
+   "note": "parent marks child completed, saves summary in memory/sub-flows.json"
+  }
+ ]
+}

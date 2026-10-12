@@ -5,18 +5,12 @@ description: "How a template travels from a git marketplace to a running flow, a
 
 A template goes through three places before it runs.
 
-```mermaid
-flowchart LR
-  G[("Git<br/>marketplace")]:::store -- "mod: refresh" --> C["Cache<br/>cache/sources/{name}"]:::store
-  C -- "mod: install" --> T["Installed<br/>templates/flows/{category}/{name}"]:::store
-  T -- "script: create-flow" --> F["Flow<br/>active/{flow}/flow.json"]:::script
-  classDef mod fill:#4F46E5,stroke:#4338CA,color:#fff
-  classDef script fill:#0F766E,stroke:#0D5F59,color:#fff
-  classDef store fill:#64748B,stroke:#475569,color:#fff
-  classDef you fill:#7C3AED,stroke:#6D28D9,color:#fff
-```
+<Frame caption="From marketplace to running flow">
+  <img className="dark:hidden" src="/images/diagrams/template-path-light.svg" alt="Diagram: From marketplace to running flow. Open the interactive version for the details." />
+  <img className="hidden dark:block" src="/images/diagrams/template-path-dark.svg" alt="Diagram: From marketplace to running flow. Open the interactive version for the details." />
+</Frame>
 
-Grey boxes are copies on disk. Each arrow names who copies: the mod, or the script.
+[Open the interactive diagram](/diagrams/template-path.html)
 
 All three live under `~/.claude/zeremai/`. Each step is a copy. Nothing links back to the place it came from.
 

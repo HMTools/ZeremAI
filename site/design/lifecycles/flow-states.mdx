@@ -7,21 +7,12 @@ description: "The states of a flow and of a step, where each flow folder lives, 
 
 A flow has one of four statuses. The status decides which folder the flow lives in.
 
-```mermaid
-stateDiagram-v2
-  direction LR
-  [*] --> running: create-flow
-  running --> paused: pause
-  paused --> running: resume
-  running --> completed: all steps done
-  running --> failed: error
-  completed --> [*]
-  failed --> [*]
-  note right of running: folder active/
-  note right of paused: folder active/
-  note right of completed: folder completed/
-  note right of failed: folder failed/
-```
+<Frame caption="States of a flow">
+  <img className="dark:hidden" src="/images/diagrams/flow-status-light.svg" alt="Diagram: States of a flow. Open the interactive version for the details." />
+  <img className="hidden dark:block" src="/images/diagrams/flow-status-dark.svg" alt="Diagram: States of a flow. Open the interactive version for the details." />
+</Frame>
+
+[Open the interactive diagram](/diagrams/flow-status.html)
 
 | Status | Folder |
 |---|---|
@@ -43,15 +34,12 @@ The mod then binds the folder to the session. The first step starts as `pending`
 
 ## A step
 
-```mermaid
-stateDiagram-v2
-  direction LR
-  [*] --> pending
-  pending --> in_progress: agent starts it
-  in_progress --> completed: update-step-status
-  completed --> [*]
-  note right of in_progress: with approvalRequired, completed needs approved = true
-```
+<Frame caption="States of a step">
+  <img className="dark:hidden" src="/images/diagrams/step-status-light.svg" alt="Diagram: States of a step. Open the interactive version for the details." />
+  <img className="hidden dark:block" src="/images/diagrams/step-status-dark.svg" alt="Diagram: States of a step. Open the interactive version for the details." />
+</Frame>
+
+[Open the interactive diagram](/diagrams/step-status.html)
 
 This is the normal path. The script accepts any of the five statuses (`pending`, `in_progress`, `completed`, `skipped`, `awaiting_approval`) and sets `startedAt` and `completedAt` for you. It has one rule of its own. A step with `approvalRequired: true` adds a check on the `in_progress → completed` arrow: the script refuses it until `approved` is `true`. Only your click sets `approved`. See [The approval gate](/design/guards/approval-gate).
 
@@ -63,20 +51,12 @@ The agent sets `in_progress` **before** it starts the `step-executor` subagent. 
 
 A step with a `subFlowTrigger` starts a child flow.
 
-```mermaid
-sequenceDiagram
-  autonumber
-  participant P as Parent flow
-  participant C as Child flow
-  P->>C: create-flow (parentFlowPath)
-  P->>P: register-child-flow
-  rect rgba(15, 118, 110, 0.18)
-    Note over C: the agent works the child steps
-  end
-  C->>P: update-flow-status completed + summary
-  P->>P: child marked completed
-  P->>P: summary saved in memory/sub-flows.json
-```
+<Frame caption="A sub-flow reports to its parent">
+  <img className="dark:hidden" src="/images/diagrams/subflow-report-light.svg" alt="Diagram: A sub-flow reports to its parent. Open the interactive version for the details." />
+  <img className="hidden dark:block" src="/images/diagrams/subflow-report-dark.svg" alt="Diagram: A sub-flow reports to its parent. Open the interactive version for the details." />
+</Frame>
+
+[Open the interactive diagram](/diagrams/subflow-report.html)
 
 - The child is a normal flow in `active/`. The mod binds it after its parent, and the newest bound flow answers first.
 - A child cannot complete without a `summary`. The script refuses `completed` for a sub-flow with no summary.

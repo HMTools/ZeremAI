@@ -1,0 +1,130 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "ZeremAI architecture",
+    "output": "site/diagrams/overview.html",
+    "quality_profile": "standard"
+  },
+  "components": [
+    {
+      "id": "you",
+      "type": "external",
+      "label": "You",
+      "sublabel": "send a prompt",
+      "pos": [
+        40,
+        200
+      ],
+      "size": [
+        120,
+        60
+      ]
+    },
+    {
+      "id": "agent",
+      "type": "backend",
+      "label": "Agent",
+      "sublabel": "makes Bash calls",
+      "pos": [
+        260,
+        200
+      ],
+      "size": [
+        130,
+        60
+      ]
+    },
+    {
+      "id": "mod",
+      "type": "security",
+      "label": "Mod",
+      "sublabel": "TypeScript hooks in hooks/",
+      "pos": [
+        500,
+        200
+      ],
+      "size": [
+        170,
+        60
+      ]
+    },
+    {
+      "id": "flow",
+      "type": "backend",
+      "label": "Flow script",
+      "sublabel": "Python, scripts/flow_manager.py",
+      "pos": [
+        770,
+        200
+      ],
+      "size": [
+        190,
+        60
+      ]
+    },
+    {
+      "id": "files",
+      "type": "database",
+      "label": "Files",
+      "sublabel": "~/.claude/zeremai/",
+      "pos": [
+        770,
+        380
+      ],
+      "size": [
+        190,
+        60
+      ]
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "region",
+      "label": "Claude Code",
+      "wraps": [
+        "agent",
+        "mod"
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "id": "you-agent",
+      "from": "you",
+      "to": "agent",
+      "label": "prompt",
+      "variant": "emphasis"
+    },
+    {
+      "id": "agent-mod",
+      "from": "agent",
+      "to": "mod",
+      "label": "Bash call"
+    },
+    {
+      "id": "mod-flow",
+      "from": "mod",
+      "to": "flow",
+      "label": "runs"
+    },
+    {
+      "id": "flow-files",
+      "from": "flow",
+      "to": "files",
+      "label": "writes",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "labelDy": 24
+    },
+    {
+      "id": "mod-files",
+      "from": "mod",
+      "to": "files",
+      "label": "reads only",
+      "variant": "dashed",
+      "fromSide": "bottom",
+      "toSide": "left"
+    }
+  ]
+}
