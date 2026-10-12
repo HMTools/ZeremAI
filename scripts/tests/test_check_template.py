@@ -266,5 +266,80 @@ class DirMode(Base):
         self.assertTrue([f for f in out['findings'] if 'not a step of this template' in f['text']], out)
 
 
+CID2 = '11111111-1111-4111-8111-111111111115'
+SID3 = '11111111-1111-4111-8111-111111111116'
+
+
+class MarketplaceMode(Base):
+    def repo(self, category='development', name='fix-bug', **extra):
+        """Write one template with its step file under self.root/mkt. Returns its folder."""
+        folder = '%s/mkt/templates/flows/%s/%s' % (self.root, category, name)
+        self.put(folder + '/%s.json' % name, template(name=name, category=category, **extra))
+        self.put(folder + '/diagnose/diagnose.json', step_file())
+        return folder
+
+    def run_mkt(self):
+        return self.run_check('--marketplace', self.root + '/mkt')
+
+    def finds(self, out, text, at=None, level='must-fix'):
+        hit = [f for f in out['findings'] if text in f['text'] and f['level'] == level and (at is None or f['at'] == at)]
+        self.assertTrue(hit, out)
+
+    def test_not_a_marketplace(self):
+        os.makedirs(self.root + '/mkt')
+        self.finds(self.run_mkt(), 'not a marketplace: templates/flows not found')
+
+    def test_no_templates_yet_is_a_note(self):
+        os.makedirs(self.root + '/mkt/templates/flows/review')
+        out = self.run_mkt()
+        self.assertEqual(out, {'status': 'ok', 'findings': [{'at': 'templates/flows', 'level': 'note', 'text': 'no templates yet'}]})
+
+    def test_template_json_missing(self):
+        os.makedirs(self.root + '/mkt/templates/flows/review/pr-review')
+        self.finds(self.run_mkt(), 'Cannot read pr-review.json', 'review/pr-review: template')
+
+    def test_folder_must_match_name_and_category(self):
+        folder = self.repo()
+        self.put(folder + '/fix-bug.json', template(name='other', category='testing'))
+        out = self.run_mkt()
+        self.finds(out, "name is 'other' but its folder is 'fix-bug'", 'development/fix-bug: name')
+        self.finds(out, "category is 'testing' but its folder is 'development'", 'development/fix-bug: category')
+
+    def test_ids_are_unique_across_the_repo(self):
+        self.repo()
+        self.repo('review', 'pr-review')  # same TID
+        self.finds(self.run_mkt(), 'id %s is already used by development/fix-bug' % TID, 'review/pr-review: id')
+
+    def test_findings_of_a_template_are_prefixed(self):
+        folder = self.repo()
+        self.put(folder + '/fix-bug.json', template(steps=[{'number': 1, 'name': 'Diagnose', 'stepRef': SID3, 'context': {'bug': '{{bug}}'}}]))
+        self.finds(self.run_mkt(), 'not a step of this template', 'development/fix-bug: steps[0]')
+
+    def test_good_repo_with_a_sub_flow_to_the_other_template(self):
+        self.repo('review', 'pr-review', id=CID2)
+        self.repo(steps=[
+            {'number': 1, 'name': 'Diagnose', 'stepRef': SID, 'context': {'bug': '{{bug}}'}},
+            {'number': 2, 'name': 'Review', 'subFlowTrigger': {'template': CID2, 'syncPoint': 'immediate'}},
+        ])
+        self.assertEqual(self.run_mkt(), {'status': 'ok', 'findings': []})
+
+    def test_sub_flow_to_a_template_nowhere_is_must_fix(self):
+        self.repo(steps=[{'number': 1, 'name': 'Diagnose', 'stepRef': SID, 'context': {'bug': '{{bug}}'}},
+                         {'number': 2, 'name': 'Review', 'subFlowTrigger': {'template': CID2, 'syncPoint': 'immediate'}}])
+        self.finds(self.run_mkt(), 'is not installed', 'development/fix-bug: steps[1].subFlowTrigger')
+
+    def test_installed_copy_is_not_an_overwrite_warning(self):
+        self.repo()
+        self.put(self.templates + '/development/fix-bug/fix-bug.json', template())
+        self.assertEqual(self.run_mkt(), {'status': 'ok', 'findings': []})
+
+    def test_underscore_categories_and_plain_files_are_ignored(self):
+        self.repo()
+        os.makedirs(self.root + '/mkt/templates/flows/_drafts/broken')  # would be must-fix if it counted
+        with open(self.root + '/mkt/templates/flows/README.md', 'w') as f:
+            f.write('x')
+        self.assertEqual(self.run_mkt(), {'status': 'ok', 'findings': []})
+
+
 if __name__ == '__main__':
     unittest.main()

@@ -3,6 +3,7 @@
 
     python3 check_template.py --draft draft.json     # a draft: {template, newSteps, children: [{template, newSteps}]}
     python3 check_template.py --dir TEMPLATE_FOLDER  # written files: <name>.json and <step>/<step>.json
+    python3 check_template.py --marketplace DIR      # a repo: templates/flows/<category>/<name>/, every template
 
 One line of JSON goes to stdout: {"status": "ok"|"error", "findings": [{"at", "level", "text"}]}. A level is
 must-fix, should-fix or note. The status is "error" (exit 1) when a finding is must-fix, else "ok" (exit 0).
@@ -65,7 +66,7 @@ def installed_templates(skip_dir=None):
     return found
 
 
-def check_template(t, steps, installed, known_ids, prefix=''):
+def check_template(t, steps, installed, known_ids, prefix='', overwrite=True):
     """Findings of one template. steps: its own step definitions (a stepRef resolves among these only)."""
     out = []
 
@@ -169,7 +170,7 @@ def check_template(t, steps, installed, known_ids, prefix=''):
     for category, name, id_ in installed:
         if id_ == t.get('id') and (category, name) != (t.get('category'), t.get('name')):
             must('id', 'This id belongs to the installed template %s/%s.' % (category, name))
-        elif (category, name) == (t.get('category'), t.get('name')):
+        elif overwrite and (category, name) == (t.get('category'), t.get('name')):
             should('name', 'A template %s/%s is installed. Writing this one would overwrite it.' % (category, name))
     return out
 
@@ -221,21 +222,57 @@ def check_draft(draft):
     return out
 
 
-def check_dir(folder):
+def check_dir(folder, known=(), overwrite=True):
     folder = folder.rstrip('/\\')
     path = '%s/%s.json' % (folder, os.path.basename(folder))
     template = read_json(path)
     steps = []
     for id_, step_path in registry(folder, 'step').items():
         steps.append(read_json(step_path))
-    return check_step_files(steps) + check_template(template, steps, installed_templates(folder), [])
+    return check_step_files(steps) + check_template(template, steps, installed_templates(folder), list(known), overwrite=overwrite)
+
+
+def check_marketplace(root):
+    base = root.rstrip('/\\') + '/templates/flows'
+    if not os.path.isdir(base):
+        return [{'at': 'templates/flows', 'level': 'must-fix', 'text': 'not a marketplace: templates/flows not found'}]
+    found = []  # (category, name, folder)
+    for category, is_dir in sorted(list_dir(base)):
+        if is_dir and not category.startswith('_'):
+            found += [(category, n, '%s/%s/%s' % (base, category, n)) for n, d in sorted(list_dir(base + '/' + category)) if d]
+    if not found:
+        return [{'at': 'templates/flows', 'level': 'note', 'text': 'no templates yet'}]
+    loaded, out, first = [], [], {}
+    for category, name, folder in found:
+        at = '%s/%s: ' % (category, name)
+        try:
+            t = read_json('%s/%s.json' % (folder, name))
+        except (OSError, ValueError) as e:
+            out.append({'at': at + 'template', 'level': 'must-fix', 'text': 'Cannot read %s.json: %s' % (name, e)})
+            continue
+        loaded.append((category, name, folder, t))
+        if isinstance(t, dict):
+            for key, want in [('name', name), ('category', category)]:
+                if t.get(key) != want:
+                    out.append({'at': at + key, 'level': 'must-fix', 'text': '%s is %r but its folder is %r.' % (key, t.get(key), want)})
+            if t.get('id') in first:
+                out.append({'at': at + 'id', 'level': 'must-fix', 'text': 'id %s is already used by %s.' % (t.get('id'), first[t['id']])})
+            first.setdefault(t.get('id'), '%s/%s' % (category, name))
+    known = [t.get('id') for _, _, _, t in loaded if isinstance(t, dict)]
+    for category, name, folder, _ in loaded:
+        try:
+            found_here = check_dir(folder, known, overwrite=False)
+        except (OSError, ValueError) as e:
+            found_here = [{'at': 'template', 'level': 'must-fix', 'text': str(e)}]
+        out += [dict(f, at='%s/%s: %s' % (category, name, f['at'])) for f in found_here]
+    return out
 
 
 def main(argv):
     try:
-        if len(argv) != 2 or argv[0] not in ('--draft', '--dir'):
-            raise ValueError('Usage: check_template.py --draft FILE | --dir TEMPLATE_FOLDER')
-        findings = check_draft(read_json(argv[1])) if argv[0] == '--draft' else check_dir(argv[1])
+        if len(argv) != 2 or argv[0] not in ('--draft', '--dir', '--marketplace'):
+            raise ValueError('Usage: check_template.py --draft FILE | --dir TEMPLATE_FOLDER | --marketplace DIR')
+        findings = {'--draft': lambda: check_draft(read_json(argv[1])), '--dir': lambda: check_dir(argv[1]), '--marketplace': lambda: check_marketplace(argv[1])}[argv[0]]()
     except (OSError, ValueError) as e:
         findings = [{'at': 'input', 'level': 'must-fix', 'text': str(e)}]
     bad = any(f['level'] == 'must-fix' for f in findings)
