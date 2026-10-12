@@ -26,7 +26,7 @@ Then run `/zeremai`. Needs a Claude Code build with mods. See the [installation 
 ## Links
 
 - [Docs](https://zerem-ai.mintlify.app)
-- [Roadmap](https://hmtools.github.io/zeremai/)
+- [Roadmap](https://zerem-ai.mintlify.app/roadmap)
 - [Official templates](https://github.com/HMTools/ZeremAI-marketplace)
 - [Issues](https://github.com/HMTools/ZeremAI/issues)
 
