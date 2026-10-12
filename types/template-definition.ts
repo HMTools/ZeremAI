@@ -62,6 +62,8 @@ export interface TemplateDefinition {
     number: number;
     /** Step name */
     name: string;
+    /** Optional group name shown on the template page (for example "Design"). A step without it is grouped by its approvals. */
+    phase?: string;
     /** Reference to step definition UUID — primary cross-reference, used for resolution */
     stepRef: StepRef;
     /** Human-readable companion name for stepRef (display-only, never used for resolution) */

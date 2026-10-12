@@ -24,7 +24,7 @@ A script already checks the exact facts (file shape, ids, `{{params}}`, the fram
 - **Guidance:** could an executor who knows nothing else run each new step from its guidance alone? Are the actions concrete, and does each step name the files it makes?
 - **Approvals:** is `approvalRequired` on the steps whose output a person should judge, and only there?
 - **Parameters:** are they what the flow truly needs? Are `required` ones really required? Are the examples real and helpful, so the form explains itself?
-- **Sub-flows:** is each one needed? Does the child do one clear job, and does the parent pass it what it needs?
+- **Sub-flows:** is each one needed? Does the child do one clear job, and does the parent pass it everything the child requires, under the child's own parameter names? Is the sync point a step where it makes sense to wait?
 - **Copies:** a step in `copied` must be adapted to this template, not pasted unchanged with another template's words.
 - **Overlap:** is the whole template a copy of an installed one? If so, say which.
 

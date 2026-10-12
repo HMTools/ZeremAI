@@ -5,31 +5,31 @@
 <style>
   /* Layout: the new folder as a file tree on the left, an inspector on the right (file, catalog, steps, where it lives), an answer bar at the bottom. */
   :root {
-    --bg: #f2f5f4; --surface: #ffffff; --fg: #14201f; --muted: #52625d; --line: #d5ddda; --line2: #a4b4ae;
-    --main: #0b7673; --main-bg: #dcf1ef; --gate: #a85f00; --gate-bg: #fcebcc; --red: #b3261e; --red-bg: #fbe4e1;
-    --green: #1b7551; --green-bg: #dcf2e7; --info: #2c5fb8; --info-bg: #e2ebfa; --ink: #14201f; --on-ink: #ffffff;
+    --bg: #ffffff; --surface: #ffffff; --fg: #141413; --muted: #6b6a63; --line: #ecebe6; --line2: #d6d4cc;
+    --main: #d97757; --main-bg: #fdeee6; --gate: #6b6a63; --gate-bg: #f4f3ef; --red: #141413; --red-bg: #f4f3ef;
+    --green: #6b6a63; --green-bg: #f4f3ef; --info: #b4532f; --info-bg: #fdeee6; --ink: #141413; --on-ink: #ffffff;
     --font-body: "Schibsted Grotesk", system-ui, -apple-system, "Segoe UI", sans-serif;
     --font-mono: "Fragment Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
   }
   @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
-    --bg: #0e1513; --surface: #162120; --fg: #e3ece9; --muted: #93a69f; --line: #263634; --line2: #46625c;
-    --main: #3cc4c0; --main-bg: #12383a; --gate: #f0b45a; --gate-bg: #40300f; --red: #ff8b82; --red-bg: #43201d;
-    --green: #52c996; --green-bg: #12342a; --info: #8db3f5; --info-bg: #1b2c4a; --ink: #e3ece9; --on-ink: #0e1513; color-scheme: dark; } }
+    --bg: #1f1e1d; --surface: #2a2927; --fg: #f0eee6; --muted: #a8a69c; --line: #3a3834; --line2: #55524b;
+    --main: #e8845f; --main-bg: #4a2e23; --gate: #a8a69c; --gate-bg: #33312d; --red: #f0eee6; --red-bg: #33312d;
+    --green: #a8a69c; --green-bg: #33312d; --info: #e8845f; --info-bg: #4a2e23; --ink: #f0eee6; --on-ink: #1f1e1d; color-scheme: dark; } }
   :root[data-theme="dark"] {
-    --bg: #0e1513; --surface: #162120; --fg: #e3ece9; --muted: #93a69f; --line: #263634; --line2: #46625c;
-    --main: #3cc4c0; --main-bg: #12383a; --gate: #f0b45a; --gate-bg: #40300f; --red: #ff8b82; --red-bg: #43201d;
-    --green: #52c996; --green-bg: #12342a; --info: #8db3f5; --info-bg: #1b2c4a; --ink: #e3ece9; --on-ink: #0e1513; color-scheme: dark; }
+    --bg: #1f1e1d; --surface: #2a2927; --fg: #f0eee6; --muted: #a8a69c; --line: #3a3834; --line2: #55524b;
+    --main: #e8845f; --main-bg: #4a2e23; --gate: #a8a69c; --gate-bg: #33312d; --red: #f0eee6; --red-bg: #33312d;
+    --green: #a8a69c; --green-bg: #33312d; --info: #e8845f; --info-bg: #4a2e23; --ink: #f0eee6; --on-ink: #1f1e1d; color-scheme: dark; }
 
   body { background: var(--bg); color: var(--fg); font: 15px/1.5 var(--font-body); padding-inline: 16px; padding-block: 20px 0; }
   .wrap { max-width: 1240px; margin-inline: auto; display: grid; gap: 16px; }
   h1, h3, h4, p { margin: 0; } h1 { font-size: 26px; line-height: 1.15; letter-spacing: -.015em; text-wrap: balance; }
-  h4 { font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 600; margin-bottom: 6px; }
+  h4 { font-size: 13px; color: var(--muted); font-weight: 600; margin-bottom: 6px; }
   code, .mono { font-family: var(--font-mono); font-size: 12.5px; }
   button { font: inherit; color: inherit; cursor: pointer; } :focus-visible { outline: 2px solid var(--info); outline-offset: 2px; }
   .muted { color: var(--muted); }
   .head { display: grid; gap: 6px; } .headrow { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; }
   .path { font-family: var(--font-mono); font-size: 12.5px; color: var(--muted); overflow-wrap: anywhere; }
-  .status { display: inline-flex; align-items: center; padding: 4px 11px; border-radius: 999px; font-size: 13px; font-weight: 600; background: var(--main-bg); color: var(--main); }
+  .status { font-size: 13.5px; color: var(--muted); }
   .purpose { max-width: 70ch; color: var(--muted); font-size: 16px; }
   .shell { display: grid; gap: 16px; grid-template-columns: minmax(0, 1fr); align-items: start; }
   @media (min-width: 900px) { .shell { grid-template-columns: 340px minmax(0, 1fr); } .side { position: sticky; top: 12px; max-height: calc(100vh - 96px); overflow: auto; } }
@@ -77,11 +77,13 @@
   .bar { position: sticky; bottom: 0; z-index: 5; margin-inline: -16px; padding: 10px 16px calc(10px + env(safe-area-inset-bottom, 0px)); background: var(--surface); border-top: 1px solid var(--line); }
   .barin { max-width: 1240px; margin-inline: auto; display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; }
   .barin .sum { flex: 1 1 260px; font-size: 13.5px; color: var(--muted); }
-  .btn2 { border: 1px solid var(--line2); background: var(--surface); border-radius: 9px; padding: 9px 16px; font-weight: 650; } .btn2.primary { background: var(--ink); color: var(--on-ink); border-color: var(--ink); }
+  .btn2 { border: 1px solid var(--line2); background: var(--surface); border-radius: 9px; padding: 9px 16px; font-weight: 650; } .btn2.primary { background: var(--main); color: #141413; border-color: var(--main); }
   dialog { width: min(560px, calc(100vw - 32px)); border: 1px solid var(--line2); border-radius: 14px; padding: 0; background: var(--surface); color: var(--fg); }
   dialog::backdrop { background: rgba(10, 18, 16, .55); }
   .dlg { padding: 18px; display: grid; gap: 12px; } .dlg h3 { font-size: 18px; } .dlg .actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
   .sent { color: var(--green); font-weight: 650; }
+  .err { color: var(--fg); font-weight: 650; }
+  button:disabled { opacity: .45; cursor: not-allowed; }
 </style>
 
 <div class="wrap">
@@ -219,43 +221,72 @@
   }
   var REMOTE = { local: 'only on this machine', github: 'a new GitHub repository (' + 'private' + ')', ado: 'a new Azure DevOps repository', existing: 'an existing remote repository' };
   function where() { return S.remote === 'github' ? 'a new GitHub repository, ' + S.vis : S.remote === 'ado' ? 'a new Azure DevOps repository, ' + S.vis : REMOTE[S.remote]; }
-  function renderSum() { var s = document.getElementById('sum'); s.textContent = ''; s.append('Nothing is written until you approve. ', el('b', null, where()), ' · config: ', el('b', null, S.register === 'yes' ? 'add it' : 'leave it')); }
+
+  var CM = null, CAN = 'checking', SENT = null;
+  var REASON = { checking: 'Checking whether Claude can receive your answer…', writers_only: 'Only an editor of this artifact can send an answer.',
+    no_session: 'Claude is not watching this page right now. Ask Claude to publish it again.', off: 'Sending to Claude is not available in this view.' };
+  function bytes(s) { return new TextEncoder().encode(s).length; }
+  function clean(s) { return s.replace(/[\u0000-\u001f\u007f]+/g, ' ').replace(/\s{2,}/g, ' ').trim(); }
+  function refreshCan() {
+    var p = window.claude && window.claude.use ? window.claude.use('comments') : null;
+    if (!p) { CAN = 'off'; renderSum(); return; }
+    p.then(function (c) { CM = c; return c ? c.canSendToClaude() : 'off'; }).catch(function () { return 'off'; }).then(function (s) { CAN = s; renderSum(); });
+  }
+  function noteOf() {
+    if (SENT) return el('span', null, 'Sent: ' + SENT + '. Claude is working.');
+    if (CAN === 'available') return null;
+    return el('span', null, REASON[CAN] || REASON.off);
+  }
+  function gate() { var ok = CAN === 'available' && !SENT; ['okBtn', 'askBtn'].forEach(function (id) { document.getElementById(id).hidden = !ok; }); }
+  function why(e) {
+    var c = e && e.code;
+    return c === 'consent_required' ? 'You did not allow comments for this page. Reload the page, press Send, and choose Allow.'
+      : c === 'claude_unavailable' ? 'Claude could not be reached. Nothing was posted.'
+      : c === 'rate_limited' ? 'Too fast. Wait a moment and press Send again.'
+      : c === 'invalid' ? 'The comment was rejected. Shorten the notes and try again.'
+      : c === 'forbidden' ? 'You cannot comment on this artifact.'
+      : 'Sending failed (' + (c || 'unknown') + '). Nothing was posted.';
+  }
+  function submit(verdict, msg, btn) {
+    var a = answerOf(verdict), n = bytes(a.comment);
+    if (n > 4096) { msg.className = 'err'; msg.textContent = 'Your answer is ' + (n - 4096) + ' bytes over the 4 KB comment limit. Shorten the notes and try again.'; return; }
+    if (!CM) { msg.className = 'err'; msg.textContent = REASON.off; return; }
+    btn.disabled = true; msg.className = 'muted'; msg.textContent = 'Sending…';
+    CM.anchorFor(document.querySelector('.bar')).then(function (anchor) { return CM.sendToClaude({ anchor: anchor, text: a.comment }); })
+      .then(function () { SENT = verdict; msg.className = 'sent'; msg.textContent = 'Sent. Claude has your answer and is working. Watch the chat.'; btn.hidden = true; renderSum(); })
+      .catch(function (e) { btn.disabled = false; msg.className = 'err'; msg.textContent = why(e); });
+  }
+
+  function renderSum() {
+    var s = document.getElementById('sum'); s.textContent = '';
+    s.append('Nothing is written until you approve. ', el('b', null, where()), ' · config: ', el('b', null, S.register === 'yes' ? 'add it' : 'leave it'));
+    var n = noteOf(); if (n) s.append(' · ', n);
+    gate();
+  }
   function renderAll() { renderTree(); renderTabs(); renderPane(); renderSum(); }
 
   function answerOf(verdict) {
     var choices = { remote: S.remote, visibility: S.vis, address: S.url.trim(), register: S.register === 'yes' };
-    var lines = ['# Re: ' + D.name, '## Verdict', '**' + verdict + '**', '## Choices', '- Where it lives: ' + where() + (S.url.trim() ? ' (' + S.url.trim() + ')' : ''), '- Add to ZeremAI config: ' + (choices.register ? 'yes, with the local path' : 'no')];
-    if (S.general.trim()) lines.push('## Notes', S.general.trim());
-    return { verdict: verdict, choices: choices, general: S.general.trim(), text: lines.join('\n') + '\n', title: D.name, at: new Date().toISOString() };
+    var parts = ['[zeremai answer] ' + D.name, 'Verdict: ' + verdict, 'Where it lives: ' + where() + (S.url.trim() ? ' (' + S.url.trim() + ')' : ''), 'Add to ZeremAI config: ' + (choices.register ? 'yes, with the local path' : 'no')];
+    if (S.general.trim()) parts.push('General: ' + S.general.trim());
+    return { verdict: verdict, choices: choices, general: S.general.trim(), comment: clean(parts.join(' | ')) };
   }
   function openDialog(verdict) {
+    if (CAN !== 'available' || SENT) return;
     var body = document.getElementById('dlgBody'), dlg = document.getElementById('dlg'); body.textContent = '';
     var general = el('textarea', { id: 'general', 'aria-label': 'Anything else', placeholder: 'Anything else for Claude? (optional)', oninput: function (e) { S.general = e.target.value; } }); general.value = S.general;
-    var msg = el('p', { class: 'muted', id: 'sendMsg', role: 'status', 'aria-live': 'polite' }), fb = el('textarea', { id: 'fallback', readonly: true, hidden: true, 'aria-label': 'Response to copy' });
+    var msg = el('p', { class: 'muted', id: 'sendMsg', role: 'status', 'aria-live': 'polite' });
     var send = el('button', { class: 'btn2 primary', type: 'button' }, verdict === 'Approve' ? 'Approve and send' : 'Send for changes');
-    send.addEventListener('click', function () { submit(verdict, msg, fb, send); });
+    send.addEventListener('click', function () { submit(verdict, msg, send); });
     body.append(el('h3', null, verdict === 'Approve' ? 'Approve this marketplace?' : 'Ask for changes?'),
-      el('p', null, verdict === 'Approve' ? 'Claude writes the folder and makes the first commit. It asks again before any step that leaves your machine.' : 'Claude changes the plan and sends you a new page.'),
-      general, msg, fb, el('div', { class: 'actions' }, el('button', { class: 'btn2', type: 'button', onclick: function () { dlg.close(); } }, 'Back'), send));
+      el('p', null, 'Your answer goes as a comment on this page that Claude receives.'),
+      verdict === 'Approve' ? el('p', { class: 'muted' }, 'Claude writes the folder and makes the first commit. It asks in the chat before any step that leaves your machine.') : el('p', { class: 'muted' }, 'Claude changes the plan and sends you a new page.'),
+      general, msg, el('div', { class: 'actions' }, el('button', { class: 'btn2', type: 'button', onclick: function () { dlg.close(); } }, 'Back'), send));
     dlg.showModal();
-  }
-  function submit(verdict, msg, fb, btn) {
-    var a = answerOf(verdict); btn.disabled = true;
-    function manual(why) {
-      fb.hidden = false; fb.value = a.text; msg.textContent = why + ' Copy this and paste it in the chat.';
-      var cp = el('button', { class: 'btn2', type: 'button' }, 'Copy');
-      cp.addEventListener('click', function () { try { navigator.clipboard.writeText(a.text).then(function () { msg.textContent = 'Copied. Paste it in the chat.'; }, function () { fb.select(); }); } catch (e) { fb.select(); } });
-      msg.after(cp); fb.select(); btn.disabled = false;
-    }
-    var cl = window.claude && window.claude.use ? window.claude.use('db') : null;
-    if (!cl) return manual('This page cannot send the answer by itself.');
-    cl.then(function (db) {
-      if (!db) return manual('This page cannot send the answer by itself.');
-      return db.doc('answers/latest').set(a).then(function () { msg.className = 'sent'; msg.textContent = 'Sent. Now tell Claude in the chat that you answered.'; });
-    }).catch(function () { manual('Sending failed.'); });
   }
   document.getElementById('okBtn').addEventListener('click', function () { openDialog('Approve'); });
   document.getElementById('askBtn').addEventListener('click', function () { openDialog('Ask for changes'); });
   renderAll();
+  refreshCan();
 })();
 </script>

@@ -13,6 +13,10 @@ A template step can start another flow, a **child**, and wait for it. The parent
 4. The agent works the child's steps with the normal loop. A child step can itself be a sub-flow.
 5. When the child completes, it reports a short summary. The parent marks the step done and continues.
 
+## Reading a template with child flows
+
+`/zeremai:view-template` shows each sub-flow step with when it starts, what it passes and where the parent waits. A later sync point is marked on both steps. In the runbook the child opens under its step, to three levels, and in Two lanes you open it with the link in the step panel. The facts line counts approvals inside child flows once each. A child that cannot be found is marked as missing.
+
 ## Fan-out
 
 `forEach` in the trigger starts one child per item of a list in the parent, for example one child per file.

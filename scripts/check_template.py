@@ -66,9 +66,55 @@ def installed_templates(skip_dir=None):
     return found
 
 
-def check_template(t, steps, installed, known_ids, prefix='', overwrite=True):
-    """Findings of one template. steps: its own step definitions (a stepRef resolves among these only)."""
+def handoff(s, i, tsteps, at, lookup, installed, should):
+    """Should-fix findings of a sub-flow step: where the parent waits, and what it passes to the child."""
+    key = 'subFlowTrigger' if isinstance(s.get('subFlowTrigger'), dict) else 'subFlowConfig' if isinstance(s.get('subFlowConfig'), dict) else None
+    cfg = s.get(key) if key else None
+    if not cfg or not cfg.get('template'):
+        return
+    where = at + '.' + key
+    sync = cfg.get('syncPoint') if key == 'subFlowTrigger' else cfg.get('sync')
+    if isinstance(sync, str) and sync.strip():
+        low, later = sync.strip().lower(), [str(x.get('name', '')).strip().lower() for x in tsteps[i + 1:] if isinstance(x, dict)]
+        num = re.match(r'^(?:step\s*)?(\d+)$', low)
+        if low != 'immediate' and low not in later and not (num and i + 1 < int(num.group(1)) <= len(tsteps)):
+            should(where, "Sync point %s is not 'immediate' and not a later step of this template." % sync)
+    child = child_of(cfg['template'], lookup, installed)
+    if not isinstance(child, dict):
+        return
+    cname = child.get('name', cfg['template'])
+    cparams = child.get('parameters') if isinstance(child.get('parameters'), dict) else {}
+    required = cparams.get('required') if isinstance(cparams.get('required'), list) else []
+    known = set(required) | set(cparams.get('optional') if isinstance(cparams.get('optional'), list) else []) | set(cparams.get('definitions') if isinstance(cparams.get('definitions'), dict) else {})
+    passed = cfg.get('parameters') if key == 'subFlowTrigger' else cfg.get('parameterMapping')
+    passed = passed if isinstance(passed, dict) else {}
+    for p in required:
+        if p not in passed:
+            should(where, 'Child %s needs required parameter %s, but this step does not pass it.' % (cname, p))
+    for k in passed:
+        if k not in known:
+            should(where, 'This step passes %s, but child %s has no such parameter.' % (k, cname))
+
+
+def child_of(id_, lookup, installed):
+    """The template with this id: from the draft or repo (lookup), else an installed one. None when it cannot be found."""
+    if id_ in lookup:
+        return lookup[id_]
+    root = home() + '/.claude/zeremai/templates/flows'
+    for category, name, i in installed:
+        if i == id_:
+            try:
+                return read_json('%s/%s/%s/%s.json' % (root, category, name, name))
+            except (OSError, ValueError):
+                return None
+    return None
+
+
+def check_template(t, steps, installed, known_ids, prefix='', overwrite=True, lookup=None):
+    """Findings of one template. steps: its own step definitions (a stepRef resolves among these only).
+    lookup: {id: template} of the other templates of the draft or the repo, for the sub-flow hand-off checks."""
     out = []
+    lookup = lookup or {}
 
     def add(at, level, text):
         out.append({'at': prefix + at, 'level': level, 'text': text})
@@ -151,6 +197,7 @@ def check_template(t, steps, installed, known_ids, prefix='', overwrite=True):
                 must(at + '.subFlowTrigger', 'subFlowTrigger.template is missing.')
             elif trigger['template'] not in known_ids and trigger['template'] not in [i[2] for i in installed]:
                 must(at + '.subFlowTrigger', 'Sub-flow template %s is not installed and not in the draft.' % trigger['template'])
+        handoff(s, i, tsteps, at, lookup, installed, should)
         back = s.get('loopBackTo')
         if back and back not in earlier:
             must(at, 'loopBackTo "%s" is not the name of an earlier step.' % back)
@@ -210,11 +257,12 @@ def check_draft(draft):
     for i, c in enumerate(draft.get('children') or []):
         parts.append(('children[%d].' % i, (c or {}).get('template'), (c or {}).get('newSteps') or []))
     known = [p[1].get('id') for p in parts if isinstance(p[1], dict)]
+    lookup = {p[1].get('id'): p[1] for p in parts if isinstance(p[1], dict)}
     installed = installed_templates()
     out = []
     for prefix, t, steps in parts:
         out += check_step_files(steps, prefix)
-        out += check_template(t, steps, installed, known, prefix)
+        out += check_template(t, steps, installed, known, prefix, lookup=lookup)
     # ids of new steps are unique across the whole draft
     ids = [s.get('id') for p in parts for s in p[2] if isinstance(s, dict)]
     for id_ in sorted({i for i in ids if ids.count(i) > 1}, key=str):
@@ -222,14 +270,14 @@ def check_draft(draft):
     return out
 
 
-def check_dir(folder, known=(), overwrite=True):
+def check_dir(folder, known=(), overwrite=True, lookup=None):
     folder = folder.rstrip('/\\')
     path = '%s/%s.json' % (folder, os.path.basename(folder))
     template = read_json(path)
     steps = []
     for id_, step_path in registry(folder, 'step').items():
         steps.append(read_json(step_path))
-    return check_step_files(steps) + check_template(template, steps, installed_templates(folder), list(known), overwrite=overwrite)
+    return check_step_files(steps) + check_template(template, steps, installed_templates(folder), list(known), overwrite=overwrite, lookup=lookup)
 
 
 def check_marketplace(root):
@@ -259,9 +307,10 @@ def check_marketplace(root):
                 out.append({'at': at + 'id', 'level': 'must-fix', 'text': 'id %s is already used by %s.' % (t.get('id'), first[t['id']])})
             first.setdefault(t.get('id'), '%s/%s' % (category, name))
     known = [t.get('id') for _, _, _, t in loaded if isinstance(t, dict)]
+    lookup = {t.get('id'): t for _, _, _, t in loaded if isinstance(t, dict)}
     for category, name, folder, _ in loaded:
         try:
-            found_here = check_dir(folder, known, overwrite=False)
+            found_here = check_dir(folder, known, overwrite=False, lookup=lookup)
         except (OSError, ValueError) as e:
             found_here = [{'at': 'template', 'level': 'must-fix', 'text': str(e)}]
         out += [dict(f, at='%s/%s: %s' % (category, name, f['at'])) for f in found_here]

@@ -17,6 +17,14 @@ The skill plans the template from your description, copies steps that fit from y
 
 The rest of this page describes the files, which you can also write by hand.
 
+## Read an installed template
+
+```
+/zeremai:view-template payoflows-e2e-development
+```
+
+The command opens the template on one calm page, even with 20 steps, and a switch at the top picks how you read it. **Runbook** is a page of type: parts for the phases, a number and one sentence for each step, a boxed STOP after each approval step, and a note for each loop and child flow, which opens under its step. **Two lanes** puts Claude on the left and you on the right, with time running down, so you see when Claude works alone and when you step in. Pick a step to see its actions and output in the side panel. The Form tab shows which steps use each parameter. Nothing is changed.
+
 ## Layout
 
 ```
@@ -111,6 +119,7 @@ Use `{{paramName}}` anywhere in step `context` or sub-flow parameters. Each `def
 | `number`, `name` | Order and label |
 | `stepRef` | UUID of the step definition's `id`. This is what resolves. |
 | `stepRefName` | Display-only companion |
+| `phase` | Optional short group name (`Design`, `Build`, `Ship`). The template page groups steps by it |
 | `description`, `context`, `notes` | Extra context for this template |
 | `approvalRequired` | User must click Approve before completion |
 | `postApprovalActions` | Actions after approval |
@@ -141,7 +150,7 @@ Put `"approvalRequired": true` on steps whose output a human should review befor
 }
 ```
 
-`template` is a UUID. `templateName` is display-only. A step with `subFlowTrigger` and no step definition is driven by the parent, not a subagent. See [Sub-flows](/guide/sub-flows).
+`template` is a UUID. `templateName` is display-only. `condition` says in words when the child starts. `parameters` maps the child's parameter names to values of the parent. `syncPoint` is `immediate` (the step waits here until every child ends), or the name of a **later** step, where the parent waits while it goes on with the steps in between. A step with `subFlowTrigger` and no step definition is driven by the parent, not a subagent. See [Sub-flows](/guide/sub-flows).
 
 ## Test it
 

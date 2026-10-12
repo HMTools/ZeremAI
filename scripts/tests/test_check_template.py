@@ -202,7 +202,7 @@ class FrameworkSteps(Base):
 
 class SubFlows(Base):
     def trigger(self, d, template_id):
-        d['template']['steps'].append({'number': 2, 'name': 'Each', 'subFlowTrigger': {'template': template_id}})
+        d['template']['steps'].append({'number': 2, 'name': 'Each', 'subFlowTrigger': {'template': template_id, 'parameters': {'bug': '{{bug}}'}}})
 
     def test_missing_template(self):
         self.bad(self.edit(lambda d: d['template']['steps'].append({'number': 2, 'name': 'Each', 'subFlowTrigger': {}})), 'subFlowTrigger.template is missing', 'steps[1].subFlowTrigger')
@@ -224,6 +224,83 @@ class SubFlows(Base):
         def f(d):
             d['children'] = [{'template': template(id=CID, name='child', type='x', steps=[{'number': 1, 'name': 'Do', 'stepRef': SID2}], references={'steps': [SID2]}), 'newSteps': [step_file(SID2, 'do')]}]
         self.bad(self.edit(f), 'type must be "template"', 'children[0].type')
+
+
+class Handoff(Base):
+    """Sub-flow hand-off checks: should-fix only, so the status stays ok."""
+    def child(self):
+        return {'template': template(id=CID, name='child', parameters={'required': ['bug'], 'optional': ['focus'], 'definitions': {
+            'bug': {'description': 'What', 'type': 'string', 'example': 'x'}, 'focus': {'description': 'Area', 'type': 'string', 'example': 'a'}}},
+            steps=[{'number': 1, 'name': 'Do', 'stepRef': SID2}], references={'steps': [SID2]}), 'newSteps': [step_file(SID2, 'do')]}
+
+    def with_step(self, key='subFlowTrigger', **cfg):
+        def f(d):
+            d['children'] = [self.child()]
+            d['template']['steps'].append({'number': 2, 'name': 'Each', key: dict({'template': CID}, **cfg)})
+            d['template']['steps'].append({'number': 3, 'name': 'Merge', 'stepDefinition': {'x': 1}})
+        return self.edit(f)
+
+    def one(self, d, text, at='steps[1].subFlowTrigger'):
+        out = self.check(d)
+        hits = [f for f in out['findings'] if text in f['text']]
+        self.assertEqual(len(hits), 1, out)
+        self.assertEqual((hits[0]['level'], hits[0]['at'], out['status']), ('should-fix', at, 'ok'))
+        return out
+
+    def test_required_parameter_not_passed(self):
+        self.one(self.with_step(parameters={}), 'Child child needs required parameter bug, but this step does not pass it.')
+
+    def test_name_passed_that_the_child_does_not_have(self):
+        self.one(self.with_step(parameters={'bug': '{{bug}}', 'nope': 'x'}), 'This step passes nope, but child child has no such parameter.')
+
+    def test_optional_parameter_may_be_passed(self):
+        self.assertEqual(self.check(self.with_step(parameters={'bug': '{{bug}}', 'focus': 'x'})), {'status': 'ok', 'findings': []})
+
+    def test_sync_point_that_is_not_a_later_step(self):
+        for sync in ['nowhere', 'Diagnose', 'Each', 'step 1', '2']:
+            self.one(self.with_step(parameters={'bug': '{{bug}}'}, syncPoint=sync), "Sync point %s is not 'immediate' and not a later step of this template." % sync)
+
+    def test_sync_point_immediate_or_a_later_step_is_good(self):
+        for sync in ['immediate', 'IMMEDIATE', 'merge', 'Merge', 'step 3', '3']:
+            self.assertEqual(self.check(self.with_step(parameters={'bug': '{{bug}}'}, syncPoint=sync)), {'status': 'ok', 'findings': []}, sync)
+
+    def test_sub_flow_config_is_read_the_same_way(self):
+        d = self.with_step('subFlowConfig', parameterMapping={'zzz': 'x'}, sync='nowhere')
+        d['template']['steps'][1]['stepDefinition'] = {'x': 1}  # the existing rule wants a stepRef, a stepDefinition or a subFlowTrigger
+        out = self.check(d)
+        got = sorted(f['text'] for f in out['findings'] if f['at'] == 'steps[1].subFlowConfig')
+        self.assertEqual(len(got), 3, out)
+        self.assertEqual(out['status'], 'ok')
+        self.assertTrue(any('needs required parameter bug' in t for t in got) and any('passes zzz' in t for t in got) and any('Sync point nowhere' in t for t in got))
+
+    def test_a_child_that_cannot_be_found_gets_only_the_existing_must_fix(self):
+        out = self.check(self.edit(lambda d: d['template']['steps'].append({'number': 2, 'name': 'Each', 'subFlowTrigger': {'template': CID, 'parameters': {}}})))
+        self.assertEqual([f['level'] for f in out['findings']], ['must-fix'])
+        self.assertIn('is not installed', out['findings'][0]['text'])
+
+    def test_dir_mode_with_the_child_installed(self):
+        self.put(self.templates + '/development/child/child.json', self.child()['template'])
+        folder = self.root + '/fix-bug'
+        self.put(folder + '/fix-bug.json', template(steps=[{'number': 1, 'name': 'Diagnose', 'stepRef': SID, 'context': {'bug': '{{bug}}'}},
+                                                          {'number': 2, 'name': 'Each', 'subFlowTrigger': {'template': CID, 'parameters': {}, 'syncPoint': 'later'}}]))
+        self.put(folder + '/diagnose/diagnose.json', step_file())
+        out = self.run_check('--dir', folder)
+        texts = sorted(f['text'] for f in out['findings'] if f['at'] == 'steps[1].subFlowTrigger')
+        self.assertEqual(len(texts), 2, out)
+        self.assertTrue(all(f['level'] == 'should-fix' for f in out['findings'] if f['at'] == 'steps[1].subFlowTrigger'))
+        self.assertEqual(out['status'], 'ok')
+
+    def test_marketplace_mode_with_the_child_in_the_same_repo(self):
+        for name, id_, extra in [('child', CID, {'parameters': self.child()['template']['parameters']}),
+                                 ('fix-bug', TID, {'steps': [{'number': 1, 'name': 'Diagnose', 'stepRef': SID, 'context': {'bug': '{{bug}}'}},
+                                                             {'number': 2, 'name': 'Each', 'subFlowTrigger': {'template': CID, 'parameters': {'oops': 'x'}}}]})]:
+            folder = '%s/mkt/templates/flows/development/%s' % (self.root, name)
+            self.put(folder + '/%s.json' % name, template(id=id_, name=name, **extra))
+            self.put(folder + '/diagnose/diagnose.json', step_file())
+        out = self.run_check('--marketplace', self.root + '/mkt')
+        texts = sorted(f['text'] for f in out['findings'] if f['at'] == 'development/fix-bug: steps[1].subFlowTrigger')
+        self.assertEqual(len(texts), 2, out)
+        self.assertEqual(out['status'], 'ok')
 
 
 class Loops(Base):
@@ -319,7 +396,7 @@ class MarketplaceMode(Base):
         self.repo('review', 'pr-review', id=CID2)
         self.repo(steps=[
             {'number': 1, 'name': 'Diagnose', 'stepRef': SID, 'context': {'bug': '{{bug}}'}},
-            {'number': 2, 'name': 'Review', 'subFlowTrigger': {'template': CID2, 'syncPoint': 'immediate'}},
+            {'number': 2, 'name': 'Review', 'subFlowTrigger': {'template': CID2, 'syncPoint': 'immediate', 'parameters': {'bug': '{{bug}}'}}},
         ])
         self.assertEqual(self.run_mkt(), {'status': 'ok', 'findings': []})
 
