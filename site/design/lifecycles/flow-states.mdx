@@ -8,11 +8,9 @@ description: "The states of a flow and of a step, where each flow folder lives, 
 A flow has one of four statuses. The status decides which folder the flow lives in.
 
 <Frame caption="States of a flow">
-  <img className="dark:hidden" src="/images/diagrams/flow-status-light.svg" alt="Diagram: States of a flow. Open the interactive version for the details." />
-  <img className="hidden dark:block" src="/images/diagrams/flow-status-dark.svg" alt="Diagram: States of a flow. Open the interactive version for the details." />
+  <img className="dark:hidden" src="/images/diagrams/flow-status-light.svg" alt="Diagram: States of a flow" />
+  <img className="hidden dark:block" src="/images/diagrams/flow-status-dark.svg" alt="Diagram: States of a flow" />
 </Frame>
-
-[Open the interactive diagram](/diagrams/flow-status.html)
 
 | Status | Folder |
 |---|---|
@@ -35,11 +33,9 @@ The mod then binds the folder to the session. The first step starts as `pending`
 ## A step
 
 <Frame caption="States of a step">
-  <img className="dark:hidden" src="/images/diagrams/step-status-light.svg" alt="Diagram: States of a step. Open the interactive version for the details." />
-  <img className="hidden dark:block" src="/images/diagrams/step-status-dark.svg" alt="Diagram: States of a step. Open the interactive version for the details." />
+  <img className="dark:hidden" src="/images/diagrams/step-status-light.svg" alt="Diagram: States of a step" />
+  <img className="hidden dark:block" src="/images/diagrams/step-status-dark.svg" alt="Diagram: States of a step" />
 </Frame>
-
-[Open the interactive diagram](/diagrams/step-status.html)
 
 This is the normal path. The script accepts any of the five statuses (`pending`, `in_progress`, `completed`, `skipped`, `awaiting_approval`) and sets `startedAt` and `completedAt` for you. It has one rule of its own. A step with `approvalRequired: true` adds a check on the `in_progress → completed` arrow: the script refuses it until `approved` is `true`. Only your click sets `approved`. See [The approval gate](/design/guards/approval-gate).
 
@@ -52,11 +48,9 @@ The agent sets `in_progress` **before** it starts the `step-executor` subagent. 
 A step with a `subFlowTrigger` starts a child flow.
 
 <Frame caption="A sub-flow reports to its parent">
-  <img className="dark:hidden" src="/images/diagrams/subflow-report-light.svg" alt="Diagram: A sub-flow reports to its parent. Open the interactive version for the details." />
-  <img className="hidden dark:block" src="/images/diagrams/subflow-report-dark.svg" alt="Diagram: A sub-flow reports to its parent. Open the interactive version for the details." />
+  <img className="dark:hidden" src="/images/diagrams/subflow-report-light.svg" alt="Diagram: A sub-flow reports to its parent" />
+  <img className="hidden dark:block" src="/images/diagrams/subflow-report-dark.svg" alt="Diagram: A sub-flow reports to its parent" />
 </Frame>
-
-[Open the interactive diagram](/diagrams/subflow-report.html)
 
 - The child is a normal flow in `active/`. The mod binds it after its parent, and the newest bound flow answers first.
 - A child cannot complete without a `summary`. The script refuses `completed` for a sub-flow with no summary.

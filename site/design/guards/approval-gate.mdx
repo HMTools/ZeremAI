@@ -8,11 +8,9 @@ A step with `approvalRequired: true` cannot complete until you approve it. The *
 ## The gate, in states
 
 <Frame caption="States of an approval gate">
-  <img className="dark:hidden" src="/images/diagrams/approval-gate-light.svg" alt="Diagram: States of an approval gate. Open the interactive version for the details." />
-  <img className="hidden dark:block" src="/images/diagrams/approval-gate-dark.svg" alt="Diagram: States of an approval gate. Open the interactive version for the details." />
+  <img className="dark:hidden" src="/images/diagrams/approval-gate-light.svg" alt="Diagram: States of an approval gate" />
+  <img className="hidden dark:block" src="/images/diagrams/approval-gate-dark.svg" alt="Diagram: States of an approval gate" />
 </Frame>
-
-[Open the interactive diagram](/diagrams/approval-gate.html)
 
 In the pane, **Approve** and **Request changes** also work from `waiting`. They end the gate in the same way as the dialog.
 
@@ -28,11 +26,9 @@ The gate is in the mod store, so a restart or a reload does not lose it.
 ## The path of one approval
 
 <Frame caption="The path of one approval">
-  <img className="dark:hidden" src="/images/diagrams/approval-path-light.svg" alt="Diagram: The path of one approval. Open the interactive version for the details." />
-  <img className="hidden dark:block" src="/images/diagrams/approval-path-dark.svg" alt="Diagram: The path of one approval. Open the interactive version for the details." />
+  <img className="dark:hidden" src="/images/diagrams/approval-path-light.svg" alt="Diagram: The path of one approval" />
+  <img className="hidden dark:block" src="/images/diagrams/approval-path-dark.svg" alt="Diagram: The path of one approval" />
 </Frame>
-
-[Open the interactive diagram](/diagrams/approval-path.html)
 
 - `request-approval` is not run by the script. The mod answers the call itself, and the call waits for your click. The answer is the text the agent reads.
 - **Approve** makes the mod run `approve-step`. The script writes `approved: true`. No other command writes it.

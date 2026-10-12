@@ -21,8 +21,6 @@ The model reads instructions from the skills. The mod makes sure it follows the 
   <img className="hidden dark:block" src="/images/diagrams/overview-dark.svg" alt="You send a prompt to Claude Code. The agent makes a Bash call to the mod. The mod runs the flow script, which writes the files. The mod only reads the files." />
 </Frame>
 
-[Open the interactive diagram](/diagrams/overview.html)
-
 The mod sees each Bash command of the agent. It runs a flow script command only if the call is allowed at that moment. The mod itself reads flow files to decide, but it changes them only by running the script.
 
 ## Why this shape
