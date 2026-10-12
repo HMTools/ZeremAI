@@ -3,7 +3,7 @@
   "title": "Template marketplace server",
   "description": "Build a server-side template marketplace for discovering and sharing community templates across teams and organizations.",
   "type": "feature",
-  "status": "proposed",
+  "status": "dropped",
   "priority": "low",
   "category": "server",
   "milestone": "backlog",
@@ -11,9 +11,9 @@
   "tags": [],
   "dependencies": [],
   "created": "2026-05-29",
-  "updated": "2026-05-29",
+  "updated": "2026-10-12",
   "author": "matanha@payoneer.com",
-  "notes": "",
+  "notes": "Superseded by git-backed marketplaces.",
   "acceptance_criteria": [],
   "illustration": "marketplace"
 }

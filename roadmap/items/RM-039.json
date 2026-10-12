@@ -1,7 +1,7 @@
 {
   "id": "RM-039",
-  "title": "Show full template details in marketplace on click",
-  "description": "When clicking a template in the marketplace, display the complete template details (all fields, parameters, steps, metadata) instead of the current simplified/summary view. Users need to see the full picture before deciding to use a template.",
+  "title": "Full template details before install",
+  "description": "The Templates tab shows a short summary until a template is installed. Show all fields, parameters and steps on click, before installing.",
   "type": "feature",
   "status": "proposed",
   "priority": "medium",
@@ -15,7 +15,7 @@
   ],
   "dependencies": [],
   "created": "2026-06-14",
-  "updated": "2026-06-14",
+  "updated": "2026-10-12",
   "author": "matanha@payoneer.com",
   "notes": "",
   "acceptance_criteria": [],

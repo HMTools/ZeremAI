@@ -1,7 +1,7 @@
 {
   "id": "RM-029",
-  "title": "Better UX for reviewing processes",
-  "description": "Add more super-easy UX ways for reviewing processes, potentially moving beyond markdown to richer interactive formats.",
+  "title": "Richer review in the approval dialog",
+  "description": "Show step deliverables in the approval dialog as rich, easy-to-review views (diffs, tables, diagrams) instead of plain markdown.",
   "type": "improvement",
   "status": "proposed",
   "priority": "medium",
@@ -11,7 +11,7 @@
   "tags": [],
   "dependencies": [],
   "created": "2026-05-29",
-  "updated": "2026-05-29",
+  "updated": "2026-10-12",
   "author": "matanha@payoneer.com",
   "notes": "",
   "acceptance_criteria": [],

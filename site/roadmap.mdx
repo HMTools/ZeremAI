@@ -3,203 +3,148 @@ title: "Roadmap"
 description: "What is planned and what has shipped for ZeremAI."
 ---
 
-Ideas and planned work for ZeremAI, grouped by area and sorted by priority. Nothing here is a commitment or has a date. Open an [issue](https://github.com/HMTools/ZeremAI/issues) to suggest something.
+Ideas and planned work for ZeremAI, the Claude Code plugin, grouped by area and sorted by priority. Nothing here is a commitment or has a date. Open an [issue](https://github.com/HMTools/ZeremAI/issues) to suggest something.
 
-**30** planned · **4** shipped
+**22** planned · **8** shipped
 
 ## Framework (plugin)
 
 <AccordionGroup>
-<Accordion title="Add stepType enum with spawn and direct types">
+<Accordion title="Explicit step type: spawn and direct">
 *RM-001 · feature · 🔴 High*
 
-Add stepType field with enum values: spawn (subprocess) and direct (regular step template). Show it in the UI and connect spawn type to target process template for UI display.
+Add a stepType field (spawn for a sub-flow, direct for a regular step) so the type is declared, not inferred from subFlowTrigger. Show it in the flow pane and link a spawn step to its target template.
 </Accordion>
 
-<Accordion title="Dynamic context injection in continue-process skill">
+<Accordion title="Dynamic context injection in the flow-run skill">
 *RM-005 · improvement · 🔴 High*
 
-Use dynamic context injection in the continue-process skill to load only relevant context for the current step, reducing token usage.
+Use dynamic context injection in the flow-run skill so it loads only what the current step needs, cutting token use.
 </Accordion>
 
-<Accordion title="Event system for process lifecycle">
+<Accordion title="Event system for flow lifecycle">
 *RM-008 · feature · 🔴 High*
 
-Implement events for different lifecycle acts of processes. Support framework-level (global) and template-level events with multiple subscription handlers. Can also run on the server app.
+Emit events for flow lifecycle moments (created, step started, step approved, completed, failed). Support global and template-level listeners, with several subscribers per event.
 </Accordion>
 
-<Accordion title="Real loop-back support in processes">
+<Accordion title="Loop-back execution in flows">
 *RM-034 · feature · 🔴 High*
 
-Enable processes to jump back to a previous step based on conditions or agent decisions, supporting iterative workflows. Currently step execution is strictly linear (forward-only by array index). This would add explicit flow-control fields to the step schema (e.g. loopBackTo, loopCondition, maxIterations) and update the process-continue logic to reset a target step's status and redirect execution backward. Must include loop-depth guards to prevent infinite cycles.
-</Accordion>
-
-<Accordion title="Create official framework wiki on Mintlify">
-*RM-036 · documentation · 🔴 High*
-
-Build a public-facing documentation site for the ZeremAI framework using Mintlify. Cover architecture, getting started guides, skill authoring, process templates, memory system, and API reference.
+Templates already accept loopBackTo, loopCondition and maxIterations. Make the flow runner honor them: reset the target step, jump back, and stop at a loop-depth limit to prevent infinite cycles.
 </Accordion>
 
 <Accordion title="Verification checklist per step">
 *RM-003 · feature · 🟡 Medium*
 
-Add a verification checklist for each step that can be executed by a hook or a low-cost model via subagent to validate step completion.
-</Accordion>
-
-<Accordion title="Improve pending-interactions routing">
-*RM-007 · improvement · 🟡 Medium*
-
-Enhance pending-interactions to show where each option routes to (next step, previous step, etc.) in both the framework and UI.
-</Accordion>
-
-<Accordion title="Hook to block framework file changes by agent">
-*RM-009 · feature · 🟡 Medium*
-
-Add a hook that blocks direct framework file changes by the agent, ensuring only skills using Python scripts can modify framework state files.
+Add a verification checklist to each step, checked by a hook or by a low-cost model in a subagent, to confirm a step is really complete.
 </Accordion>
 
 <Accordion title="Git management: branches, tagging, worktrees">
 *RM-010 · feature · 🟡 Medium*
 
-Add git management capabilities including branch creation, tagging, and worktree support for process isolation.
+Git support for flows: create a branch per flow, tag milestones, and use worktrees to isolate parallel flows.
 </Accordion>
 
-<Accordion title="Dynamic processes and templates">
+<Accordion title="Dynamic flows and templates">
 *RM-011 · feature · 🟡 Medium*
 
-Support dynamically generated processes and templates that can adapt their steps based on runtime conditions and context.
+Let flows and templates generate or adapt their steps at runtime based on context.
 </Accordion>
 
 <Accordion title="Simple do template for ad-hoc workflows">
 *RM-012 · feature · 🟡 Medium*
 
-Create a simple 'do' template that dynamically builds a workflow, checks for existing steps, and includes a final step for saving new steps, and process definitions.
+A simple built-in "do" template that builds a workflow on the fly from existing steps, then saves any new steps and the flow as a reusable template.
 </Accordion>
 
-<Accordion title="Improve continuous learning step">
+<Accordion title="Smarter continuous improvement findings">
 *RM-013 · improvement · 🟡 Medium*
 
-Guide the continuous learning step to find improvements for one-shot execution, better token cost effectiveness, and improved context management.
+Make the Continuous Improvement step find changes that make future flows one-shot, cheaper in tokens, and lighter on context, and rank them better before saving findings.
 </Accordion>
 
-<Accordion title="Per-step LLM model configuration">
+<Accordion title="Per-step model configuration">
 *RM-014 · feature · 🟡 Medium*
 
-Allow setting different LLM models for different steps via configuration, enabling cost optimization by using cheaper models for simpler steps.
+Choose the model per step (today the step-executor inherits the session model), so simple steps can run on cheaper models.
 </Accordion>
 
-<Accordion title="Cost analysis of processes and steps">
+<Accordion title="Cost analysis of flows and steps">
 *RM-018 · feature · 🟡 Medium*
 
-Add cost analysis capabilities to track token usage and compute costs per process and per step for optimization insights.
+Track token use and cost per flow and per step to show where optimization pays off.
 </Accordion>
 
 <Accordion title="CI/CD triggers">
 *RM-020 · feature · 🟡 Medium*
 
-Add trigger support for CI and CD pipelines, allowing processes to be initiated or advanced by external pipeline events.
+Triggers for CI and CD: start or advance a flow from a pipeline event.
 </Accordion>
 
 <Accordion title="Verification subagent as optional step declaration">
 *RM-024 · improvement · 🟡 Medium*
 
-Make the verification subagent (different context window) an optional part of the step declaration rather than a dedicated step in the process.
-</Accordion>
-
-<Accordion title="Finish session hook with empty .session file">
-*RM-006 · feature · ⚪ Low*
-
-Implement a finish-session hook that creates/clears a .session file to properly signal session boundaries.
+Make a verification subagent (separate context window) an optional part of a step declaration, not a dedicated step.
 </Accordion>
 
 <Accordion title="Knowledge graph integration (graphify)">
 *RM-019 · feature · ⚪ Low*
 
-Integrate graphify to generate knowledge graphs from process data, enabling visual exploration of process relationships and dependencies.
+Integrate graphify to build a knowledge graph from flow data and explore relationships and dependencies.
 </Accordion>
 
 <Accordion title="Use full skills frontmatter capabilities">
 *RM-021 · improvement · ⚪ Low*
 
-Leverage the complete skills frontmatter specification including model selection, tool restrictions, and other metadata fields.
-</Accordion>
-
-<Accordion title="Rebrand framework to Seder (Structured Deterministic Processes)">
-*RM-032 · idea · ⚪ Low*
-
-Evaluate renaming the project from Agentic Processes to DetA (Deterministic Agents) to better communicate the framework's core value: turning non-deterministic AI agent behavior into structured, repeatable, deterministic workflows.
-
-**Notes:** Decided on name 'Seder' - Hebrew for 'order/sequence'. The Passover Seder metaphor maps perfectly: a template (Haggadah) defines ordered steps, encodes institutional knowledge across generations, supports pause and resume, and each step has specific instructions. Tagline direction: 'Deterministic AI workflows'. Previous candidates considered: DetA, Golem, Masa, Ordo, Grit, and ~60 others.
+Use more of the skills frontmatter spec (model choice, tool restrictions, other fields) in the plugin skills.
 </Accordion>
 
 </AccordionGroup>
 
-## UI
+## Flow pane (UI)
 
 <AccordionGroup>
-<Accordion title="Web-based deployment beyond Electron">
-*RM-026 · feature · 🔴 High*
-
-Support web-based deployment of the UI, moving beyond Electron to enable browser-based access and wider platform support.
-</Accordion>
-
-<Accordion title="Redesign continuous improvement UX with rich improvement cards">
+<Accordion title="Review improvement findings in the pane">
 *RM-033 · improvement · 🔴 High*
 
-Replace the current plain-text continuous improvement presentation with a polished, concept-driven UX. Each improvement should be displayed as a rich card showing: the improvement category (icon + label), a clear explanation of what/why/impact, before/after context, affected files, and approval controls. Categories like Automation Opportunities, Process Optimization, Documentation Enhancement etc. should each have distinct visual identity. The overall flow should guide the user through the improvement proposals with clear visual hierarchy - making the concept behind each improvement immediately understandable without reading dense log output.
+Browse saved improvement findings in the flow pane as cards (category, what, why, impact, files) and approve, reject or defer them, instead of running /apply-improvements blind.
 </Accordion>
 
-<Accordion title="Channel MCP support for UI">
-*RM-025 · feature · 🟡 Medium*
-
-Add the option of using Channel MCP for communication instead of directly writing to CLI, enabling richer UI interactions.
-</Accordion>
-
-<Accordion title="Live step flow diagrams">
+<Accordion title="Live substep diagram in the flow pane">
 *RM-027 · feature · 🟡 Medium*
 
-Show real-time inner flow diagrams for the active step, visualizing substep progress and control flow as it happens.
+The pane already draws the step graph of a bound flow. Add a live view of the active step's substeps and control flow as they run.
 </Accordion>
 
-<Accordion title="Better UX for reviewing processes">
+<Accordion title="Track files modified across a whole flow">
+*RM-028 · improvement · 🟡 Medium*
+
+Show which files a flow changed anywhere in the project, not only what is in the flow folder, using the files recorded in the log.
+</Accordion>
+
+<Accordion title="Richer review in the approval dialog">
 *RM-029 · improvement · 🟡 Medium*
 
-Add more super-easy UX ways for reviewing processes, potentially moving beyond markdown to richer interactive formats.
+Show step deliverables in the approval dialog as rich, easy-to-review views (diffs, tables, diagrams) instead of plain markdown.
 </Accordion>
 
-<Accordion title="Template creator via chat with dynamic preview">
+<Accordion title="Create templates by chat in the pane">
 *RM-030 · feature · 🟡 Medium*
 
-Build a chat-based template creator with dynamic preview UI, allowing users to design process templates conversationally while seeing live previews.
+Design a template conversationally from the flow pane, with a live preview of its steps and parameters.
 </Accordion>
 
-<Accordion title="Memory Visualization UX for Templates and Instances">
+<Accordion title="Memory view in the flow pane">
 *RM-035 · feature · 🟡 Medium*
 
-Add rich memory visualization views to both template and instance screens in the UI app. For templates: display a clear mapping of which steps read from or write to which memory files, giving template authors visibility into the memory flow across the process. For instances: show the same step-to-memory mapping plus deeper runtime details — current memory file contents, change history per step execution, diffs between memory states, and which step last modified each memory topic. The goal is to make memory a first-class, easily explorable part of the process UX rather than a hidden implementation detail.
+Show which steps read and write which memory topics, for templates and running flows, plus current contents, per-step history and diffs.
 </Accordion>
 
-<Accordion title="Multi-directory workspace support for UI-triggered processes">
-*RM-038 · feature · 🟡 Medium*
-
-When the UI app triggers a new process or runs process-continue, the spawned Claude Code session should support attaching multiple directories (workspaces) via --add-dir. This allows processes to operate across multiple codebases simultaneously - e.g., a process that needs access to both the main repo and a shared library. The UI should let users configure which directories to attach per process or template.
-</Accordion>
-
-<Accordion title="Show full template details in marketplace on click">
+<Accordion title="Full template details before install">
 *RM-039 · feature · 🟡 Medium*
 
-When clicking a template in the marketplace, display the complete template details (all fields, parameters, steps, metadata) instead of the current simplified/summary view. Users need to see the full picture before deciding to use a template.
-</Accordion>
-
-</AccordionGroup>
-
-## Server
-
-<AccordionGroup>
-<Accordion title="Template marketplace server">
-*RM-031 · feature · ⚪ Low*
-
-Build a server-side template marketplace for discovering and sharing community templates across teams and organizations.
+The Templates tab shows a short summary until a template is installed. Show all fields, parameters and steps on click, before installing.
 </Accordion>
 
 </AccordionGroup>
@@ -207,10 +152,22 @@ Build a server-side template marketplace for discovering and sharing community t
 ## Shipped
 
 <AccordionGroup>
+<Accordion title="Change memory from single file to multiple files">
+*RM-004 · improvement*
+
+Split the single memory file into topic-based memory files in the flow memory folder, with per-step read and write access.
+</Accordion>
+
+<Accordion title="Block hand edits of flow state files">
+*RM-009 · feature*
+
+The mod refuses Write, Edit and Bash writes to a flow's state files (flow, log, memory, findings) so only the flow tools change them. Only the user click can approve a step.
+</Accordion>
+
 <Accordion title="Default steps to template scope">
 *RM-015 · improvement*
 
-Change steps to default to process-template scope (related to specific template), with an option to set steps as global.
+Change steps to default to template scope (related to specific template), with an option to set steps as global.
 </Accordion>
 
 <Accordion title="Step-level shared behaviors via hooks and skills">
@@ -229,6 +186,18 @@ Remove the view-only markdown files and instead create a skill that generates in
 *RM-022 · feature*
 
 Create a dedicated step executor skill for running individual steps with proper context isolation and state management.
+</Accordion>
+
+<Accordion title="Rebrand to ZeremAI">
+*RM-032 · idea*
+
+The framework is now ZeremAI, a Claude Code plugin, with the /zeremai command.
+</Accordion>
+
+<Accordion title="Create official framework wiki on Mintlify">
+*RM-036 · documentation*
+
+Public documentation site for ZeremAI on Mintlify: install, concepts, authoring, reference and this roadmap.
 </Accordion>
 
 </AccordionGroup>

@@ -1,7 +1,7 @@
 {
   "id": "RM-027",
-  "title": "Live step flow diagrams",
-  "description": "Show real-time inner flow diagrams for the active step, visualizing substep progress and control flow as it happens.",
+  "title": "Live substep diagram in the flow pane",
+  "description": "The pane already draws the step graph of a bound flow. Add a live view of the active step's substeps and control flow as they run.",
   "type": "feature",
   "status": "proposed",
   "priority": "medium",
@@ -11,7 +11,7 @@
   "tags": [],
   "dependencies": [],
   "created": "2026-05-29",
-  "updated": "2026-05-29",
+  "updated": "2026-10-12",
   "author": "matanha@payoneer.com",
   "notes": "",
   "acceptance_criteria": [],

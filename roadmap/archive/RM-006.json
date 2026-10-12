@@ -3,7 +3,7 @@
   "title": "Finish session hook with empty .session file",
   "description": "Implement a finish-session hook that creates/clears a .session file to properly signal session boundaries.",
   "type": "feature",
-  "status": "proposed",
+  "status": "dropped",
   "priority": "low",
   "category": "framework",
   "milestone": "backlog",
@@ -11,9 +11,9 @@
   "tags": [],
   "dependencies": [],
   "created": "2026-05-29",
-  "updated": "2026-05-29",
+  "updated": "2026-10-12",
   "author": "matanha@payoneer.com",
-  "notes": "",
+  "notes": "Obsolete: the mod keeps session state itself, no .session file.",
   "acceptance_criteria": [],
   "illustration": "session-state"
 }

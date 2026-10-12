@@ -1,7 +1,7 @@
 {
   "id": "RM-020",
   "title": "CI/CD triggers",
-  "description": "Add trigger support for CI and CD pipelines, allowing processes to be initiated or advanced by external pipeline events.",
+  "description": "Triggers for CI and CD: start or advance a flow from a pipeline event.",
   "type": "feature",
   "status": "proposed",
   "priority": "medium",
@@ -11,7 +11,7 @@
   "tags": [],
   "dependencies": [],
   "created": "2026-05-29",
-  "updated": "2026-05-29",
+  "updated": "2026-10-12",
   "author": "matanha@payoneer.com",
   "notes": "",
   "acceptance_criteria": [],

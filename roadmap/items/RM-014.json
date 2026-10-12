@@ -1,7 +1,7 @@
 {
   "id": "RM-014",
-  "title": "Per-step LLM model configuration",
-  "description": "Allow setting different LLM models for different steps via configuration, enabling cost optimization by using cheaper models for simpler steps.",
+  "title": "Per-step model configuration",
+  "description": "Choose the model per step (today the step-executor inherits the session model), so simple steps can run on cheaper models.",
   "type": "feature",
   "status": "proposed",
   "priority": "medium",
@@ -11,7 +11,7 @@
   "tags": [],
   "dependencies": [],
   "created": "2026-05-29",
-  "updated": "2026-05-29",
+  "updated": "2026-10-12",
   "author": "matanha@payoneer.com",
   "notes": "",
   "acceptance_criteria": [],

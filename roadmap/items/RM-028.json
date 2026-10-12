@@ -1,7 +1,7 @@
 {
   "id": "RM-028",
-  "title": "Persistent file modification tracking",
-  "description": "Create a persistent way to see which files have been modified across the entire process, not just what is in the process instance folder.",
+  "title": "Track files modified across a whole flow",
+  "description": "Show which files a flow changed anywhere in the project, not only what is in the flow folder, using the files recorded in the log.",
   "type": "improvement",
   "status": "proposed",
   "priority": "medium",
@@ -11,7 +11,7 @@
   "tags": [],
   "dependencies": [],
   "created": "2026-05-29",
-  "updated": "2026-05-29",
+  "updated": "2026-10-12",
   "author": "matanha@payoneer.com",
   "notes": "",
   "acceptance_criteria": [],

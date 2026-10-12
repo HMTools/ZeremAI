@@ -1,7 +1,7 @@
 {
   "id": "RM-005",
-  "title": "Dynamic context injection in continue-process skill",
-  "description": "Use dynamic context injection in the continue-process skill to load only relevant context for the current step, reducing token usage.",
+  "title": "Dynamic context injection in the flow-run skill",
+  "description": "Use dynamic context injection in the flow-run skill so it loads only what the current step needs, cutting token use.",
   "type": "improvement",
   "status": "proposed",
   "priority": "high",
@@ -11,7 +11,7 @@
   "tags": [],
   "dependencies": [],
   "created": "2026-05-29",
-  "updated": "2026-05-29",
+  "updated": "2026-10-12",
   "author": "matanha@payoneer.com",
   "notes": "",
   "acceptance_criteria": [],

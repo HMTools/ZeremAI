@@ -1,7 +1,7 @@
 {
   "id": "RM-021",
   "title": "Use full skills frontmatter capabilities",
-  "description": "Leverage the complete skills frontmatter specification including model selection, tool restrictions, and other metadata fields.",
+  "description": "Use more of the skills frontmatter spec (model choice, tool restrictions, other fields) in the plugin skills.",
   "type": "improvement",
   "status": "proposed",
   "priority": "low",
@@ -11,7 +11,7 @@
   "tags": [],
   "dependencies": [],
   "created": "2026-05-29",
-  "updated": "2026-05-29",
+  "updated": "2026-10-12",
   "author": "matanha@payoneer.com",
   "notes": "",
   "acceptance_criteria": [],

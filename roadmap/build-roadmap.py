@@ -7,7 +7,7 @@ root = Path(__file__).parent
 load = lambda d: [json.loads(f.read_text()) for f in sorted((root / d).glob("*.json"))]
 items, archive = load("items"), load("archive")
 PRIO = {"high": 0, "medium": 1, "low": 2}
-CATS = {"framework": "Framework (plugin)", "ui": "UI", "server": "Server"}
+CATS = {"framework": "Framework (plugin)", "ui": "Flow pane (UI)", "server": "Server"}
 BADGE = {"high": "🔴 High", "medium": "🟡 Medium", "low": "⚪ Low"}
 
 
@@ -29,7 +29,7 @@ def card(i, done=False):
 
 
 out = ['---', 'title: "Roadmap"', 'description: "What is planned and what has shipped for ZeremAI."', '---', '',
-       "Ideas and planned work for ZeremAI, grouped by area and sorted by priority. Nothing here is a commitment or has a date. Open an [issue](https://github.com/HMTools/ZeremAI/issues) to suggest something.", '',
+       "Ideas and planned work for ZeremAI, the Claude Code plugin, grouped by area and sorted by priority. Nothing here is a commitment or has a date. Open an [issue](https://github.com/HMTools/ZeremAI/issues) to suggest something.", '',
        f"**{len(items)}** planned · **{sum(i['status'] == 'done' for i in archive)}** shipped", '']
 for cat, label in CATS.items():
     group = sorted((i for i in items if i["category"] == cat), key=lambda i: (PRIO.get(i["priority"], 9), i["id"]))

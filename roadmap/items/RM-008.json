@@ -1,7 +1,7 @@
 {
   "id": "RM-008",
-  "title": "Event system for process lifecycle",
-  "description": "Implement events for different lifecycle acts of processes. Support framework-level (global) and template-level events with multiple subscription handlers. Can also run on the server app.",
+  "title": "Event system for flow lifecycle",
+  "description": "Emit events for flow lifecycle moments (created, step started, step approved, completed, failed). Support global and template-level listeners, with several subscribers per event.",
   "type": "feature",
   "status": "proposed",
   "priority": "high",
@@ -11,7 +11,7 @@
   "tags": [],
   "dependencies": [],
   "created": "2026-05-29",
-  "updated": "2026-05-29",
+  "updated": "2026-10-12",
   "author": "matanha@payoneer.com",
   "notes": "",
   "acceptance_criteria": [],

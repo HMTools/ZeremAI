@@ -1,7 +1,7 @@
 {
   "id": "RM-015",
   "title": "Default steps to template scope",
-  "description": "Change steps to default to process-template scope (related to specific template), with an option to set steps as global.",
+  "description": "Change steps to default to template scope (related to specific template), with an option to set steps as global.",
   "type": "improvement",
   "status": "done",
   "priority": "medium",

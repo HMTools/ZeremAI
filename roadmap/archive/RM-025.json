@@ -3,7 +3,7 @@
   "title": "Channel MCP support for UI",
   "description": "Add the option of using Channel MCP for communication instead of directly writing to CLI, enabling richer UI interactions.",
   "type": "feature",
-  "status": "proposed",
+  "status": "dropped",
   "priority": "medium",
   "category": "ui",
   "milestone": "backlog",
@@ -11,9 +11,9 @@
   "tags": [],
   "dependencies": [],
   "created": "2026-05-29",
-  "updated": "2026-05-29",
+  "updated": "2026-10-12",
   "author": "matanha@payoneer.com",
-  "notes": "",
+  "notes": "Obsolete: the UI is now the /zeremai pane inside Claude Code, not a separate app talking to the CLI.",
   "acceptance_criteria": [],
   "illustration": "multi-channel"
 }

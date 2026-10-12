@@ -1,7 +1,7 @@
 {
   "id": "RM-011",
-  "title": "Dynamic processes and templates",
-  "description": "Support dynamically generated processes and templates that can adapt their steps based on runtime conditions and context.",
+  "title": "Dynamic flows and templates",
+  "description": "Let flows and templates generate or adapt their steps at runtime based on context.",
   "type": "feature",
   "status": "proposed",
   "priority": "medium",
@@ -11,7 +11,7 @@
   "tags": [],
   "dependencies": [],
   "created": "2026-05-29",
-  "updated": "2026-05-29",
+  "updated": "2026-10-12",
   "author": "matanha@payoneer.com",
   "notes": "",
   "acceptance_criteria": [],
