@@ -1,0 +1,26 @@
+---
+title: "Sub-flows"
+description: "A template step can start another flow, a child, and wait for it. The parent drives the child itself."
+---
+
+A template step can start another flow, a **child**, and wait for it. The parent drives the child itself.
+
+## How it runs
+
+1. The step's `subFlowTrigger` names a template by UUID and maps parent parameters into the child.
+2. A child flow is created in `active/` and bound to your session.
+3. The parent records it in `subFlowState.childFlows`.
+4. The agent works the child's steps with the normal loop. A child step can itself be a sub-flow.
+5. When the child completes, it reports a short summary. The parent marks the step done and continues.
+
+## Fan-out
+
+`forEach` in the trigger starts one child per item of a list in the parent, for example one child per file.
+
+## Resuming
+
+Resume the **parent** from the Continue tab. If a child is still `running`, the agent reports it and drives it before the parent's next step.
+
+## Loops
+
+Separate from sub-flows: a step can `loopBackTo` an earlier step while a `loopCondition` holds, up to `maxIterations`. See [Write a template](/authoring/templates).

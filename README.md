@@ -221,6 +221,8 @@ After installing templates from marketplaces:
 
 ## Documentation
 
+User docs site source is in `site/` (Mintlify): `cd site && npx mint dev`.
+
 - [Getting Started](docs/getting-started.md) - Detailed quick start guide
 - [Architecture](docs/architecture.md) - System architecture deep dive
 - [Examples](docs/examples.md) - More usage examples

@@ -1,0 +1,50 @@
+---
+title: "Installation"
+description: "## Requirements"
+---
+
+## Requirements
+
+- **Claude Code** with **mods** enabled. ZeremAI is a Claude Code mod and needs a build that supports them.
+- `git` on your `PATH` (templates come from git repositories).
+
+## Install the plugin
+
+Add the marketplace once, then install:
+
+```bash
+# inside Claude Code
+/plugin marketplace add HMTools/ZeremAI
+```
+
+```bash
+claude plugin install zeremai@zeremai
+```
+
+### Local checkout (no marketplace)
+
+For development or customization:
+
+```bash
+claude --plugin-dir /path/to/zeremai
+```
+
+## Install templates
+
+The plugin ships **no templates**. They come from git-backed [marketplaces](/guide/marketplaces).
+
+1. Run `/zeremai`.
+2. Open the **Templates** tab.
+3. Press **Refresh**, then **Install** the templates you need.
+
+Templates land in `~/.claude/zeremai/templates/flows/`.
+
+## When mods are off
+
+If mods are disabled (admin policy, an untrusted new folder, a crash, or `--safe-mode`), ZeremAI cannot change a flow. The flow skill tells you and stops. Under `--safe-mode` no plugin loads at all, so you will see nothing from ZeremAI.
+
+Try `/reload-plugins`, trust the folder, or ask your admin.
+
+## Verify
+
+Run `/zeremai`. You should see a pane with **New**, **Continue** and **Templates** tabs.

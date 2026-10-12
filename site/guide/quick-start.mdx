@@ -1,0 +1,50 @@
+---
+title: "Quick start"
+description: "## 1. Open the pane"
+---
+
+## 1. Open the pane
+
+```
+/zeremai
+```
+
+It opens a pane with a **New** tab (start a flow) and a **Continue** tab (resume one).
+
+## 2. Create a flow
+
+On the **New** tab:
+
+1. Pick a template.
+2. Fill in its fields. Required ones have a star.
+3. Press **Create**.
+
+ZeremAI resolves the template's steps, substitutes your parameters, creates the flow in `~/.claude/zeremai/active/`, binds it to your session and starts the first step.
+
+## 3. Work through the steps
+
+For each step the agent:
+
+1. Marks it `in_progress`.
+2. Hands it to a **step-executor** subagent that follows the step's guidance and writes results to flow memory.
+3. If the step needs approval, shows you its output in a dialog. You click **Approve** or **Request changes**.
+4. Marks it `completed` and moves on.
+
+You can talk to the agent at any time. Every request or correction you make is logged in the flow's audit log.
+
+## 4. Finish
+
+Every flow ends with two automatic steps:
+
+- **Continuous Improvement**: saves findings about what could be better. See [Continuous improvement](/guide/improvements).
+- **Complete Flow**: deletes leftover artifact files, then moves the flow to `completed/`.
+
+## Resume later
+
+Open `/zeremai` → **Continue**. Each active flow shows its current step and last change. Pick one and it resumes from the last incomplete step.
+
+## Tips
+
+- Be specific in parameters. Vague input gives vague plans.
+- Review each step's output before approving.
+- Never hand-edit the flow's state files. ZeremAI refuses agent edits to them, and your own edit can corrupt the flow.

@@ -1,0 +1,62 @@
+---
+title: "Marketplaces"
+description: "Templates are distributed through git-backed marketplaces, not bundled with the plugin."
+---
+
+Templates are distributed through **git-backed marketplaces**, not bundled with the plugin.
+
+## Why
+
+- **Versioned**: track a branch or tag.
+- **Team sharing**: host private templates in your own repo.
+- **Multiple sources**: combine official and custom repos.
+- **Per-template install**: install only what you need.
+- **Update detection**: see which installed templates have newer versions.
+- **Independent updates**: update templates without updating the plugin.
+
+## Manage from the pane
+
+Open `/zeremai` → **Templates**.
+
+| Action | Effect |
+|---|---|
+| Refresh | Fetch the latest catalogs from all enabled marketplaces |
+| Install / Update | Copy a template from the marketplace cache |
+| Remove | Delete an installed template |
+
+The same tab manages the marketplaces: **Add**, **Edit** (name, git address, branch, priority), **On/Off**, and **Remove**. Remove asks you to press twice. It deletes the cache, not templates you already installed.
+
+## Config file
+
+`~/.claude/zeremai/config/marketplaces.json`:
+
+```json
+{
+  "marketplaces": [
+    {
+      "name": "official",
+      "url": "https://github.com/HMTools/ZeremAI-marketplace.git",
+      "branch": "main",
+      "enabled": true,
+      "priority": 100
+    }
+  ],
+  "settings": {
+    "autoRefreshOnStale": false,
+    "staleDurationMinutes": 1440
+  }
+}
+```
+
+| Field | Meaning |
+|---|---|
+| `name` | Short identifier |
+| `url` | Git clone URL |
+| `branch` | Branch to track (default `main`) |
+| `enabled` | Skip the marketplace when `false` |
+| `priority` | Lower number = higher priority |
+| `autoRefreshOnStale` / `staleDurationMinutes` | Refresh automatically once the cache is older than this |
+
+## Private marketplaces
+
+Use any git URL your machine can already clone (SSH, or HTTPS with your credential helper). ZeremAI runs plain `git`, so it needs no extra credentials of its own.

@@ -1,0 +1,43 @@
+---
+title: "Continuous improvement"
+description: "Every flow ends with a Continuous Improvement step. It never blocks and needs no approval."
+---
+
+Every flow ends with a **Continuous Improvement** step. It never blocks and needs no approval.
+
+## What it does
+
+It reads the flow's log for patterns: repeated user corrections, high iteration counts, problems and workarounds, missing validations, doc gaps. It ranks them by frequency, impact and ease, then **saves** the top 3 to 5 as findings. It changes no files.
+
+Findings are stored per template and flow:
+
+```
+improvement-findings/<templateId>/<flowId>.json
+```
+
+## Apply them later
+
+Run the skill:
+
+```
+/apply-improvements
+```
+
+It:
+
+1. Lists open findings across all flows. Optionally focus on one template.
+2. Prioritizes the top few and groups similar ones.
+3. For each: proposes What / Why / Impact / Scope and waits for **approve / reject / defer**.
+4. If approved: investigates the real files, makes one atomic change, shows the diff.
+5. Records the outcome as `applied`, `rejected` or `deferred`, with notes.
+
+Zero open findings is a normal result.
+
+## Limits
+
+- Templates you do not own (installed from a marketplace) are not edited. The skill says so and stops. Send the change to the marketplace repo instead.
+- Never edit `improvement-findings/` by hand.
+
+## Help it help you
+
+Log problems honestly. The step reads the problems recorded in the log, so workarounds you mention during a flow are what turn into findings.

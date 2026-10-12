@@ -1,0 +1,26 @@
+{
+  "$schema": "https://mintlify.com/docs.json",
+  "theme": "mint",
+  "name": "ZeremAI",
+  "colors": { "primary": "#4F46E5", "light": "#7C3AED", "dark": "#4F46E5" },
+  "logo": { "light": "/logo.svg", "dark": "/logo.svg" },
+  "favicon": "/logo.svg",
+  "navigation": {
+    "groups": [
+      { "group": "Get started", "pages": ["index", "guide/installation", "guide/quick-start"] },
+      {
+        "group": "Guide",
+        "pages": [
+          "guide/concepts", "guide/approvals", "guide/marketplaces", "guide/flow-files",
+          "guide/sub-flows", "guide/improvements", "guide/troubleshooting"
+        ]
+      },
+      { "group": "Authoring", "pages": ["authoring/templates", "authoring/steps"] },
+      { "group": "Reference", "pages": ["reference/tools", "reference/internals"] }
+    ]
+  },
+  "navbar": {
+    "links": [{ "label": "Roadmap", "href": "https://hmtools.github.io/zeremai/" }],
+    "primary": { "type": "github", "href": "https://github.com/HMTools/ZeremAI" }
+  }
+}

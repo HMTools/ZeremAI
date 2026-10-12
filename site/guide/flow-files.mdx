@@ -1,0 +1,53 @@
+---
+title: "Where flows live"
+description: "Everything is under ~/.claude/zeremai/:"
+---
+
+Everything is under `~/.claude/zeremai/`:
+
+```
+~/.claude/zeremai/
+├── config/
+│   ├── marketplaces.json         # marketplace list
+│   └── installed-templates.json  # what you installed
+├── cache/sources/{name}/         # git clone per marketplace
+├── templates/flows/{category}/   # installed templates (steps inside)
+├── active/                       # running and paused flows
+├── completed/                    # finished flows
+├── failed/                       # failed flows
+└── flags/                        # runtime flags
+```
+
+## Inside a flow folder
+
+```
+flow-{name}-{YYYYMMDD}/
+├── flow.json   # state: metadata, parameters, steps, current step
+├── log.json    # audit log
+└── memory/     # topic files shared across steps
+```
+
+| File | Holds |
+|---|---|
+| `flow.json` | Name, template, status, parameters, every step with status and timestamps, the active step and substep, sub-flow state |
+| `log.json` | Per step: actions, reasoning, files modified, problems, decisions, performance notes. Every user interaction. Flow-wide observations |
+| `memory/<topic>.json` | What steps produced and decided, plus `_cross-references.json` |
+
+These files are managed only by the flow tools. Read them freely when debugging. Do not edit them.
+
+## Inspecting a flow
+
+```bash
+ls ~/.claude/zeremai/active/
+cat ~/.claude/zeremai/active/<flow>/flow.json
+```
+
+## Flow statuses
+
+| Status | Folder |
+|---|---|
+| `running`, `paused` | `active/` |
+| `completed` | `completed/` |
+| `failed` | `failed/` |
+
+Changing status moves the folder automatically.

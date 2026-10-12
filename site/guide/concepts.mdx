@@ -1,0 +1,61 @@
+---
+title: "Core concepts"
+description: "## Flow"
+---
+
+## Flow
+
+A **flow** is a running instance of a template. It tracks the current step, per-step status and timestamps, shared memory, and an audit log. Each flow is a folder under `~/.claude/zeremai/`.
+
+## Template
+
+A **template** is a reusable workflow definition:
+
+- metadata (title, when to use it)
+- parameters (required and optional, with descriptions and examples)
+- an ordered list of steps that point at step definitions
+- optional approvals, loops and sub-flows
+
+Parameters use `{{paramName}}` placeholders that are filled in when the flow is created.
+
+## Step
+
+A **step** is a self-contained unit of work, stored next to its template. A step definition holds:
+
+- purpose and expected output
+- guidance: prerequisites, specific actions, files to read/create/update, tools, best practices
+- numbered **substeps** with actions
+- which memory topics it reads and writes
+
+Templates reference steps by **UUID** (`stepRef`). The `stepRefName` next to it is only for humans. Renaming a step never breaks a template.
+
+## Framework steps
+
+Two steps are appended to **every** flow automatically. Template authors do not add them:
+
+| Step | What it does |
+|---|---|
+| Continuous Improvement | Reads the log and saves improvement findings. Never blocks. |
+| Complete Flow | Deletes artifact files, marks the flow completed, moves the folder. |
+
+## Memory
+
+Steps share information through **memory topics**: JSON files in the flow's `memory/` folder (for example `context`, `identified-files`, `implementation-decisions`). A step may read and write only the topics it declares, which keeps context small and predictable.
+
+## Step executor
+
+Each regular step runs in a **subagent** (`step-executor`) with an isolated context. It receives only the flow folder and step ID, then reads its own definition, the flow parameters and its declared memory topics. This keeps the main conversation light across long flows.
+
+## Flow tools
+
+All state changes go through **flow tools** provided by the plugin (`update_step_status`, `add_memory_entry`, `log_interaction`, ...). The agent never edits flow files directly. See the [tool reference](/reference/tools).
+
+## Lifecycle
+
+```
+New  ──►  active/  ──►  completed/
+              │
+              └────►  failed/
+```
+
+A flow can also be `paused`. It stays in `active/` and you resume it from the **Continue** tab.

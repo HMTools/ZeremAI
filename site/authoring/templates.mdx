@@ -1,0 +1,139 @@
+---
+title: "Write a template"
+description: "A template is one JSON file plus a subfolder per step. Publish it in a git marketplace(/guide/marketplaces) so others can install it."
+---
+
+A template is one JSON file plus a subfolder per step. Publish it in a git [marketplace](/guide/marketplaces) so others can install it.
+
+## Layout
+
+```
+templates/flows/{category}/{template-name}/
+├── {template-name}.json        # the template
+├── {step-a}/{step-a}.json      # step definitions
+└── {step-b}/{step-b}.json
+```
+
+Installed copies live under `~/.claude/zeremai/templates/flows/`.
+
+## Minimal template
+
+```json
+{
+  "type": "template",
+  "id": "9f1c2e7a-5b1d-4a8e-8c3f-0d2b6a7e1f10",
+  "name": "fix-bug",
+  "category": "development",
+  "metadata": {
+    "title": "Fix a bug",
+    "purposeAndUsage": "Diagnose and fix a reported bug, with a reviewed plan.",
+    "lastUpdated": "2026-10-12"
+  },
+  "parameters": {
+    "required": ["bugDescription"],
+    "optional": ["repro"],
+    "definitions": {
+      "bugDescription": {
+        "description": "What is wrong",
+        "type": "string",
+        "example": "Login returns 500 for emails with a plus sign"
+      },
+      "repro": {
+        "description": "Steps to reproduce",
+        "type": "string",
+        "example": "POST /login with a+b@x.com"
+      }
+    }
+  },
+  "steps": [
+    {
+      "number": 1,
+      "name": "Diagnose",
+      "stepRef": "28047be4-e7c5-4152-8329-2929982ad042",
+      "stepRefName": "diagnose",
+      "context": { "bug": "{{bugDescription}}" }
+    },
+    {
+      "number": 2,
+      "name": "Plan the fix",
+      "stepRef": "c4a1f0aa-3d52-4b9e-9a77-6d0e5b2f91c3",
+      "stepRefName": "plan-fix",
+      "approvalRequired": true
+    }
+  ],
+  "references": {
+    "steps": [
+      "28047be4-e7c5-4152-8329-2929982ad042",
+      "c4a1f0aa-3d52-4b9e-9a77-6d0e5b2f91c3"
+    ],
+    "relatedTemplates": [],
+    "dependencies": []
+  }
+}
+```
+
+Generate UUIDs with `uuidgen` or `node -e "console.log(crypto.randomUUID())"`. Never reuse them.
+
+## Top-level fields
+
+| Field | Required | Notes |
+|---|---|---|
+| `type` | yes | Always `"template"` |
+| `id` | yes | UUID v4, stable forever (sub-flows and findings key on it) |
+| `name`, `category` | yes | Folder names |
+| `metadata` | yes | `title`, `purposeAndUsage`, `lastUpdated` (`YYYY-MM-DD`) |
+| `parameters` | yes | `required`, `optional`, `definitions`, optional `defaults` and `notes` |
+| `steps` | yes | Ordered list, see below |
+| `references` | yes | Step UUIDs used, related templates, dependencies |
+| `memoryFileStructure` / `memoryFileUsage` | no | Documents memory topics |
+| `guidance` | no | Per-step extra context |
+
+## Parameters
+
+Use `{{paramName}}` anywhere in step `context` or sub-flow parameters. Each `definitions` entry needs `description`, `type` and an `example`, since the pane shows them when you fill the form. Required parameters get a star.
+
+## Step entries
+
+| Field | Meaning |
+|---|---|
+| `number`, `name` | Order and label |
+| `stepRef` | UUID of the step definition's `id`. This is what resolves. |
+| `stepRefName` | Display-only companion |
+| `description`, `context`, `notes` | Extra context for this template |
+| `approvalRequired` | User must click Approve before completion |
+| `postApprovalActions` | Actions after approval |
+| `conditional` | When to run the step |
+| `loopBackTo`, `loopCondition`, `maxIterations` | Repeat an earlier step while the condition holds |
+| `subFlowTrigger` | Start a child flow, see below |
+| `fallback` | What to do when the step cannot run |
+
+<Warning>Do **not** add Continuous Improvement or Complete Flow. They are appended automatically.</Warning>
+
+## Approval checkpoints
+
+Put `"approvalRequired": true` on steps whose output a human should review before work builds on it: plans, designs, destructive changes. The gate cannot be bypassed by the agent. See [Approvals](/guide/approvals).
+
+## Sub-flows
+
+```json
+{
+  "number": 3,
+  "name": "Fix each failing test",
+  "subFlowTrigger": {
+    "template": "<UUID of another template's id>",
+    "templateName": "integration-test-fix",
+    "forEach": "failingTests",
+    "parameters": { "testName": "{{item}}" },
+    "syncPoint": "immediate"
+  }
+}
+```
+
+`template` is a UUID. `templateName` is display-only. A step with `subFlowTrigger` and no step definition is driven by the parent, not a subagent. See [Sub-flows](/guide/sub-flows).
+
+## Test it
+
+1. Put the template in a marketplace repo (or copy it to `~/.claude/zeremai/templates/flows/<category>/`).
+2. Run `/zeremai`, Templates → Refresh → Install.
+3. Create a flow from the New tab and run through it.
+4. Check the finished flow's log for friction. Fix and repeat.

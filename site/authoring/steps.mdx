@@ -1,0 +1,89 @@
+---
+title: "Write a step"
+description: "A step definition is the sole source of instructions for the subagent that runs it. Write it as if the executor knows nothing else, because that is tr"
+---
+
+A step definition is the sole source of instructions for the subagent that runs it. Write it as if the executor knows nothing else, because that is true: it gets only the flow folder and the step ID.
+
+## Skeleton
+
+```json
+{
+  "type": "step",
+  "id": "28047be4-e7c5-4152-8329-2929982ad042",
+  "name": "diagnose",
+  "category": "investigation",
+  "metadata": {
+    "title": "Diagnose the bug",
+    "purposeAndUsage": "Find the root cause before any fix is planned.",
+    "lastUpdated": "2026-10-12"
+  },
+  "output": {
+    "description": "Root cause with evidence",
+    "artifacts": ["diagnosis.md"],
+    "memoryUpdates": ["rootCause"]
+  },
+  "guidance": {
+    "prerequisites": ["Bug description is in flow parameters"],
+    "specificActions": [
+      "Reproduce the bug",
+      "Trace the failing path to the first wrong value",
+      "Write the root cause and evidence to diagnosis.md"
+    ],
+    "files": { "read": ["src/**"], "create": ["diagnosis.md"], "update": [] },
+    "tools": ["shell"],
+    "bestPractices": ["Fix causes, not symptoms", "Cite file:line for every claim"]
+  },
+  "substeps": [
+    {
+      "number": 1,
+      "name": "Reproduce",
+      "description": "Confirm the failure",
+      "actions": ["Run the repro", "Record the exact error"]
+    },
+    {
+      "number": 2,
+      "name": "Trace",
+      "description": "Find the root cause",
+      "actions": ["Follow the call path", "Note the first wrong value"],
+      "conditional": "Only if the repro fails"
+    }
+  ],
+  "flow": { "description": "Reproduce → trace → write diagnosis" },
+  "memoryFileUsage": {
+    "readFrom": ["context"],
+    "writeTo": ["diagnosis"],
+    "fields": ["rootCause", "evidence"]
+  },
+  "dependencies": { "requiredComponents": [], "requiredFiles": [], "requiredTools": [] },
+  "references": { "relatedSteps": ["plan-fix"], "usedInTemplates": ["fix-bug"] }
+}
+```
+
+## What the executor does with it
+
+1. Reports the substep count, then runs each substep.
+2. Reads only the memory topics in `memoryFileUsage.readFrom`.
+3. Writes only to topics in `memoryFileUsage.writeTo`. An empty list means no limit.
+4. Logs actions, reasoning, files touched and problems through the flow tools.
+5. Before returning, checks that decisions and file changes were recorded.
+
+If it needs an answer from you it cannot ask directly. It stops and reports the questions. The main agent asks, then re-runs the step with your answers as corrections.
+
+## Rules of thumb
+
+- **One purpose per step.** If the title needs "and", split it.
+- **Concrete actions.** "Trace the call path from the controller" beats "investigate".
+- **Declare memory access.** It is the contract between steps, and it keeps context small.
+- **Make outputs checkable.** List artifacts so a reviewer knows what to look for.
+- **Use `conditional`** on substeps that only sometimes apply.
+- **Let the template add approvals.** The step's `approvalRequired` applies only when used standalone.
+- **Log problems in the step's guidance.** Continuous Improvement turns recorded problems into findings.
+
+## Optional fields
+
+`parameters` (step-specific `required`/`optional`/`definitions`/`defaults`) and any extra keys your step needs are allowed. Extra keys are carried into the flow with the step.
+
+## Reuse
+
+The same step can be referenced by several templates through its UUID. Changing the step updates all of them the next time a flow is created. Existing flows keep the copy embedded at creation.

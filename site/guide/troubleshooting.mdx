@@ -1,0 +1,42 @@
+---
+title: "Troubleshooting"
+description: "## 'The flow tools are not here, so mods are off'"
+---
+
+## "The flow tools are not here, so mods are off"
+
+Mods are not loaded: admin policy, untrusted folder, a crash or a rollout switch. Try `/reload-plugins`, trust the folder, or ask your admin. The agent will not edit flow files by hand as a workaround, by design.
+
+## `/zeremai` shows no templates
+
+Open the **Templates** tab, **Refresh**, then **Install**. If Refresh fails, check you can `git clone` the marketplace URL from a terminal.
+
+## Agent cannot edit a flow file
+
+Intended. A flow's state files and findings change only through flow tools. If a tool errors, read its message: it says what to do next.
+
+## Step will not complete
+
+It has `approvalRequired: true` and you have not approved. Open the dialog (it reopens on your next prompt) and click **Approve**.
+
+## Agent stops to log an interaction
+
+You sent a prompt in a flow session, so a log entry is owed. The agent calls `log_interaction` first. This is the mandatory logging rule: interactions are logged *before* any file change.
+
+## Resume lands on the wrong step
+
+Check the truth:
+
+```bash
+cat ~/.claude/zeremai/active/<flow>/flow.json
+```
+
+Look at each step's `status` and the current-state fields. Fix status through the agent (it calls `update_step_status`), not by editing.
+
+## A flow I finished is not in `completed/`
+
+Completion moves the folder, so the path changes. Look in `~/.claude/zeremai/completed/`. Failed flows go to `failed/`.
+
+## Still stuck
+
+Open an issue: [https://github.com/HMTools/ZeremAI/issues](https://github.com/HMTools/ZeremAI/issues). Include the flow's log (remove anything private).

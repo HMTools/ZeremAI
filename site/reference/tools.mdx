@@ -1,0 +1,66 @@
+---
+title: "Flow tools"
+description: "The plugin registers these tools. The agent finds them with tool search. Each answers {'status': 'ok', ...} or {'status': 'error', 'message': '...'}. "
+---
+
+The plugin registers these tools. The agent finds them with tool search. Each answers `{"status": "ok", ...}` or `{"status": "error", "message": "..."}`. Every tool takes `flowDir` (absolute path of the flow folder) except the finding tools.
+
+After `update_flow_status` moves a folder, use the `relocated_to` path from the answer.
+
+## Flow lifecycle
+
+| Tool | Purpose |
+|---|---|
+| `create_flow` | Create a flow from a template. `templatePath`; optional `name`, `params`, `projectPath`, and `parentFlowPath`/`parentId`/`parentName`/`returnToStep` for sub-flows. Used by the pane and sub-flow steps only. |
+| `update_flow_status` | Set `running`, `completed`, `failed` or `paused`. Moves the folder. A sub-flow also passes `summary`. |
+
+## Progress
+
+| Tool | Purpose |
+|---|---|
+| `update_step_status` | `pending`, `in_progress`, `completed`, `skipped`, `awaiting_approval`. Sets `startedAt` / `completedAt`. Refuses `completed` on an unapproved step. |
+| `update_current_state` | Set the active step, its summary, substep count, current substep |
+| `update_active_substep` | Change only the current substep |
+
+## Memory
+
+| Tool | Purpose |
+|---|---|
+| `add_memory_entry` | Add or merge what a step produced into `memory/<topic>.json`. Respects the step's `writeTo`. |
+| `read_memory_topic` | Read a topic. Respects the step's `readFrom`. `_cross-references` is always readable. |
+
+## Logging
+
+| Tool | Purpose |
+|---|---|
+| `add_log_entry` | Append actions, reasoning, files modified, problems, decisions, performance notes for a step |
+| `log_interaction` | Record a user request: `request`, `reason`, `response`. Optional `forImprovement`, `potentialImprovement`. Must precede changes after a user prompt. |
+| `update_log_observations` | Append flow-wide patterns and recommendations |
+
+## Approval
+
+| Tool | Purpose |
+|---|---|
+| `request_approval` | Open the approval dialog and wait for the user's click. Returns Approve or the requested changes. |
+
+## Sub-flows
+
+| Tool | Purpose |
+|---|---|
+| `register_child_flow` | Record a child in the parent: `childId`, `childName`, `childStatus`, `spawnedAtStep`, `syncPoint`, `childFlowPath` |
+| `update_child_status` | Update a child's status in the parent |
+
+## Improvement findings
+
+| Tool | Purpose |
+|---|---|
+| `write_finding` | Save a finding (`category`, `title`, `what`, `why`, `impact`, optional `scope`). Only Continuous Improvement calls it. |
+| `list_findings` | List findings by `status` (`open`, `applied`, `rejected`, `deferred`) and optional `templateId`. Only `apply-improvements` calls it. |
+| `update_finding_status` | Record `applied`, `rejected` or `deferred` with `notes` and `filesModified` |
+
+## Rules
+
+1. Never use Write, Edit or Bash on a flow's state files or the findings store. The plugin refuses it.
+2. Always read the answer. An error message says what to do next.
+3. Use full paths for `flowDir`.
+4. Approval is the user's. The agent cannot set it.

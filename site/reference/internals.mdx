@@ -1,0 +1,58 @@
+---
+title: "Skills, agent & hooks"
+description: "How the plugin is put together. You do not need this to use ZeremAI, but it explains the behavior you see."
+---
+
+How the plugin is put together. You do not need this to use ZeremAI, but it explains the behavior you see.
+
+## Plugin layout
+
+```
+zeremai/
+├── .claude-plugin/plugin.json   # manifest
+├── agents/step-executor.md      # the subagent
+├── framework-steps/             # auto-appended steps
+├── hooks/                       # the mod: one folder per rule
+├── skills/                      # flow-run, flow-state-update, ...
+├── config/marketplaces.default.json
+├── types/                       # TypeScript types + schema.json
+└── assets/logo.svg
+```
+
+## Skills
+
+| Skill | User-invocable | Role |
+|---|---|---|
+| `flow-run` | via the pane | Runs a bound flow: the step loop, approval checkpoints, sub-flows |
+| `flow-state-update` | no | Documents the flow tools; the rule that state changes only through them |
+| `step-executor-delegation` | no | Runs one step in a forked `step-executor` subagent |
+| `apply-improvements` | yes | Reviews saved findings and applies the ones you approve |
+
+## Agent
+
+**`step-executor`** executes one step with an isolated context. It receives a flow folder and step ID, reads its own definition and declared memory, reports progress through the flow tools, and applies corrections when re-invoked after your review. It cannot ask you questions and refuses to run sub-flow steps.
+
+## Hooks (the mod)
+
+Each rule is a folder under `hooks/`:
+
+| Rule | What it enforces |
+|---|---|
+| `on-flow-pane` | The `/zeremai` pane: New, Continue, Templates tabs |
+| `on-flow-tools` | Lists the flow tools when a flow starts or resumes; shows findings waiting at session start |
+| `on-agent-editing` | While a log entry is owed, the agent cannot edit files, start a subagent or change the flow |
+| `on-user-prompt` | Marks a log entry as owed after your prompt; reopens a closed approval dialog |
+| `on-approval-gate` | Only your click sets `approved`; blocks hand edits of flow state files |
+| `on-pending-checkpoint` | While an approval waits, refuses every tool call except research and the log entry |
+| `on-agent-stopping` | Re-prompts the agent if it ends a turn while the flow still has work |
+| `on-todo-tool` | While a flow runs, its steps are the task list; a second todo list is refused |
+
+When a guard blocks or re-prompts the agent, a toast tells you why.
+
+## Types
+
+`types/` has TypeScript definitions and `schema.json` for templates, steps, flow instances, status, memory and logs. Validate your template or step JSON against `schema.json` while authoring.
+
+## Source
+
+[https://github.com/HMTools/ZeremAI](https://github.com/HMTools/ZeremAI)
