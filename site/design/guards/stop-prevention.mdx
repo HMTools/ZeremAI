@@ -23,17 +23,21 @@ Then it picks the first case that fits, from top to bottom:
 
 ```mermaid
 flowchart TD
-  A[Main agent ended its turn] --> B{Flow running and no gate open?}
-  B -- no --> Z[Do nothing: the agent may stop]
-  B -- yes --> C{Step in progress that needs approval?}
-  C -- "not approved" --> D["Run the approval path: wait for the executor, or ask for your answer"]
-  C -- "approved" --> E["Complete the step first"]
-  C -- no --> F{A step still pending?}
-  F -- yes --> G["Delegate the next step to step-executor"]
+  A([Agent ended its turn]) --> B{Flow running,<br/>no gate open?}
+  B -- no --> Z([Agent may stop]):::stop
+  B -- yes --> C{Approval step<br/>in progress?}
+  C -- "not approved" --> D["Wait for executor<br/>or ask you"]:::go
+  C -- approved --> E["Complete the step"]:::go
+  C -- no --> F{A step pending?}
+  F -- yes --> G["Delegate the next step"]:::go
   F -- no --> H{A step in progress?}
-  H -- yes --> I["Wait for its executor, or re-delegate if it is gone"]
+  H -- yes --> I["Wait for executor<br/>or delegate again"]:::go
   H -- no --> Z
+  classDef go fill:#4F46E5,stroke:#4338CA,color:#fff
+  classDef stop fill:#64748B,stroke:#475569,color:#fff
 ```
+
+Indigo boxes: the mod sends a re-prompt. Grey: the agent may stop.
 
 | Situation | The prompt says |
 |---|---|

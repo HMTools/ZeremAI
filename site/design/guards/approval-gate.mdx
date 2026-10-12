@@ -9,16 +9,17 @@ A step with `approvalRequired: true` cannot complete until you approve it. The *
 
 ```mermaid
 stateDiagram-v2
+  direction LR
   [*] --> working
-  working --> dialog: agent runs request-approval
-  dialog --> approved: you click Approve
-  dialog --> working: you request changes
-  dialog --> waiting: you close the dialog
-  waiting --> dialog: your next prompt
-  waiting --> approved: Approve in the pane
-  waiting --> working: Request changes in the pane
+  working --> dialog: request-approval
+  dialog --> approved: Approve
+  dialog --> working: Request changes
+  dialog --> waiting: close
+  waiting --> dialog: next prompt
   approved --> [*]
 ```
+
+In the pane, **Approve** and **Request changes** also work from `waiting`. They end the gate in the same way as the dialog.
 
 | State | What it means | Stored as |
 |---|---|---|
@@ -33,16 +34,19 @@ The gate is in the mod store, so a restart or a reload does not lose it.
 
 ```mermaid
 sequenceDiagram
+  autonumber
   participant A as Agent
-  participant G as Mod: on-approval-gate
+  participant G as Mod (on-approval-gate)
   participant U as You
   participant S as Flow script
   A->>G: Bash: request-approval
   G->>G: find the step, open the gate
   G->>U: dialog: Approve / Request changes
-  U-->>G: Approve
-  G->>S: approve-step (only the mod can)
-  S-->>G: approved: true written
+  rect rgba(79, 70, 229, 0.18)
+    U-->>G: Approve (your click)
+    G->>S: approve-step (only the mod can)
+    S-->>G: approved: true written
+  end
   G-->>A: "The user approved step N. Complete it."
   A->>S: update-step-status completed
 ```

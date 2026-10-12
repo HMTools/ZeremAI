@@ -20,19 +20,22 @@ The mod is a set of hooks. Claude Code calls a hook when something happens. Each
 
 ```mermaid
 sequenceDiagram
+  autonumber
   participant You
   participant Mod
   participant Agent
   participant Script as Flow script
   You->>Mod: prompt.submit
-  Mod->>Script: log-interaction (details by Haiku)
+  Mod->>Script: log the prompt (Haiku)
   Mod->>Agent: the prompt goes on
-  Agent->>Mod: tool.call (Bash: update-step-status)
-  Mod->>Mod: check moment and input
-  Mod->>Script: run the command
+  Agent->>Mod: tool.call (Bash)
+  rect rgba(79, 70, 229, 0.18)
+    Mod->>Mod: check moment and input
+    Mod->>Script: run the command
+  end
   Script-->>Agent: one line of JSON
   Agent->>Mod: turn.complete
-  Mod->>Agent: re-prompt, if the flow has work left
+  Mod->>Agent: re-prompt if work is left
 ```
 
 ## How hooks combine

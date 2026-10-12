@@ -7,13 +7,19 @@ Every flow learns something about its template. Improvement findings keep that l
 
 ```mermaid
 flowchart LR
-  P["Your prompts and the agent's problems"] --> L[("log.json")]
-  L --> CI["Continuous Improvement step"]
-  CI -- "write-finding" --> FS[("improvement-findings/&lt;template&gt;/&lt;flow&gt;.json")]
-  FS -- "toast at session start" --> U[You]
-  U -- "/apply-improvements" --> AP["apply-improvements skill"]
+  P["Your prompts and<br/>the agent's problems"] --> L[("log.json")]:::store
+  L --> CI["Continuous<br/>Improvement step"]:::script
+  CI -- "write-finding" --> FS[("improvement-findings/<br/>{template}/{flow}.json")]:::store
+  FS -- "toast at start" --> U([You]):::you
+  U -- "/apply-improvements" --> AP["apply-improvements<br/>skill"]:::mod
   AP -- "update-finding-status" --> FS
+  classDef mod fill:#4F46E5,stroke:#4338CA,color:#fff
+  classDef script fill:#0F766E,stroke:#0D5F59,color:#fff
+  classDef store fill:#64748B,stroke:#475569,color:#fff
+  classDef you fill:#7C3AED,stroke:#6D28D9,color:#fff
 ```
+
+Grey: files. Teal: the flow script and the step that runs it. Indigo: the mod and its skill. Violet: you.
 
 ## Step 1: the log collects the evidence
 

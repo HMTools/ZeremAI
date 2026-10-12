@@ -7,10 +7,16 @@ A template goes through three places before it runs.
 
 ```mermaid
 flowchart LR
-  G[("Git marketplace")] -- "refresh: clone or pull" --> C["cache/sources/&lt;name&gt;/"]
-  C -- "install: copy the folder" --> T["templates/flows/&lt;category&gt;/&lt;name&gt;/"]
-  T -- "create-flow: copy each step" --> F["active/&lt;flow&gt;/flow.json"]
+  G[("Git<br/>marketplace")]:::store -- "mod: refresh" --> C["Cache<br/>cache/sources/{name}"]:::store
+  C -- "mod: install" --> T["Installed<br/>templates/flows/{category}/{name}"]:::store
+  T -- "script: create-flow" --> F["Flow<br/>active/{flow}/flow.json"]:::script
+  classDef mod fill:#4F46E5,stroke:#4338CA,color:#fff
+  classDef script fill:#0F766E,stroke:#0D5F59,color:#fff
+  classDef store fill:#64748B,stroke:#475569,color:#fff
+  classDef you fill:#7C3AED,stroke:#6D28D9,color:#fff
 ```
+
+Grey boxes are copies on disk. Each arrow names who copies: the mod, or the script.
 
 All three live under `~/.claude/zeremai/`. Each step is a copy. Nothing links back to the place it came from.
 
