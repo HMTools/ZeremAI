@@ -3,8 +3,8 @@
   "theme": "mint",
   "name": "ZeremAI",
   "colors": { "primary": "#4F46E5", "light": "#7C3AED", "dark": "#4F46E5" },
-  "logo": { "light": "/logo.svg", "dark": "/logo.svg" },
-  "favicon": "/logo.svg",
+  "logo": { "light": "/logo.png", "dark": "/logo.png" },
+  "favicon": "/logo.png",
   "navigation": {
     "groups": [
       { "group": "Get started", "pages": ["index", "guide/installation", "guide/quick-start"] },

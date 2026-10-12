@@ -1,4 +1,4 @@
-<p align="center"><img src="assets/logo.svg" alt="ZeremAI" width="96"></p>
+<p align="center"><img src="assets/hero.webp" alt="ZeremAI: a surfing agentic panda" width="100%"></p>
 
 # ZeremAI
 
