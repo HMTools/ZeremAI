@@ -67,51 +67,13 @@ A step definition is the sole source of instructions for the subagent that runs 
 1. Starts with a **brief** that the plugin builds: the step definition, the flow parameters, and the content of the memory topics in `memoryFileUsage.readFrom`.
 2. Reports the substep count, then runs each substep.
 3. Ends with one result block: a summary, memory entries for the topics in `memoryFileUsage.writeTo` (an empty list means no limit), and the log. The plugin saves it.
-4. If the step has `verifiers`, the plugin runs them. A failed check goes back to the executor to fix. See [Verifiers](#verifiers).
+4. If the step has `verifiers`, the plugin runs them. A failed check goes back to the executor to fix. See [Deterministic Verifiers](/authoring/verifiers).
 
 If it needs an answer from you it cannot ask directly. It stops and reports the questions. The main agent asks, then re-runs the step with your answers as corrections.
 
 ## Verifiers
 
-A verifier is a Python script that checks the work of a step with code, not with judgment: a file exists, a JSON has the right keys, a plan has a rollback section. Put the script in the step folder and list it in the step file:
-
-```json
-"verifiers": [{ "script": "check-diagnosis.py", "timeoutSec": 5 }],
-"maxFixes": 2
-```
-
-| Field | Meaning |
-|---|---|
-| `script` | A `.py` file name in the step folder. No path. |
-| `timeoutSec` | Optional, above 0 and up to 8. Default 5. A slower script counts as failed. |
-| `maxFixes` | Optional, 0 to 5, default 2. How many times the executor can fix a failed check. It also counts a missing result block. |
-
-The plugin runs the verifiers when the executor ends with a good result block. The script gets two arguments, the flow folder and the step ID. It must print one line of JSON and exit with 0:
-
-```json
-{
-  "status": "fail",
-  "checks": [
-    { "name": "has rollback section", "passed": false, "message": "Add a Rollback section to plan.md" },
-    { "name": "has owner", "passed": true }
-  ]
-}
-```
-
-`status` is `pass` only if every check passed. A `message` tells the executor what is wrong and how to fix it. A script only reads: it must not change flow files.
-
-```python
-import json, sys, os
-
-flow_dir, step_id = sys.argv[1], sys.argv[2]
-ok = os.path.exists(os.path.join(flow_dir, "diagnosis.md"))
-checks = [{"name": "diagnosis.md exists", "passed": ok, "message": "" if ok else "Write diagnosis.md"}]
-print(json.dumps({"status": "pass" if ok else "fail", "checks": checks}))
-```
-
-**A verifier never throws an error.** The flow script runs every script and turns a crash, a timeout, a missing file or an answer in the wrong shape into one failed check. So a broken script counts as a failed step: the executor gets "verifier crashed: …" and uses its tries on it. Test your script before you ship the template.
-
-**What happens on a fail.** The plugin sends the failed checks to the same executor, which fixes the work and ends again. The result is saved once: when all checks pass, or when no try is left. After the last try the result is saved anyway, and the main agent is told which checks still fail. The user still approves a step with a click. A verifier never approves it.
+A step can list Python scripts that check its work with code, and send failures back to the executor. See [Deterministic Verifiers](/authoring/verifiers). The fields are `verifiers` and `maxFixes`.
 
 ## Rules of thumb
 
@@ -125,7 +87,7 @@ print(json.dumps({"status": "pass" if ok else "fail", "checks": checks}))
 
 ## Optional fields
 
-`verifiers` and `maxFixes` (see [Verifiers](#verifiers)), `parameters` (step-specific `required`/`optional`/`definitions`/`defaults`) and any extra keys your step needs are allowed. Extra keys are carried into the flow with the step.
+`verifiers` and `maxFixes` (see [Deterministic Verifiers](/authoring/verifiers)), `parameters` (step-specific `required`/`optional`/`definitions`/`defaults`) and any extra keys your step needs are allowed. Extra keys are carried into the flow with the step.
 
 ## Reuse
 

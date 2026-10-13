@@ -61,7 +61,8 @@
         "group": "Authoring",
         "pages": [
           "authoring/templates",
-          "authoring/steps"
+          "authoring/steps",
+          "authoring/verifiers"
         ]
       },
       {
