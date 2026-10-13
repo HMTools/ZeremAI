@@ -257,7 +257,6 @@ async function openPane($: any, named?: (typeof TABS)[number], rest = ''): Promi
   await ensureLoaded($)
   ;[st.templates, st.flows] = await Promise.all([listTemplates(files), listFlows(files)])
   try { const ports = await templatePortsOf($); [st.entries, st.markets] = await Promise.all([catalog(ports), listMarketplaces(ports)]) } catch { /* no catalog: the list shows what is installed */ }
-  st.detailKey = undefined
   st.boundDir = await findFlowDir(files, linksOf($), await $.session.id())
   st.view = !named && st.boundDir ? 'flow' : 'list'
   st.shown = st.boundDir
@@ -283,6 +282,12 @@ async function openInViewer($: any, path: string, surface: string): Promise<stri
     if (run && run.exitCode === 0) return ''
   }
   return `Could not open the file with ${tries.map(t => t[0]).join(' or ')}. The file is ${path}`
+}
+
+// The Details button: the view-template command of this plugin, as if you typed it. It builds the page and shows it in the conversation.
+async function viewTemplate($: any, path: string): Promise<void> {
+  try { await $.command.run({ command: 'zeremai:view-template', args: path }) } catch (error) { say('error', `Could not run view-template: ${error instanceof Error ? error.message : String(error)}`) }
+  $.ui.invalidate('ui.render')
 }
 
 const HELP = ['/zeremai          open the pane: the bound flow, or the list', '/zeremai new      pick a template and start a flow', '/zeremai continue pick a flow to go on with',
@@ -418,7 +423,7 @@ export const register: Register = on => {
       approve: async stepId => answerGate($, await approveFromPane(filesOf($), approverOf($), gatesOf($), await $.session.id(), bound!.dir, stepId, answerLog($))),
       requestChanges: async (stepId, reason) => answerGate($, await requestChangesFromPane(filesOf($), approverOf($), gatesOf($), await $.session.id(), bound!.dir, stepId, reason, answerLog($))),
       close: () => closeFlow($),
-      templateJob: (job, busy) => templateJob($, job, busy), fill: (template, purpose, text) => fillJob($, template, purpose, text), resume: (dir, note) => resumeAndHandOff($, dir, note), handOff: (started, toast) => handOff($, started, toast), openInViewer: (path, surface) => openInViewer($, path, surface), refresh: () => refresh($),
+      viewTemplate: path => viewTemplate($, path), templateJob: (job, busy) => templateJob($, job, busy), fill: (template, purpose, text) => fillJob($, template, purpose, text), resume: (dir, note) => resumeAndHandOff($, dir, note), handOff: (started, toast) => handOff($, started, toast), openInViewer: (path, surface) => openInViewer($, path, surface), refresh: () => refresh($),
     }
     // One strip at the top for every result and error. A symbol and a color say which: never color alone.
     const tone = { info: 'inactive', success: 'success', error: 'error' }[st.kind]

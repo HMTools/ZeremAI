@@ -55,6 +55,13 @@ export function groupRows(rows: TemplateRow[], favorites: ReadonlySet<string>, l
 export const lastUsedNames = (flows: { template?: string; updatedMs?: number }[]): string[] =>
   [...new Set(flows.filter(p => p.template).sort((a, b) => (b.updatedMs ?? 0) - (a.updatedMs ?? 0)).map(p => p.template!))]
 
+// The file that the view-template command reads: the installed template, else the copy in the marketplace cache. Nothing is installed for it.
+export function viewPath(home: string, row: TemplateRow): string | undefined {
+  if (row.template) return row.template.path
+  const e = row.entry
+  return e ? `${home.replace(/\\/g, '/')}/.claude/zeremai/cache/sources/${e.marketplace}/templates/flows/${e.category}/${e.name}/${e.name}.json` : undefined
+}
+
 export type Access = 'R' | 'W' | 'R/W' | ''
 export type TemplateStep = { number: number; name: string; approval: boolean; purpose: string; guidance: string[]; substeps: string[]; output: string; reads: string[]; writes: string[] }
 export type TemplateDetail = {

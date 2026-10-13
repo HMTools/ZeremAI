@@ -32,6 +32,7 @@ export interface Ctx {
   fill: (template: TemplateInfo, purpose: string, text: string) => Promise<void> // Claude fills the Start form from the text
   handOff: (started: Started, toast?: string) => Promise<void> // `toast` shows before the pane closes
   openInViewer: (path: string, surface: string) => Promise<string>
+  viewTemplate: (path: string) => Promise<void> // runs the view-template command for a template file
   refresh: () => Promise<void>
   gate: PaneGate | undefined // the approval step of the bound flow, and whether the pane can answer it
   approve: (stepId: string) => Promise<void>

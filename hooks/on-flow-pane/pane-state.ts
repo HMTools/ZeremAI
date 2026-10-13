@@ -21,9 +21,6 @@ export const st = {
   look: 1, // how much color Desktop draws: 0 none, 1 cards and group titles, 2 + the ground, 3 + colored buttons and chips, 4 + the ground fills the height
   showMissing: false, // the folded group of templates you do not have is open
   category: undefined as string | undefined, // the chip: a category, the favorites, or all
-  detailKey: undefined as string | undefined, // the template whose detail shows
-  tdTab: 'overview' as 'overview' | 'steps' | 'flow' | 'raw',
-  tdStep: undefined as number | undefined,
   section: 'steps' as 'steps' | 'memory' | 'logs' | 'files', // the tab of the bound flow
   memTab: 'flow' as 'flow' | 'topics' | 'history' | 'diffs',
   openTopic: undefined as string | undefined,

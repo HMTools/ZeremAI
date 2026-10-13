@@ -1,6 +1,6 @@
 import { test, expect } from 'claude-code/testing'
 import { world } from '../flow-manager/fake-world'
-import { FAVORITES, groupRows, lastUsedNames, matches, mergeTemplates, templateDetail } from './template-views'
+import { FAVORITES, groupRows, lastUsedNames, matches, mergeTemplates, templateDetail, viewPath } from './template-views'
 import type { TemplateInfo } from './flow-pane'
 import type { CatalogEntry } from '../templates/templates'
 
@@ -52,6 +52,13 @@ test('template detail: purpose, parameters, steps from their step files, and the
   expect(d.steps[2]).toMatchObject({ output: '', reads: [], writes: [] }) // a step file that is missing still shows its name
   expect(d.flow).toEqual({ topics: ['cause', 'patch'], cells: { cause: ['W', 'R/W', ''], patch: ['', 'W', ''] } })
   expect(await templateDetail(w.ports.files, '/t/gone.json')).toBeUndefined()
+})
+
+test('the file to view: the installed template, else the copy in the cache, else none', () => {
+  const rows = Object.fromEntries(mergeTemplates([info('dev', 'bug')], [entry('dev', 'bug', 'update'), entry('dev', 'feature', 'available')]).map(r => [r.key, r]))
+  expect(viewPath('/h', rows['dev/bug'])).toBe('/t/dev/bug/bug.json')
+  expect(viewPath('C:\\Users\\me', rows['dev/feature'])).toBe('C:/Users/me/.claude/zeremai/cache/sources/m/templates/flows/dev/feature/feature.json')
+  expect(viewPath('/h', { ...rows['dev/feature'], entry: undefined })).toBeUndefined()
 })
 
 test('groups: favorites, then last used, then categories; a template shows once; missing ones go last', () => {

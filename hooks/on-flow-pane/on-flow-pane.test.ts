@@ -158,9 +158,9 @@ test('the New list shows the marketplace templates with a state, and Install mak
   expect(await ui.find({ type: 'Button', key: 'start-dev/bug' })).toBeDefined()
 })
 
-test('search and favorites narrow the New list; a template opens with Overview, Steps, Memory flow and Raw', async ($, on) => {
-  const ran: string[][] = []
-  on('process.run', async (_$, e: any) => { ran.push(e.argv); return { value: { exitCode: 0, stdout: '', stderr: '' } } })
+test('search and favorites narrow the New list; Details runs the view-template command for the template file', async ($, on) => {
+  const viewed: unknown[][] = []
+  on('command.run', async (_$, e: any) => { viewed.push([e.command, e.args]); return { text: '' } as never })
   const other = `${HOME}/templates/flows/infra/set`
   const w = world(on, {
     [`${T}/bug.json`]: { ...template, metadata: { title: 'Bug', purposeAndUsage: 'Fix a bug.' }, steps: [{ number: 1, name: 'Design', stepRef: 'r1' }] },
@@ -183,16 +183,7 @@ test('search and favorites narrow the New list; a template opens with Overview, 
   await ui.press({ key: 'cat-all' })
 
   await ui.press({ key: 'template-dev/bug' })
-  expect(await ui.find({ type: 'Text', text: '  Fix a bug.' })).toBeDefined()
-  await ui.press({ key: 'td-steps' })
-  await ui.press({ key: 'tdstep-1' })
-  expect(await ui.find({ type: 'Text', text: '     guidance: read the bug' })).toBeDefined()
-  await ui.press({ key: 'td-flow' })
-  expect(await ui.find({ type: 'Text', text: 'W writes · R reads · R/W both' })).toBeDefined()
-  await ui.press({ key: 'td-raw' })
-  await ui.press({ key: 'raw-open' }) // the pane draws no JSON: the file goes to the editor
-  expect(ran).toEqual([['code', '--goto', `${T}/bug.json`]])
-  await ui.press({ key: 'td-back' })
+  expect(viewed).toEqual([['zeremai:view-template', `${T}/bug.json`]]) // the template file, written out in full
   expect(await has('search')).toBe(false) // an Input, not a Button
   expect(await ui.find({ type: 'Input', key: 'search' })).toBeDefined()
 })
@@ -307,6 +298,7 @@ test('/zeremai debug toasts each press with the button key, and /zeremai debug a
 })
 
 test('Desktop draws cards, pills and chips: every screen mounts, and each control keeps its key', async ($, on) => {
+  on('command.run', async () => ({ text: '' }) as never)
   const dir = `${HOME}/active/p1`, child = `${HOME}/active/kid`
   const w = world(on, {
     [`${T}/bug.json`]: { ...template, metadata: { title: 'Bug', purposeAndUsage: 'Fix a bug.' } },
@@ -325,9 +317,8 @@ test('Desktop draws cards, pills and chips: every screen mounts, and each contro
   expect(await ui.find({ type: 'Button', key: 'tab-continue', variant: 'secondary' })).toBeDefined()
   expect(await ui.find({ type: 'Button', key: 'template-dev/bug', label: 'Details' })).toBeDefined()
   expect(await ui.find({ type: 'Button', key: 'start-dev/bug' })).toBeDefined()
-  await ui.press({ key: 'template-dev/bug' })
-  await ui.press({ key: 'td-steps' })
-  await ui.press({ key: 'td-back' })
+  await ui.press({ key: 'template-dev/bug' }) // Details: the command runs, and the pane stays as it is
+  expect(await ui.find({ type: 'Button', key: 'start-dev/bug' })).toBeDefined()
   await ui.press({ key: 'tab-continue' })
   expect(await ui.find({ type: 'Button', key: 'flow-0', label: 'Resume' })).toBeDefined()
   expect(await ui.find({ type: 'Button', key: 'del-0', label: 'Delete' })).toBeDefined()
@@ -483,8 +474,7 @@ test('Remove on a template needs two presses, and the first is taken back at the
   const w = world(on, { [`${T}/bug.json`]: template, [`${T}/design/design.json`]: { type: 'step', id: 'r1' } })
   await $.command.run({ command: 'zeremai', args: '' })
   const ui = await $.ui.mount(PANE)
-  await ui.press({ key: 'template-dev/bug' })
-  expect(await ui.find({ type: 'Button', key: 'tpl-remove-dev/bug', label: 'Remove' })).toBeDefined()
+  expect(await ui.find({ type: 'Button', key: 'tpl-remove-dev/bug', label: 'Remove' })).toBeDefined() // on the card of an installed template
   await ui.press({ key: 'tpl-remove-dev/bug' })
   expect(await ui.find({ type: 'Button', key: 'tpl-remove-dev/bug', label: 'Sure?' })).toBeDefined()
   await w.clock.advance(5000)
@@ -687,8 +677,7 @@ test('the New list shows a count line, a header for each category, and no catego
   expect(await ui.find({ type: 'Text', text: 'dev' })).toBeDefined() // the group header
   expect(await ui.find({ type: 'Text', text: /^dev \// })).toBeUndefined()
   expect(await ui.find({ type: 'Button', key: 'tpl-refresh' })).toBeDefined()
-  await ui.press({ key: 'template-dev/bug' })
-  expect(await ui.find({ type: 'Text', text: /^dev {2}·/ })).toBeDefined() // the source line of the detail
+  expect(await ui.find({ type: 'Button', key: 'template-dev/bug', label: 'Details' })).toBeDefined()
 })
 
 test('/zeremai look sets how much color Desktop draws, and says the range for a wrong value', async ($, on) => {
