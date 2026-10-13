@@ -177,18 +177,18 @@ test('the session row names the folder, the flows it holds and a beat; the templ
 test('/zeremai publishes the page once with its rules, keeps the link, opens it with the session after #, and writes the flows', async ($, on) => {
   const w = world(on)
   const first = await open($)
-  expect(first.text).toBe(`ZeremAI opened: ${URL}#S1`)
+  expect(first.text).toBe(`ZeremAI opened: ${URL}?s=S1#S1`)
   expect(w.published).toHaveLength(1)
   expect(w.published[0].file_path).toMatch(/skills\/live-flow\/page\.html$/)
   expect(w.published[0].pin).toBe(true)
   for (const path of ['details', 'commands', 'sessions', 'templates', 'marketplaces']) expect(w.published[0].capabilities.db.rules).toContainEqual({ path, read: 'owner', write: 'owner' })
   expect(w.published[0].capabilities.user).toEqual({})
   expect(w.store.livePageUrl).toBe(URL)
-  expect(w.opened).toEqual([`${URL}#S1`])
+  expect(w.opened).toEqual([`${URL}?s=S1#S1`])
   expect(w.data.some(d => d.writes.some((x: any) => x.doc_id === 'f1'))).toBe(true)
   await open($)
   expect(w.published).toHaveLength(1) // the second run only opens the link
-  expect(w.opened).toEqual([`${URL}#S1`, `${URL}#S1`])
+  expect(w.opened).toEqual([`${URL}?s=S1#S1`, `${URL}?s=S1#S1`])
 })
 
 test('every word of /zeremai opens the site, and "help" says what it does without publishing', async ($, on) => {
@@ -202,14 +202,21 @@ test('every word of /zeremai opens the site, and "help" says what it does withou
 test('when the Artifact tool refuses a link with #, the plain link opens the site', async ($, on) => {
   const w = world(on, { url: URL, noFragment: true })
   const r = await open($)
-  expect(r.text).toBe(`ZeremAI opened: ${URL}#S1`)
+  expect(r.text).toBe(`ZeremAI opened: ${URL}?s=S1#S1`)
   expect(w.opened).toEqual([URL])
+})
+
+test('"sync" writes the row of the session and opens nothing', async ($, on) => {
+  const w = world(on, { url: URL })
+  expect((await open($, 'sync')).text).toBe('')
+  expect(w.db.get('sessions/S1')!.data.openedAt).toBeDefined()
+  expect(w.opened).toEqual([])
 })
 
 test('/zeremai prints the link when the page cannot be opened', async ($, on) => {
   const w = world(on, { url: URL, noOpen: true })
   const r = await open($)
-  expect(r.text).toBe(`ZeremAI link: ${URL}#S1`)
+  expect(r.text).toBe(`ZeremAI link: ${URL}?s=S1#S1`)
   expect(w.opened).toEqual([])
 })
 

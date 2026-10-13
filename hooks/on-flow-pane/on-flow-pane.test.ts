@@ -17,7 +17,7 @@ function world(on: On, disk: Record<string, unknown>, { url = '', noOpen = false
   const clock = mock.clock(on)
   const store: Record<string, unknown> = {}
   if (url) store.livePageUrl = url
-  const toasts: string[] = [], opened: string[] = [], ran: string[][] = []
+  const toasts: string[] = [], opened: string[] = [], ran: string[][] = [], syncs: string[] = []
   let code = opener
   on('store.get', async (_$, e: any) => ({ value: store[e.key] }))
   on('store.set', async (_$, e: any) => { store[e.key] = e.value; return { value: undefined } })
@@ -28,12 +28,12 @@ function world(on: On, disk: Record<string, unknown>, { url = '', noOpen = false
   on('fs.read', async (_$, e) => ({ value: files[e.path] }))
   on('ui.toast', async (_$, e: any) => { toasts.push(e.text); return { value: undefined } })
   on('process.run', async (_$, e: any) => { ran.push(e.argv); return { value: { exitCode: code, stdout: '', stderr: '', timedOut: false } } as never })
-  on('command.run', async (_$, e: any) => { if (cmdFail) throw new Error('command failed'); if (e.command === 'zeremai') store.livePageUrl = URL; return { value: undefined } as never })
+  on('command.run', async (_$, e: any) => { if (e.args === 'sync') { syncs.push(e.args); return { value: undefined } as never } if (cmdFail) throw new Error('command failed'); if (e.command === 'zeremai') store.livePageUrl = URL; return { value: undefined } as never })
   on('tool.call', async (_$, e: any) => {
     if (e.tool === 'Artifact' && e.action === 'open') { if (noOpen) return { result: {}, isError: true, text: 'no browser' } as never; opened.push(e.url); return { result: {}, text: 'shown' } as never }
     return { result: {}, text: '' } as never
   })
-  return { files, store, toasts, opened, ran, clock, fail: () => { code = 1 } }
+  return { files, store, toasts, opened, ran, syncs, clock, fail: () => { code = 1 } }
 }
 
 const press = async (band: any) => { await band.press({ key: 'band-open' }); await new Promise(r => setTimeout(r, 30)) } // the press starts the open and does not wait for it
@@ -70,27 +70,28 @@ test('a flow that starts to wait raises one toast within 5 seconds', async ($, o
 test('a press opens the site with the session after #, through the Artifact tool', async ($, on) => {
   const w = world(on, {}, { url: URL })
   await press(await $.ui.mount(BAND))
-  expect(w.opened).toEqual([`${URL}#S1`])
+  expect(w.opened).toEqual([`${URL}?s=S1#S1`])
+  expect(w.syncs).toEqual(['sync']) // the row of the session is written before the page opens
   expect(w.ran).toEqual([])
 })
 
 test('a press that the Artifact tool cannot open goes to the system opener', async ($, on) => {
   const w = world(on, {}, { url: URL, noOpen: true })
   await press(await $.ui.mount(BAND))
-  expect(w.ran[0]).toEqual(['open', `${URL}#S1`])
+  expect(w.ran[0]).toEqual(['open', `${URL}?s=S1#S1`])
   expect(w.toasts).toEqual([])
 })
 
 test('a press that nothing can open shows the link in a toast', async ($, on) => {
   const w = world(on, {}, { url: URL, noOpen: true, opener: 1 })
   await press(await $.ui.mount(BAND))
-  expect(w.toasts).toEqual([`ZeremAI: ${URL}#S1`])
+  expect(w.toasts).toEqual([`ZeremAI: ${URL}?s=S1#S1`])
 })
 
 test('a press with no site set up auto-runs /zeremai and opens it', async ($, on) => {
   const w = world(on, {})
   await press(await $.ui.mount(BAND))
-  expect(w.opened).toEqual([`${URL}#S1`])
+  expect(w.opened).toEqual([`${URL}?s=S1#S1`])
   expect(w.toasts).toEqual([])
 })
 
