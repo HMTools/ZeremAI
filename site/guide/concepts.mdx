@@ -44,7 +44,7 @@ Steps share information through **memory topics**: JSON files in the flow's `mem
 
 ## Step executor
 
-Each regular step runs in a **subagent** (`step-executor`) with an isolated context. It receives only the flow folder and step ID, then reads its own definition, the flow parameters and its declared memory topics. This keeps the main conversation light across long flows.
+Each regular step runs in a **subagent** (`step-executor`) with an isolated context. The mod builds its prompt (a brief): the step definition, the flow parameters and the content of its declared memory topics, and on a re-run its earlier summary and your corrections. When the subagent ends, the mod saves its memory and log. This keeps the main conversation light across long flows.
 
 ## Flow tools
 

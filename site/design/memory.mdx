@@ -52,13 +52,18 @@ Small, declared memory keeps each step's context small and predictable. A step r
 
 ## What a step knows
 
-A regular step runs in a forked `step-executor` subagent. The subagent starts with nothing from the main conversation. It gets the flow folder and the step id, and then reads:
+A regular step runs in a `step-executor` subagent. The subagent starts with nothing from the main conversation. The mod gives it one prompt, the **brief**, that it builds with the flow script command `get-step-brief`:
 
-1. its own `stepDefinition` from `flow.json`;
+1. the step `stepDefinition`;
 2. the flow `parameters`;
-3. the memory topics in its `readFrom` list.
+3. the full content of the memory topics in its `readFrom` list (a step with no list gets none);
+4. on a re-run: the short summary of its earlier run and your corrections.
 
-When the step ends, its context is gone. Anything a later step needs must be in a memory topic or a deliverable file. If you ask for changes, the step runs again as a new subagent. It reads its previous work from `flow.json` and the memory, and applies only your corrections.
+The mod finds the step: it is the one `in_progress` in the newest flow of the session. The subagent reads no flow file to find its job.
+
+When the step ends, the subagent's last words are one result block (a summary, the memory entries and the log). The mod reads it and saves it with the flow script. The summary also goes to a private topic, `rerun-summary`, that only a re-run of the same step reads. If the block is missing or wrong, the mod asks the subagent to fix it (2 tries), then tells the main agent.
+
+When the step ends, its context is gone. Anything a later step needs must be in a memory topic or a deliverable file. If you ask for changes, the step runs again as a new subagent, with the brief above.
 
 ## What the mod remembers
 
@@ -101,4 +106,4 @@ A second guard in `on-approval-gate` refuses Write, Edit and Bash commands that 
 
 ## Source
 
-`scripts/flow_manager.py`: `write_json`, `locked`, `add_memory_entry`, `validate_topic_access`. `hooks/infra/flow-manager/script.ts`: `checkCall`. `agents/step-executor.md`, `skills/step-executor-delegation/SKILL.md`.
+`scripts/flow_manager.py`: `write_json`, `locked`, `add_memory_entry`, `validate_topic_access`. `hooks/infra/flow-manager/script.ts`: `checkCall`. `hooks/on-step-brief/on-step-brief.ts`, `hooks/infra/step-brief/`, `agents/step-executor.md`.

@@ -2,9 +2,9 @@ import { test, expect } from 'claude-code/testing'
 import { FLOW_TOOLS } from './tools'
 import { AGENT_SUBCOMMANDS, SCRIPT_SUBCOMMANDS } from './script'
 
-test('15 flow operations, each with a unique name, a description and a schema whose required keys exist', () => {
-  expect(FLOW_TOOLS.length).toBe(15)
-  expect(new Set(FLOW_TOOLS.map(t => t.name)).size).toBe(15)
+test('16 flow operations, each with a unique name, a description and a schema whose required keys exist', () => {
+  expect(FLOW_TOOLS.length).toBe(16)
+  expect(new Set(FLOW_TOOLS.map(t => t.name)).size).toBe(16)
   for (const t of FLOW_TOOLS) {
     expect(t.inputSchema.type).toBe('object')
     expect(t.description.length).toBeGreaterThan(10)
@@ -18,5 +18,5 @@ test('the agent gets every operation but bind_flow (the mod\'s own); approve-ste
   expect(AGENT_SUBCOMMANDS).not.toContain('bind-flow')
   expect(AGENT_SUBCOMMANDS).not.toContain('approve-step')
   expect(SCRIPT_SUBCOMMANDS).toContain('approve-step')
-  expect(AGENT_SUBCOMMANDS.length).toBe(14)
+  expect(AGENT_SUBCOMMANDS.length).toBe(15)
 })

@@ -48,7 +48,7 @@ A rule folder holds only the hook: which event it listens to, and what it does w
 ## What happens in one turn
 
 1. You send a prompt. The mod logs it in the flow log, before the agent sees it.
-2. The agent works the flow with the `flow-run` skill. For a regular step it starts the `step-executor` subagent.
+2. The agent works the flow with the `flow-run` skill. For a regular step it starts the `step-executor` subagent with the Agent tool. The mod puts the step's brief in the prompt and saves the result when the subagent ends.
 3. Every flow change the agent makes is a Bash call of the flow script. The mod checks it and runs it.
 4. If a step needs approval, the agent calls `request-approval`. The mod shows the dialog. Only your click sets `approved`.
 5. When the agent ends its turn while the flow has work left, the mod sends it a new prompt to go on.

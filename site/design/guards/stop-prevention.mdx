@@ -30,11 +30,11 @@ Then it picks the first case that fits, from top to bottom:
 |---|---|
 | A step needs approval and was not approved | Wait for the executor; with no executor, ask the user with `request-approval` |
 | You approved the step | Complete it with `update-step-status` before anything else |
-| A step is `pending` and no approval is open | Delegate the next step to `step-executor` |
+| A step is `pending` and no approval is open | Start the next step with the Agent tool (`step-executor`) |
 | A step is `in_progress` and an executor runs | Wait: do not stop yet |
-| A step is `in_progress` and no executor runs | It was lost. Delegate it again, or mark it failed |
+| A step is `in_progress` and no executor runs | It was lost. Start it again, or mark it failed |
 
-The mod finds out whether a step-executor runs by asking Claude Code for the list of agents. This is why the agent must set a step to `in_progress` **before** it starts the executor.
+The mod finds out whether a step-executor runs by asking Claude Code for the list of agents. This is why the agent must set a step to `in_progress` **before** it starts the executor. The brief hook also needs it: it briefs the step that is `in_progress`.
 
 ## The limit
 

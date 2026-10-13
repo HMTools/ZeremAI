@@ -109,6 +109,19 @@ The answer is `{"status": "ok", "topic": "context", "data": {...}}`, or `"data":
 
 ---
 
+### get_step_brief
+
+Give the prompt of a step subagent as one text: the step, the flow parameters, the content of the memory topics it reads, and on a re-run its earlier summary and the corrections. It only reads. The plugin runs it when you start a step subagent: you never need it.
+
+| Input | Required | Description |
+|-------|----------|-------------|
+| `flowDir`, `stepId` | Yes | Flow folder and step |
+| `corrections` | No | What the user asked to change, on a re-run |
+
+The answer is `{"status": "ok", "text": "..."}`. A step with an empty definition (a sub-flow step) is an error.
+
+---
+
 ### add_log_entry
 
 Append to the entry of a step in `log.json`. Only the inputs you give are appended.

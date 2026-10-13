@@ -24,11 +24,12 @@ For each step in order, check its type:
 
 **Regular step** (non-empty `stepDefinition`):
 1. Call the tool `update_step_status` with `flowDir`, `stepId` and `status: in_progress`. Do this BEFORE delegating. It tells the Stop hook a subagent works the step, so the hook does not block every turn.
-2. Invoke the `step-executor-delegation` skill with the flow directory and the step ID. Do NOT call the Agent tool for a step.
+2. Start the step with the Agent tool: `subagent_type` `zeremai:step-executor`, `description` the step name, `prompt` exactly `Run the step.` Nothing else: the plugin finds the step that is `in_progress`, builds the subagent's prompt (step, parameters, memory) and saves its memory and log when it ends. Never put step details in the prompt. If the Agent call is refused, read the reason and fix it (usually the step is not `in_progress`).
+   - The subagent's report is a short summary. If it says the result is missing and the subagent is asked to fix it, do nothing: end your turn. The plugin starts a new turn when the result is saved.
 3. If the step has `approvalRequired: true`, follow Approval Checkpoints below.
 4. Advance to the next step.
 
-**Sub-flow step** (`subFlowTrigger` AND empty `stepDefinition`): follow Sub-Flow Steps below. Do NOT call `step-executor-delegation` for it. The step-executor cannot handle it.
+**Sub-flow step** (`subFlowTrigger` AND empty `stepDefinition`): follow Sub-Flow Steps below. Do NOT start the step-executor for it. The step-executor cannot handle it.
 
 `approvalRequired: true` means approval of the deliverables AFTER the step ran. Never ask permission before a step runs.
 
@@ -42,7 +43,7 @@ A "yes" to a mid-step question (an assumption, a clarification, a suggested appr
 2. Present the deliverables to the user.
 3. Call the tool `request_approval`. It shows a dialog and waits for the click. The answer is the result.
 4. The plugin logs the answer of the user in the dialog.
-5. If the user approved, call `update_step_status` with status `completed`. If the user asked for changes, invoke `step-executor-delegation "<flow-dir>" "<step-id>" "<user corrections>"`, present the new deliverables and call `request_approval` again. Repeat until the user approves.
+5. If the user approved, call `update_step_status` with status `completed`. If the user asked for changes, start the step again with the Agent tool (as in the step loop), with the prompt `User corrections: <the words of the user>`. The step is still `in_progress`. Present the new deliverables and call `request_approval` again. Repeat until the user approves.
 
 Only the user's click sets `approved: true`. While the dialog waits, you can only research (read, search, MCP tools, subagents). If the user closes the dialog, it opens again with their next prompt.
 

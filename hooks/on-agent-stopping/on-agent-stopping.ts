@@ -94,10 +94,10 @@ async function promptToContinue($: any, sessionId: string): Promise<Prompt | und
   // The user approved the step: the agent must complete it before anything else.
   if (runningStep?.approvalRequired) return completeApprovedStepPrompt(runningStep, flowDir)
 
-  // No approval is open and a step has not started: the agent must delegate it, not stop.
+  // No approval is open and a step has not started: the agent must start it, not stop.
   if (pendingStep) return startNextStepPrompt(pendingStep, flowDir)
 
-  // A normal step is in progress: wait for its executor, or re-delegate the step if the executor is gone.
+  // A normal step is in progress: wait for its executor, or start the step again if the executor is gone.
   if (runningStep) return promptForRunningStep($, runningStep, flowDir)
 }
 
@@ -123,7 +123,7 @@ function lostStepPrompt(step: Step, flowDir: string): Prompt {
   return {
     key: `${step.id}:lost`,
     text: `${describeStep(step)} is in_progress but no step-executor is running — it likely crashed or was lost.\nFlow dir: ${flowDir}\n\n` +
-      'Re-delegate the step via step-executor-delegation, or mark it failed.',
+      'Start the step again with the Agent tool (subagent_type zeremai:step-executor), or mark it failed.',
   }
 }
 
@@ -131,7 +131,7 @@ function startNextStepPrompt(step: Step, flowDir: string): Prompt {
   return {
     key: `${step.id}:pending`,
     text: `Flow has remaining steps — do not stop yet.\n\nNext step to execute: ${describeStep(step)}\nFlow dir: ${flowDir}\n\n` +
-      'Continue by delegating the next step to the step-executor subagent.\n' +
+      'Continue: set the next step to in_progress, then start the step-executor subagent with the Agent tool.\n' +
       'Only stop while the user decides on an approval (after calling request_approval) or after all steps are complete.',
   }
 }

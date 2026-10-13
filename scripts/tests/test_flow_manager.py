@@ -370,6 +370,58 @@ class MemoryTest(FlowBase):
 
 # ── create-flow.test.ts ───────────────────────────────────────────────────
 
+class StepBriefTest(FlowBase):
+    def setup_step(self, usage):
+        self.put_flow(extra={'parameters': {'ticket': 'PAY-123'}}, steps=[step(
+            number=3, stepDefinition={'guidance': {'specificActions': ['plan it']}, 'memoryFileUsage': usage})])
+        self.put(self.dir + '/memory/_cross-references.json', XREF)
+
+    def test_the_brief_holds_the_step_the_parameters_and_the_content_of_the_declared_topics(self):
+        self.setup_step({'readFrom': ['context.json'], 'writeTo': ['context.json', 'secret.json']})
+        self.ok('add-memory-entry', flowDir=self.dir, stepId='s1', topic='context', info={'ticket': 'PAY-123'})
+        self.ok('add-memory-entry', flowDir=self.dir, stepId='s1', topic='secret', info={'hidden': 'yes'})
+        text = self.ok('get-step-brief', flowDir=self.dir, stepId='s1')['text']
+        for part in ['# Step 3: Design', 'Step ID: s1', '"ticket": "PAY-123"', 'plan it', '### context', '"informationProduced"']:
+            self.assertIn(part, text)
+        self.assertNotIn('hidden', text)  # not in readFrom
+        self.assertNotIn('Earlier summary', text)
+        self.assertNotIn('User corrections', text)
+
+    def test_a_step_with_no_declared_topic_gets_no_memory(self):
+        self.setup_step({'readFrom': []})
+        self.ok('add-memory-entry', flowDir=self.dir, stepId='s1', topic='context', info={'a': 1})
+        self.assertIn('(this step reads no memory topic)', self.ok('get-step-brief', flowDir=self.dir, stepId='s1')['text'])
+
+    def test_a_declared_topic_with_no_file_says_so(self):
+        self.setup_step({'readFrom': ['context.json']})
+        self.assertIn('(no entries yet)', self.ok('get-step-brief', flowDir=self.dir, stepId='s1')['text'])
+
+    def test_a_rerun_gets_its_own_summary_and_the_corrections(self):
+        self.setup_step({'readFrom': [], 'writeTo': ['plan.json']})  # writeTo does not list the reserved topic
+        self.ok('add-memory-entry', flowDir=self.dir, stepId='s1', topic='rerun-summary', info={'summary': 'Plan written.'})
+        text = self.ok('get-step-brief', flowDir=self.dir, stepId='s1', corrections='Use PAY-124.')['text']
+        self.assertIn('## Earlier summary\nPlan written.', text)
+        self.assertIn('## User corrections\nUse PAY-124.', text)
+
+    def test_the_summary_of_another_step_is_not_in_the_brief(self):
+        self.put_flow(steps=[step(stepDefinition={'guidance': {}}), step(id='s2', number=1, stepDefinition={'guidance': {}})])
+        self.put(self.dir + '/memory/_cross-references.json', XREF)
+        self.ok('add-memory-entry', flowDir=self.dir, stepId='s2', topic='rerun-summary', info={'summary': 'Other step.'})
+        self.assertNotIn('Other step.', self.ok('get-step-brief', flowDir=self.dir, stepId='s1', corrections='x')['text'])
+
+    def test_an_empty_definition_is_an_error(self):
+        self.put_flow()
+        self.err('get-step-brief', 'sub-flow step', flowDir=self.dir, stepId='s1')
+
+    def test_an_unknown_step_is_an_error(self):
+        self.put_flow()
+        self.err('get-step-brief', 'Step nope not found', flowDir=self.dir, stepId='nope')
+
+    def test_the_summary_topic_is_not_readable_by_a_step_that_lists_other_topics(self):
+        self.setup_step({'readFrom': ['context.json']})
+        self.err('read-memory-topic', 'is not allowed to read from', flowDir=self.dir, stepId='s1', topic='rerun-summary')
+
+
 class CreateFlowTest(Base):
     TEMPLATE = {
         'name': 'Fix a bug', 'id': 'tid', 'category': 'dev',

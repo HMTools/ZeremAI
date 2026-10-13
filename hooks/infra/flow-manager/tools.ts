@@ -40,6 +40,9 @@ export const FLOW_TOOLS: Tool[] = [
   tool('read_memory_topic', 'Read a memory topic file. A step can read only the topics its definition lists.', {
     flowDir, stepId: str('Step id, for the access check'), topic: str('Topic name, or _cross-references'),
   }, ['flowDir', 'stepId', 'topic']),
+  tool('get_step_brief', 'Give the prompt of a step subagent as one text: the step, the flow parameters, the memory it reads, and on a re-run its earlier summary and the corrections. It only reads.', {
+    flowDir, stepId: str('Step id'), corrections: str('What the user asked to change, on a re-run'),
+  }, ['flowDir', 'stepId']),
   tool('add_log_entry', 'Add actions, reasoning, files, problems, decisions or notes to the log entry of a step.', {
     flowDir, stepId: str('Step id'), actions: list('Actions taken'), reasoning: list('Agent reasoning'),
     filesModified: list('Files modified'), problems: list('Problems met'), decisions: list('Decisions made'),

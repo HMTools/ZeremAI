@@ -37,6 +37,9 @@ PATH_INPUTS = ['flowDir', 'templatePath', 'projectPath', 'parentFlowPath', 'chil
 EMBED_FIELDS = ['output', 'guidance', 'substeps', 'flow', 'memoryFileUsage', 'parameters']
 EXTRA_EMBED_FIELDS = ['improvementCategories', 'prioritization', 'workflow', 'successCriteria', 'searchModes', 'changeProposalFormat', 'captureTypes']
 
+# The summary of a step's last run. Only the mod writes it (it is always allowed), and only a re-run of the same step reads it.
+RERUN_TOPIC = 'rerun-summary'
+
 # A flow lives in the folder of its status. A running or paused flow is in `active/`.
 STATUS_FOLDER = {'completed': 'completed', 'failed': 'failed', 'running': 'active', 'paused': 'active'}
 
@@ -392,7 +395,7 @@ def approve_step(a):
 
 def validate_topic_access(directory, step_id, topic, access):
     """A step can read and write only the topics its definition lists. An empty or old-format list means no limit."""
-    if topic == '_cross-references':
+    if topic == '_cross-references' or (topic == RERUN_TOPIC and access == 'writeTo'):
         return
     flow = read_flow(directory)
     step = next((s for s in flow['steps'] if s.get('id') == step_id), None)
@@ -454,6 +457,39 @@ def read_memory_topic(a):
     validate_topic_access(a['flowDir'], a['stepId'], a['topic'], 'readFrom')
     path = '%s/%s.json' % (memory, a['topic'])
     return {'status': 'ok', 'topic': a['topic'], 'data': read_json(path) if os.path.exists(path) else None}
+
+
+def get_step_brief(a):
+    """The prompt of a step subagent, as one text: the step, the flow parameters, the content of the memory topics the
+    step reads, and on a re-run its summary and the corrections. It only reads."""
+    d = a['flowDir']
+    flow = read_flow(d)
+    step = next((s for s in flow['steps'] if s.get('id') == a['stepId']), None)
+    if step is None:
+        fail('Step %s not found' % a['stepId'])
+    definition = step.get('stepDefinition')
+    if not isinstance(definition, dict) or not definition:
+        fail('Empty stepDefinition: this is a sub-flow step. The orchestrator drives it, so it has no brief.')
+
+    def block(title, value):
+        return '## %s\n%s\n' % (title, value if isinstance(value, str) else json.dumps(value, ensure_ascii=False, indent=2))
+
+    corrections = nn(a.get('corrections'), '').strip()
+    parts = ['# Step %s: %s\nFlow directory: %s\nStep ID: %s\n' % (nn(step.get('number'), ''), nn(step.get('name'), ''), d, a['stepId']),
+             block('Parameters', nn(flow.get('parameters'), {})), block('Step definition', definition)]
+    topics = nn((nn(definition.get('memoryFileUsage'), {})).get('readFrom'), [])
+    memory = ['### %s\n%s' % (t, json.dumps(read_json('%s/memory/%s.json' % (d, t)), ensure_ascii=False, indent=2)
+                              if os.path.exists('%s/memory/%s.json' % (d, t)) else '(no entries yet)')
+              for t in (name[:-5] if name.endswith('.json') else name for name in topics)]
+    parts.append(block('Memory', '\n\n'.join(memory) if memory else '(this step reads no memory topic)'))
+    if corrections:
+        path = '%s/memory/%s.json' % (d, RERUN_TOPIC)
+        entry = ((read_json(path).get('entries') or {}).get(a['stepId']) or {}) if os.path.exists(path) else {}
+        earlier = (entry.get('informationProduced') or {}).get('summary')
+        if earlier:
+            parts.append(block('Earlier summary', earlier))
+        parts.append(block('User corrections', corrections))
+    return {'status': 'ok', 'text': '\n'.join(parts)}
 
 
 # ── log ───────────────────────────────────────────────────────────────────
@@ -736,6 +772,7 @@ TOOLS = {
     'update_active_substep': (['flowDir', 'substepNumber', 'substepName'], {}, update_active_substep),
     'add_memory_entry': (['flowDir', 'stepId', 'topic'], {}, add_memory_entry),
     'read_memory_topic': (['flowDir', 'stepId', 'topic'], {}, read_memory_topic),
+    'get_step_brief': (['flowDir', 'stepId'], {}, get_step_brief),
     'add_log_entry': (['flowDir', 'stepId'], {}, add_log_entry),
     'log_interaction': (['flowDir', 'stepId', 'request', 'reason', 'response'], {}, log_interaction),
     'update_flow_status': (['flowDir', 'status'], {'status': FLOW_STATUSES}, update_flow_status),

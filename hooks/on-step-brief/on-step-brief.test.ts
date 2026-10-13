@@ -1,0 +1,119 @@
+import { test, expect, mock } from 'claude-code/testing'
+import type { On } from 'claude-code'
+
+const ACTIVE = '/h/.claude/zeremai/active'
+const DIR = `${ACTIVE}/p1`
+const flowFile = (status = 'in_progress') => JSON.stringify({ status: 'running', steps: [{ id: 's1', name: 'Design', status, stepDefinition: { guidance: {} } }] })
+const GOOD = '```json\n' + JSON.stringify({ summary: 'Plan written.', memory: [{ topic: 'context', info: { a: 1 } }], log: { actions: ['x'] } }) + '\n```'
+
+// A fake disk with one flow folder bound to session S1. The engine side is a stand-in:
+// it starts agent A1 with the prompt it is given, and the flow script answers for `scriptAnswers`.
+function world(on: On, { stepStatus = 'in_progress', delivered = true, scriptAnswers = {} as Record<string, any> } = {}) {
+  const all: Record<string, string> = { [`${DIR}/flow.json`]: flowFile(stepStatus) }
+  const script: { sub: string; input: any }[] = [], spawned: string[] = [], sent: any[] = [], prompts: string[] = []
+  mock.env(on, { HOME: '/h' })
+  mock.store(on, { 'session:S1': [DIR] })
+  on('session.id', async () => ({ value: 'S1' }))
+  on('fs.list', async (_$, e) => ({ value: e.path === ACTIVE ? [{ name: 'p1', kind: 'dir', size: 0, mtimeMs: 0, isLink: false }] : [] }))
+  on('fs.exists', async (_$, e) => ({ value: e.path in all }))
+  on('fs.read', async (_$, e) => ({ value: all[e.path] }))
+  on('process.run', async (_$, e: any) => {
+    const [, , sub, , json] = e.argv as string[]
+    script.push({ sub, input: JSON.parse(json) })
+    const answer = scriptAnswers[sub] ?? (sub === 'get-step-brief' ? { status: 'ok', text: 'THE BRIEF' } : { status: 'ok' })
+    return { value: { exitCode: 0, stdout: JSON.stringify(answer), stderr: '', timedOut: false } } as never
+  })
+  on('agent.spawn', async (_$, e: any) => { spawned.push(e.prompt); return { model: 'm', agentId: 'A1' } as never })
+  on('session.send', async (_$, e: any) => { sent.push(e); return (delivered ? { isDelivered: true } : { isDelivered: false, reason: 'gone' }) as never })
+  on('prompt.submit', async (_$, e: any) => { if (e.origin?.kind === 'plugin') prompts.push(e.text); return { drop: 'test' } })
+  on('turn.complete', async () => ({ text: 'ENGINE' }))
+  return { script, spawned, sent, prompts }
+}
+const spawn = ($: any, prompt = 'Run the step.') => $.agent.spawn({ prompt, subagentType: 'zeremai:step-executor' })
+const end = ($: any, answer: string, extra = {}) =>
+  $.turn.complete({ answer, durationMs: 1, isAborted: false, turnId: 't1', reason: 'answer', agentId: 'A1', ...extra })
+const saved = (w: ReturnType<typeof world>) => w.script.filter(c => c.sub !== 'get-step-brief')
+
+test('the step subagent starts with the brief as its prompt', async ($, on) => {
+  const w = world(on)
+  await spawn($)
+  expect(w.spawned).toEqual(['THE BRIEF'])
+  expect(w.script[0]).toEqual({ sub: 'get-step-brief', input: { flowDir: DIR, stepId: 's1' } })
+})
+test('a prompt that starts with "User corrections:" is a re-run, and the corrections go to the script', async ($, on) => {
+  const w = world(on)
+  await spawn($, 'User corrections: use PAY-124')
+  expect(w.script[0].input.corrections).toBe('use PAY-124')
+})
+test('no step in progress: the start is refused and the reason says what to do', async ($, on) => {
+  const w = world(on, { stepStatus: 'pending' })
+  expect((await spawn($)).deny).toContain('update-step-status')
+  expect(w.spawned).toEqual([])
+})
+test('a script that cannot make the brief refuses the start, with its message', async ($, on) => {
+  const w = world(on, { scriptAnswers: { 'get-step-brief': { status: 'error', message: 'Empty stepDefinition' } } })
+  expect((await spawn($)).deny).toBe('Empty stepDefinition')
+  expect(w.spawned).toEqual([])
+})
+test('another agent type is left alone', async ($, on) => {
+  const w = world(on)
+  await $.agent.spawn({ prompt: 'Look around.', subagentType: 'Explore' })
+  expect(w.spawned).toEqual(['Look around.'])
+  expect(w.script).toEqual([])
+})
+
+test('a valid result block saves the memory, the re-run summary and the log, and the orchestrator reads the summary', async ($, on) => {
+  const w = world(on)
+  await spawn($)
+  const r: any = await end($, `Done.\n${GOOD}`)
+  expect(saved(w)).toEqual([
+    { sub: 'add-memory-entry', input: { flowDir: DIR, stepId: 's1', topic: 'context', info: { a: 1 } } },
+    { sub: 'add-memory-entry', input: { flowDir: DIR, stepId: 's1', topic: 'rerun-summary', info: { summary: 'Plan written.' } } },
+    { sub: 'add-log-entry', input: { flowDir: DIR, stepId: 's1', actions: ['x'] } },
+  ])
+  expect(r.text).toBe('Plan written.')
+  expect(w.sent).toEqual([])
+})
+test('a save that fails is named in what the orchestrator reads', async ($, on) => {
+  world(on, { scriptAnswers: { 'add-log-entry': { status: 'error', message: 'log.json not found' } } })
+  await spawn($)
+  expect(((await end($, GOOD)) as any).text).toBe('Plan written.\n\nNot saved: log.json not found')
+})
+test('a missing block goes back to the subagent itself, and nothing is saved yet', async ($, on) => {
+  const w = world(on)
+  await spawn($)
+  const r: any = await end($, 'Done, no block.')
+  expect(w.sent.map(m => m.to)).toEqual(['A1'])
+  expect(r.text).toContain('asked to fix it')
+  expect(saved(w)).toEqual([])
+})
+test('the fixed block is saved, and the plugin tells the orchestrator', async ($, on) => {
+  const w = world(on)
+  await spawn($)
+  await end($, 'Done, no block.')
+  await end($, GOOD)
+  expect(saved(w).map(c => c.sub)).toEqual(['add-memory-entry', 'add-memory-entry', 'add-log-entry'])
+  expect(w.prompts).toEqual(['Plan written.'])
+})
+test('after 2 fix rounds the plugin says the result is missing and saves nothing', async ($, on) => {
+  const w = world(on)
+  await spawn($)
+  await end($, 'no'); await end($, 'no'); await end($, 'no')
+  expect(w.sent.length).toBe(2)
+  expect(saved(w)).toEqual([])
+  expect(w.prompts).toEqual(['Step result missing: nothing was saved. Start the step again.'])
+})
+test('a subagent that cannot get the message ends the step with the reason at once', async ($, on) => {
+  const w = world(on, { delivered: false })
+  await spawn($)
+  expect(((await end($, 'no')) as any).text).toContain('Step result missing')
+  expect(w.prompts).toEqual([])
+})
+test('the end of the main agent, or of a subagent the mod did not brief, is left alone', async ($, on) => {
+  const w = world(on)
+  await spawn($)
+  expect(((await end($, 'x', { agentId: undefined })) as any).text).toBe('ENGINE')
+  expect(((await end($, 'x', { agentId: 'other' })) as any).text).toBe('ENGINE')
+  expect(w.sent).toEqual([])
+  expect(saved(w)).toEqual([])
+})
