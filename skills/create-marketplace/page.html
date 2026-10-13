@@ -181,8 +181,8 @@
     return [el('div', null, el('h4', null, S.sel), text ? el('pre', { class: 'file' }, text) : el('p', { class: 'muted' }, D.notes[S.sel] || 'An empty file. It keeps the folder in git.'))];
   }
   function catalogPane() {
-    return [el('p', { class: 'muted' }, 'This is the Templates tab of /zeremai once you add this marketplace.'),
-      el('div', { class: 'mock', 'aria-label': 'Preview of the Templates tab' },
+    return [el('p', { class: 'muted' }, 'This is the Templates screen of the ZeremAI site once you add this marketplace.'),
+      el('div', { class: 'mock', 'aria-label': 'Preview of the Templates screen' },
         el('div', { class: 'mh' }, 'Templates', el('small', null, ' · ' + D.name)),
         el('div', { class: 'empty' }, el('b', null, 'No templates yet'), el('span', { class: 'muted' }, 'Add one with /zeremai:create-template, then press Refresh.')),
         el('div', { class: 'row', 'aria-hidden': 'true' }, el('span', null, el('b', null, 'category / template'), el('br'), el('small', null, 'How a row looks after you add a template')), el('span', { class: 'btn' }, 'Install')))];

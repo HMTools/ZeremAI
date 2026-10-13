@@ -1,11 +1,11 @@
 ---
 name: flow-run
-description: Run the steps of a flow that is bound to this session. Use it when the flow pane (/zeremai) hands you a flow, or when a step of a flow is next. Covers the step loop, approval checkpoints and sub-flow steps.
+description: Run the steps of a flow that is bound to this session. Use it when the ZeremAI site (/zeremai) hands you a flow, or when a step of a flow is next. Covers the step loop, approval checkpoints and sub-flow steps.
 ---
 
 # Flow Run
 
-The user started or resumed a flow with the flow pane (`/zeremai`). The pane created or found the flow, bound it to this session, and told you the folder, the parameters and the next step. Run the steps from there. Never work outside the flow, and never start a flow yourself: if the user wants another one, tell them to open `/zeremai`.
+The user started or resumed a flow on the ZeremAI site (`/zeremai`). The mod created or found the flow, bound it to this session, and told you the folder, the parameters and the next step. Run the steps from there. Never work outside the flow, and never start a flow yourself: if the user wants another one, tell them to open `/zeremai` and use **New flow** on the site.
 
 All flow files change only through the flow script, with the Bash command form of your first message (see the flow-state-update skill): `python3 <plugin>/scripts/flow_manager.py <subcommand> --json '<object>'`. Never edit `flow.json`, `log.json` or memory files by hand. Wherever this page says "call the tool `x_y`", run the subcommand `x-y`.
 
@@ -16,7 +16,7 @@ The flow script works only with the plugin's mod, which checks every call. If th
 ## Start
 
 1. Call the tool `update_current_state` with the next step's `stepId`, `stepName` and a one-line `summary` of what you are about to do.
-2. Go to the step loop. The pane's message lists every step with its id and status. Read `flow.json` or a memory topic only when a step needs it.
+2. Go to the step loop. The mod's message lists every step with its id and status. Read `flow.json` or a memory topic only when a step needs it.
 
 ## Step Loop
 

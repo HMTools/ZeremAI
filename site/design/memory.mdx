@@ -72,7 +72,7 @@ When the step ends, its context is gone. Anything a later step needs must be in 
 The mod keeps two kinds of state.
 
 - **The store** is kept across reloads and restarts. It holds the list of flow folders bound to a session (`session:<id>`, newest last) and the open approval gate (`gate:<id>`).
-- **Module variables** are lost when the mod reloads. They hold the re-prompt count, the time of the last toast, the set of sessions with a dialog open, and the state of the pane. Losing them is safe: a count starts again, and a dialog is opened again by the gate in the store.
+- **Module variables** are lost when the mod reloads. They hold the re-prompt count, the time of the last toast, the set of sessions with a dialog open, and the versions of the documents that the mod wrote to the site. Losing them is safe: a count starts again, a dialog is opened again by the gate in the store, and the mod learns the versions again with one read.
 
 The rule: if losing it would break a flow, it must be in a file or in the store.
 

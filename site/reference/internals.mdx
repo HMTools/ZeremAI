@@ -23,7 +23,7 @@ zeremai/
 
 | Skill | User-invocable | Role |
 |---|---|---|
-| `flow-run` | via the pane | Runs a bound flow: the step loop, approval checkpoints, sub-flows |
+| `flow-run` | via the site | Runs a bound flow: the step loop, approval checkpoints, sub-flows |
 | `flow-state-update` | no | Documents the flow tools; the rule that state changes only through them |
 | `apply-improvements` | yes | Reviews saved findings and applies the ones you approve |
 
@@ -37,7 +37,8 @@ Each rule is a folder under `hooks/`:
 
 | Rule | What it enforces |
 |---|---|
-| `on-flow-pane` | The `/zeremai` pane: New, Continue, Templates tabs |
+| `on-live-page` | `/zeremai`: opens the [live site](/design/live-site), publishes it, writes the state of every flow to it, and runs the commands you press on it |
+| `on-flow-pane` | The button above the prompt: the flow summary and **ZeremAI ↗** |
 | `on-flow-tools` | Decides if the agent may run the flow script (moment and input); shows findings waiting at session start |
 | `on-user-prompt` | Logs your prompt in the flow log before the agent sees it (a small model writes the details); reopens a closed approval dialog |
 | `on-approval-gate` | Only your click sets `approved`; blocks hand edits of flow state files |

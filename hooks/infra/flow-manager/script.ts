@@ -107,7 +107,7 @@ export function checkCall(command: string, moment: Moment): Verdict {
     if (input.parentFlowPath !== undefined && !moment.bound.includes(input.parentFlowPath as string)) return { deny: 'The parent flow is not bound to this session.' }
     return { allow: true, sub, input }
   }
-  if (!moment.bound.length) return { deny: 'No flow is bound to this session. Start one from the flow pane (/zeremai), or create one with create-flow.' }
+  if (!moment.bound.length) return { deny: 'No flow is bound to this session. Start one on the ZeremAI site (/zeremai), or create one with create-flow.' }
   if (sub === 'list-findings' || sub === 'update-finding-status') return { allow: true, sub, input } // not about one flow folder
   if (typeof input.flowDir === 'string' && !moment.bound.includes(input.flowDir)) return { deny: `That folder is not a flow of this session. Flows of this session: ${moment.bound.join(', ')}` }
 

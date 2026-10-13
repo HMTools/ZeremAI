@@ -196,7 +196,7 @@ export function handoff(kind: 'new' | 'resume', dir: string, flow: Doc, note?: s
   const next = nextStep(flow)
   const rows = steps.map(s => `  ${isDone(s) ? '✓' : s === next ? '→' : ' '} ${s.number}. ${s.name} (${s.status}) id=${s.id}`)
   return [
-    `${kind === 'new' ? 'I started' : 'I resumed'} the flow "${flow.name}" from the flow pane. It is bound to this session.`,
+    `${kind === 'new' ? 'I started' : 'I resumed'} the flow "${flow.name}" on the ZeremAI site. It is bound to this session.`,
     `Folder: ${dir}`,
     `Parameters: ${JSON.stringify(flow.parameters ?? {})}`,
     `Steps:\n${rows.join('\n')}`,

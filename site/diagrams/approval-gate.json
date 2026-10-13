@@ -44,7 +44,7 @@
       "id": "waiting",
       "type": "waiting",
       "label": "waiting",
-      "sublabel": "pane shows buttons",
+      "sublabel": "site shows buttons",
       "lane": "closed",
       "col": 2
     }
@@ -107,7 +107,7 @@
   "cards": [
     {
       "dot": "cyan",
-      "title": "Also true in the pane",
+      "title": "Also true on the site",
       "items": [
         "Approve and Request changes also work from waiting",
         "They end the gate the same way as the dialog"

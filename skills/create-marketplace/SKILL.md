@@ -12,7 +12,7 @@ This skill never starts a flow and never uses the flow script.
 
 ## What a marketplace is
 
-- A git repository with `templates/flows/<category>/<template>/<template>.json`, and one subfolder for each step of a template. The Templates tab reads exactly this. A category folder whose name starts with `_` is not listed.
+- A git repository with `templates/flows/<category>/<template>/<template>.json`, and one subfolder for each step of a template. The Templates screen of the ZeremAI site reads exactly this. A category folder whose name starts with `_` is not listed.
 - Nothing else is required. The skill adds a `README.md` and `templates/flows/.gitkeep` (git does not store empty folders).
 - ZeremAI knows a marketplace by a **name**, a **git address** (a remote URL or a local path), a **branch** and a **priority**, in `~/.claude/zeremai/config/marketplaces.json`.
 
@@ -29,5 +29,5 @@ This skill never starts a flow and never uses the flow script.
    - `ado`: `choices.address` is the organization and project. Check `az account show`. Create it with `az repos create --name <name> --organization <org> --project <project>`, and read `remoteUrl` from its answer. Then `git remote add origin <remoteUrl>` and `git push -u origin main`. A project sets who can see the repository, so tell the user.
    - `existing`: run `git ls-remote <address>`. If it already lists `refs/heads/main`, stop and tell the user: the repository is not empty. Otherwise `git remote add origin <address>` and `git push -u origin main`.
    - `local`: print the commands for both hosts and stop. If a tool is missing or a login is needed, print the commands and stop.
-8. **Add it to ZeremAI, if the answer says so.** Read `~/.claude/zeremai/config/marketplaces.json`. If it does not exist, tell the user to open `/zeremai` once, or to add the marketplace in Templates, Add, and go to step 9. Otherwise show the new entry and ask for a yes: `{"name": "<name>", "url": "<folder path, or the remote address after a push>", "branch": "main", "enabled": true, "priority": 100}`. Add it with the Edit tool. Stop if the name is already used. After a push, offer to change the address of an entry that holds the local path to the remote address.
+8. **Add it to ZeremAI, if the answer says so.** Read `~/.claude/zeremai/config/marketplaces.json`. If it does not exist, tell the user to open `/zeremai` once (it creates the file), then add the entry to it, and go to step 9. The site does not add marketplaces: only the file does. Otherwise show the new entry and ask for a yes: `{"name": "<name>", "url": "<folder path, or the remote address after a push>", "branch": "main", "enabled": true, "priority": 100}`. Add it with the Edit tool. Stop if the name is already used. After a push, offer to change the address of an entry that holds the local path to the remote address.
 9. **Finish.** Say where the folder is, what the check printed, and what is left. Tell the user to run `/zeremai`, open Templates and press Refresh, and that `/zeremai:create-template` makes the first template.

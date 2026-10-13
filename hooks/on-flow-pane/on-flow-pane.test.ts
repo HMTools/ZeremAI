@@ -37,12 +37,6 @@ function world(on: On, disk: Record<string, unknown>, { url = '', noOpen = false
 
 const press = async (band: any) => { await band.press({ key: 'band-open' }); await new Promise(r => setTimeout(r, 30)) } // the press starts the open and does not wait for it
 
-test('/zeremai passes to the hook beneath: on-live-page answers every word', async ($, on) => {
-  world(on, {})
-  on('command.run', async () => ({ text: 'from beneath' }) as never)
-  expect(((await $.command.run({ command: 'zeremai', args: 'new' })) as any).text).toBe('from beneath')
-})
-
 test('the band names the bound flow and its state, and ends with the ZeremAI link', async ($, on) => {
   const dir = `${HOME}/active/p1`
   const w = world(on, { [`${dir}/flow.json`]: { ...flow, steps: [{ id: 'a', number: 3, name: 'Gate', status: 'awaiting_approval' }] } })
@@ -75,21 +69,21 @@ test('a flow that starts to wait raises one toast within 5 seconds', async ($, o
 test('a press opens the site with the session after #, through the Artifact tool', async ($, on) => {
   const w = world(on, {}, { url: URL })
   await press(await $.ui.mount(BAND))
-  expect(w.opened).toEqual([`${URL}#s=S1`])
+  expect(w.opened).toEqual([`${URL}#S1`])
   expect(w.ran).toEqual([])
 })
 
 test('a press that the Artifact tool cannot open goes to the system opener', async ($, on) => {
   const w = world(on, {}, { url: URL, noOpen: true })
   await press(await $.ui.mount(BAND))
-  expect(w.ran[0]).toEqual(['open', `${URL}#s=S1`])
+  expect(w.ran[0]).toEqual(['open', `${URL}#S1`])
   expect(w.toasts).toEqual([])
 })
 
 test('a press that nothing can open shows the link in a toast', async ($, on) => {
   const w = world(on, {}, { url: URL, noOpen: true, opener: 1 })
   await press(await $.ui.mount(BAND))
-  expect(w.toasts).toEqual([`ZeremAI: ${URL}#s=S1`])
+  expect(w.toasts).toEqual([`ZeremAI: ${URL}#S1`])
 })
 
 test('a press with no site set up says what to run', async ($, on) => {

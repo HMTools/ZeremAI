@@ -34,7 +34,7 @@ The catalog lists every template found in the caches, at `templates/flows/<categ
 
 The version of a template is the **git commit** (`HEAD`) of its marketplace cache when it was installed. It is saved in `config/installed-templates.json`, with the marketplace, the install time and the category.
 
-**Install** and **Update** do the same thing: remove the installed folder, copy the folder from the cache, and write the manifest. The names in the pane (`category`, `name`, `marketplace`) must be plain names (letters, digits, `.`, `_`, `-`), because they become part of a path that the mod deletes and copies. The copy runs `mkdir -p` and `cp -R` on macOS and Linux, and one PowerShell command on Windows.
+**Install** and **Update** do the same thing: remove the installed folder, copy the folder from the cache, and write the manifest. The names that the site sends (`category`, `name`, `marketplace`) must be plain names (letters, digits, `.`, `_`, `-`), because they become part of a path that the mod deletes and copies. The copy runs `mkdir -p` and `cp -R` on macOS and Linux, and one PowerShell command on Windows.
 
 ## 3. Create: template to flow
 

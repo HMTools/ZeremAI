@@ -1,0 +1,112 @@
+---
+title: "The live site"
+description: "How the ZeremAI site gets its data and sends your actions back: the page database, the command rows, the checks and the heartbeat."
+---
+
+The site is one Artifact page on claude.ai. It has no server of its own. The mod and the page share a small **page database** that the Artifact runtime keeps for the page. The mod writes the state of your flows into it. The page draws it and writes your **commands** into it. The mod reads them and runs them.
+
+```
+flow files  ──mod writes──▶  page database  ──page reads──▶  the site
+flow files  ◀──mod runs───   commands rows  ◀──page writes──  your press
+```
+
+The page never touches a flow file. The flow script stays the only writer.
+
+## The collections
+
+| Collection | One document for | Written by | Read by |
+|---|---|---|---|
+| `flows/<flowId>` | Each active flow: status, steps, what needs you | the mod | everyone with access to the page |
+| `details/<flowId>~logs`, `~memory`, `~files` | The log, the memory topics and the file names of a flow | the mod | the owner |
+| `meta/mod` | The mod: `{ beat, v }` | the mod | everyone with access |
+| `sessions/<sessionId>` | Each session: `{ folder, name, beat, flows[] }` | that session | the owner |
+| `templates/<category>~<name>` | Each template: name, category, `installed`, `marketplace`, `steps`, `fields[]` | the mod | the owner |
+| `marketplaces/<name>` | Each marketplace: `{ name, templates, enabled, cached, refreshedAt }` | the mod | the owner |
+| `commands/<id>` | Each action you press | the page (create), the mod (update) | the owner |
+
+A flow document holds `name`, `template`, `status`, `activeStepId`, `needsYou` (the step that waits, with its name and the time), `updatedAt`, `counts` and a list of `steps`. Each step has `id`, `number`, `name`, `status`, `approval`, and when they apply `phase`, `loopBackTo`, `childFlowId` and `summary`. The status words are the six of the old pane: `waiting`, `running`, `done`, `failed`, `paused` and `pending`.
+
+The mod cuts every long text and list before it writes, so each document stays far below the limit of 256 KiB.
+
+## The access rules
+
+The page declares its rules when the mod publishes it:
+
+| Path | Read | Write |
+|---|---|---|
+| everything else (`flows`, `meta`) | view | owner |
+| `details`, `commands`, `sessions`, `templates`, `marketplaces` | owner | owner |
+
+The **owner** is you. A person who can only view the page sees the flows and the heartbeat, and nothing else. Only the owner can write a command, so nobody else can send one. The mod still checks every command, because a row is data and not an order.
+
+## A command, from press to result
+
+A command is one document in `commands/<id>`:
+
+```ts
+{
+  id: string; session: string; at: string        // the session that must run it
+  action: 'approve' | 'request-changes' | 'continue' | 'close' | 'new-flow'
+        | 'fill-fields' | 'install-template' | 'remove-template' | 'refresh-marketplaces'
+  args: Record<string, string>
+  status: 'new' | 'running' | 'done' | 'error'
+  result?: string                                  // plain words, or the answer of fill-fields
+}
+```
+
+The status moves one way: `new` → `running` → `done` or `error`.
+
+| Action | Arguments | What the mod runs |
+|---|---|---|
+| `approve` | `flowId`, `stepId` | The call of the old pane button, `approveFromPane`: the script writes `approved` and your answer is logged. |
+| `request-changes` | `flowId`, `stepId`, `reason` | `requestChangesFromPane`: your reason goes to the agent. |
+| `continue` | `flowId`, `note?` | `resumeFlow`: binds the flow to the session and sends the agent the hand-off message. |
+| `close` | `flowId` | Removes the flow from the list of flows bound to this session. The flow files do not change. |
+| `new-flow` | `template` (`category/name`), `name?`, one key for each field | Creates the flow with the script, binds it, and sends the agent the hand-off message. |
+| `fill-fields` | `template`, `text`, `values?` | One model call that suggests field values. The answer is in `result` as JSON. |
+| `install-template`, `remove-template` | `marketplace?`, `category`, `name` | The template jobs of `infra/templates`. |
+| `refresh-marketplaces` | none | `git clone` or `git pull` of every enabled marketplace, then the catalog is written again. |
+
+### The 5-second poll
+
+The mod has one timer. On each tick it asks the database for the rows with `status == 'new'` and `session ==` its own session id, and runs them **one at a time**, in the order of `at`. A row for another session stays as it is. So a press can take up to 5 seconds to start.
+
+A poll is used and not a live connection (a room event) on purpose. A row is kept, so a reload of the page or a dropped connection loses nothing. An approval that is lost would be worse than an approval that is 5 seconds late.
+
+### The checks
+
+`checkCommand` (`hooks/infra/live-site/`) runs before anything else. It refuses a row, with a plain message in `result`, when:
+
+- the action is not on the list, or the row has no `args`;
+- the row is for another session;
+- an argument is missing, is not a string, is longer than 2,000 characters, or has a name that is not plain;
+- a name that becomes part of a path (`flowId`, `stepId`, `marketplace`, `category`, `name`) has anything but letters, digits, `.`, `_` and `-`;
+- `template` is not `category/name`;
+- the flow is not bound to this session (`close`, `approve`, `request-changes`), or is not in the list of active flows (`continue`);
+- the step does not wait for approval any more (`approve`, `request-changes`). This is the same check as the approval gate. See [The approval gate](/design/guards/approval-gate).
+
+Only a row that passes every check reaches a call.
+
+## The writes
+
+The database refuses a write to a document that exists unless the write names the **version** it last saw (`if_version`). The mod is the only writer of most documents, so it keeps the version of each document it wrote. It learns the versions it does not know with one `list` of the collection. If a write says the version is wrong, the mod learns them again and tries once more.
+
+The mod writes only the documents whose text changed since the last push, in batches of 50. A batch that fails leaves its documents marked as not written, so the next tick sends them again. A failed write never touches the flow. The reason is kept in the store (`livePageError`) and `/zeremai` shows it. The next good push clears it.
+
+## The heartbeat
+
+Every 30 seconds the mod writes `meta/mod` and the row of its session, `sessions/<sessionId>`, with the current time in `beat`. The list `flows` in the session row holds the ids of the flows bound to that session. The page uses it to send a flow action to the session that holds the flow.
+
+The page treats a `beat` older than 3 minutes as a closed session. It then turns its actions off and says **Session closed. Press ZeremAI in a live session.** A quiet flow writes no rows, so without a heartbeat the page could not tell a quiet flow from a closed session.
+
+On each heartbeat the mod also deletes the commands that are older than one day.
+
+## The link and the republish
+
+The mod stores the link of the page in its store (`livePageUrl`). The button and `/zeremai` open `<link>#<sessionId>`. The page reads the id after `#` to know where to send the actions that have no flow, such as a new flow.
+
+When the mod starts its timer, and on each `/zeremai`, it makes a short hash of `skills/live-flow/page.html` and of the rules above. If the hash is not the one in the store (`livePageHash`), it publishes the page again to the **same** link, with the same rules, and stores the new hash. A new version of the plugin therefore updates the page, and the pinned link stays the same.
+
+## Source
+
+`hooks/on-live-page/on-live-page.ts` (the command word, the timer, the command reader, the publish, the writes), `hooks/infra/live-page/live-page.ts` (the flow documents, the rules), `hooks/infra/live-site/live-site.ts` (`checkCommand`, the session and template documents), `hooks/on-flow-pane/on-flow-pane.ts` (the button above the prompt), `skills/live-flow/page.html` (the site).

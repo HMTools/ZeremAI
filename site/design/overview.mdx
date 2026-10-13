@@ -9,7 +9,7 @@ This section is for people who change ZeremAI. It explains how the plugin works 
 
 | Part | Written in | Job |
 |---|---|---|
-| **The mod** (`hooks/`) | TypeScript | Watches Claude Code. Decides what the agent may do, shows the pane and the dialogs, and keeps the rules. |
+| **The mod** (`hooks/`) | TypeScript | Watches Claude Code. Decides what the agent may do, shows the dialogs, runs the [live site](/design/live-site), and keeps the rules. |
 | **The flow script** (`scripts/flow_manager.py`) | Python | The only writer of flow files. Checks every change and keeps it safe. |
 | **Skills and the agent** (`skills/`, `agents/`) | Markdown | Tell the model how to run a flow and a step. Nothing here is enforced by itself. |
 | **The files** (`~/.claude/zeremai/`) | JSON | The state: templates, flows, logs, memory, findings, config. |

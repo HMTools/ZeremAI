@@ -22,7 +22,7 @@ A marketplace is a git repository with `templates/flows/<category>/<template>/<t
 /zeremai:create-marketplace A shared library of review flows for the payments team
 ```
 
-The skill plans the folder and shows it on one page: the file tree, how the Templates tab will look, each step, and where you want the repository to live. Nothing is written until you press **Approve**. It then creates the folder, runs `git init` on branch `main`, makes the first commit, and checks the result.
+The skill plans the folder and shows it on one page: the file tree, how the Templates screen of the site will list it, each step, and where you want the repository to live. Nothing is written until you press **Approve**. It then creates the folder, runs `git init` on branch `main`, makes the first commit, and checks the result.
 
 Everything that leaves your machine or changes your config asks first and shows the exact command: adding the marketplace to `marketplaces.json` (with the local path, so you can install from it at once), creating a GitHub or Azure DevOps repository, and pushing to a new or an empty existing repository. It never forces a push. Then add templates with [`/zeremai:create-template`](/authoring/templates).
 
@@ -34,17 +34,17 @@ python3 <plugin>/scripts/check_template.py --marketplace <folder>
 
 It checks every template, that each folder name and category match the JSON, that template ids are unique, and that sub-flows point to templates in the repository.
 
-## Manage from the pane
+## Manage from the site
 
-Open `/zeremai` → **Templates**.
+Open `/zeremai` → **Templates**. The list is grouped by marketplace.
 
 | Action | Effect |
 |---|---|
 | Refresh | Fetch the latest catalogs from all enabled marketplaces |
-| Install / Update | Copy a template from the marketplace cache |
-| Remove | Delete an installed template |
+| Install | Copy a template from the marketplace cache. On an installed template with a newer commit it updates it. |
+| Remove | Delete an installed template. The site asks first. |
 
-The same tab manages the marketplaces: **Add**, **Edit** (name, git address, branch, priority), **On/Off**, and **Remove**. Remove asks you to press twice. It deletes the cache, not templates you already installed.
+The site does not add or edit the marketplaces themselves. To add one, change its git address, branch or priority, switch it off, or remove it, edit [the config file](#config-file) below. Then press **Refresh**. Removing a marketplace deletes its cache, not the templates you already installed.
 
 ## Config file
 

@@ -12,13 +12,13 @@ A step with `approvalRequired: true` cannot complete until you approve it. The *
   <img className="hidden dark:block" src="/images/diagrams/approval-gate-dark.svg" alt="Diagram: States of an approval gate" />
 </Frame>
 
-In the pane, **Approve** and **Request changes** also work from `waiting`. They end the gate in the same way as the dialog.
+On [the site](/design/live-site), **Approve** and **Request changes** also work from `waiting`. They end the gate in the same way as the dialog.
 
 | State | What it means | Stored as |
 |---|---|---|
 | `working` | The agent works. No gate is open. | No `gate:<id>` record |
 | `dialog` | The agent asked. The dialog is on screen. | `gate:<id>` = `{ dir, stepId, dialog: true }` |
-| `waiting` | You closed the dialog. The pane shows its own buttons. | `gate:<id>` = `{ dir, stepId }` |
+| `waiting` | You closed the dialog. The site shows its own buttons. | `gate:<id>` = `{ dir, stepId }` |
 | `approved` | The step has `approved: true` and the gate is gone. | `approved` in `flow.json` |
 
 The gate is in the mod store, so a restart or a reload does not lose it.
@@ -60,7 +60,7 @@ Everything else (Write, Edit, other Bash commands, todo tools) is refused with a
 
 ## Where you can answer
 
-You can answer in the dialog or in the pane (the buttons of the gate card). Both paths check the world again at the moment of the click: the step must still be the one that waits, and the agent must have asked. A pane click while a dialog is open is refused ("Answer the dialog that is open").
+You can answer in the dialog or on the site (the buttons of the card for the step that waits). A click on the site is a command row that the mod reads within 5 seconds. Both paths check the world again at the moment of the answer: the step must still be the one that waits, and the agent must have asked. An answer from the site while a dialog is open is refused ("Answer the dialog that is open"). Only the owner of the page can write the command row, and the mod checks the row like any other.
 
 Typing "approved" in chat does nothing. Only a click counts.
 

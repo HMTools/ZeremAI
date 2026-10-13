@@ -35,6 +35,7 @@ async function say($: any, text: string): Promise<void> {
 
 export const register: Register = on => {
   on('tool.call', async ($, e, next) => {
+    if (next.origin.plugin === $.plugin.name) return next(e) // a call this plugin raises itself (the live site writes its database while a step waits). The agent's calls come from the engine.
     const text = await findPendingBlock(filesOf($), linksOf($), gatesOf($), await $.session.id(), e as any)
     if (text) { await say($, 'Flow: a step waits for your approval, so Claude cannot go on.'); return { deny: text } }
     return next(e)

@@ -9,11 +9,27 @@ Mods are not loaded: admin policy, untrusted folder, a crash or a rollout switch
 
 ## "flow_manager.py did not start" or "gave no JSON"
 
-Python is missing or too old. Install **Python 3.9 or newer** and make sure `python3` (Windows: `python`) runs from a terminal, then press **Resume** on the flow. See [Installation](/guide/installation).
+Python is missing or too old. Install **Python 3.9 or newer** and make sure `python3` (Windows: `python`) runs from a terminal, then press **Continue** on the flow on the site. See [Installation](/guide/installation).
 
-## `/zeremai` shows no templates
+## The site shows no templates
 
-Open the **Templates** tab, **Refresh**, then **Install**. If Refresh fails, check you can `git clone` the marketplace URL from a terminal.
+Open the **Templates** screen, **Refresh**, then **Install**. If Refresh fails, check you can `git clone` the marketplace URL from a terminal.
+
+## "Session closed. Press ZeremAI in a live session."
+
+The session that the site talks to has not sent a heartbeat for 3 minutes, so the site turned its actions off. Go to a Claude Code session that is open, and press **ZeremAI ↗** above the prompt (or run `/zeremai`). The site then works with that session. If the session is open and the site still says so, run `/zeremai` and read the message: it names the last write that failed.
+
+## "Open ZeremAI from a session to use actions."
+
+You opened the pinned link, with no session in it. The site only shows the data. Press **ZeremAI ↗** in a session to get a link that names the session.
+
+## A button on the site stays on "Sending…" or "Running…"
+
+The command waits for your session. It starts within about 5 seconds when the session is idle or working. If it does not start, check that the session is open and has the flow, then press the button again. A command for another session is left alone by design.
+
+## `/zeremai` does nothing, or the page does not open
+
+ZeremAI opens the page with the Artifact tool, so you need a claude.ai sign-in and a surface with that tool (not print mode, not the VS Code extension). If the tool cannot open the page, ZeremAI uses the system opener and then shows the link in a message. Open the link by hand.
 
 ## Agent cannot edit a flow file
 
@@ -21,11 +37,11 @@ Intended. A flow's state files and findings change only through the flow script 
 
 ## Step will not complete
 
-It has `approvalRequired: true` and you have not approved. Open the dialog (it reopens on your next prompt) and click **Approve**.
+It has `approvalRequired: true` and you have not approved. Open the dialog (it reopens on your next prompt) and click **Approve**, or press **Approve** on the site.
 
 ## "Flow log failed, so your prompt was not sent"
 
-The plugin logs each prompt of a flow session before the agent sees it. A small model (Haiku) writes the details of the entry. If that call or the flow script fails, the prompt is not sent and the message says why. Send the prompt again. If it keeps failing, close the flow in the flow pane.
+The plugin logs each prompt of a flow session before the agent sees it. A small model (Haiku) writes the details of the entry. If that call or the flow script fails, the prompt is not sent and the message says why. Send the prompt again. If it keeps failing, close the flow on the site.
 
 ## Resume lands on the wrong step
 

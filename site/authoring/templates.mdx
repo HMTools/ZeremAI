@@ -110,7 +110,7 @@ Generate UUIDs with `uuidgen` or `node -e "console.log(crypto.randomUUID())"`. N
 
 ## Parameters
 
-Use `{{paramName}}` anywhere in step `context` or sub-flow parameters. Each `definitions` entry needs `description`, `type` and an `example`, since the pane shows them when you fill the form. Required parameters get a star.
+Use `{{paramName}}` anywhere in step `context` or sub-flow parameters. Each `definitions` entry needs `description`, `type` and an `example`, since the **New flow** form on [the site](/guide/live-site) shows them. Required parameters get a star.
 
 ## Step entries
 
@@ -155,6 +155,6 @@ Put `"approvalRequired": true` on steps whose output a human should review befor
 ## Test it
 
 1. Put the template in a marketplace repo (or copy it to `~/.claude/zeremai/templates/flows/<category>/`).
-2. Run `/zeremai`, Templates → Refresh → Install.
-3. Create a flow from the New tab and run through it.
+2. Run `/zeremai`, open **Templates** on the site → Refresh → Install.
+3. Create a flow from the **New flow** screen and run through it.
 4. Check the finished flow's log for friction. Fix and repeat.

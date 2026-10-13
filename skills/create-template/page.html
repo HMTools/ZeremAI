@@ -852,7 +852,7 @@
       var inp = el('input', { id: id, type: 'text', placeholder: p.example, inputmode: p.type === 'number' ? 'numeric' : null, oninput: function (e) { vals[p.name] = e.target.value; } }); inp.value = vals[p.name] || '';
       return el('div', { class: 'field' + (hl.indexOf(p.name) >= 0 ? ' hl' : '') }, el('label', { for: id }, p.name + (p.required ? ' (required)' : '')), inp, el('small', null, p.description + ' · ' + p.type), used);
     }
-    return [el('p', { class: 'muted' }, 'The form the flow pane shows. Type a value to see it inside the steps.')].concat(req.concat(opt).map(field));
+    return [el('p', { class: 'muted' }, 'The form the ZeremAI site shows. Type a value to see it inside the steps.')].concat(req.concat(opt).map(field));
   }
 
   /* ---- answer bar (draft mode) ---- */

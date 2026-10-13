@@ -39,7 +39,7 @@ The mod then binds the folder to the session. The first step starts as `pending`
 
 This is the normal path. The script accepts any of the five statuses (`pending`, `in_progress`, `completed`, `skipped`, `awaiting_approval`) and sets `startedAt` and `completedAt` for you. It has one rule of its own. A step with `approvalRequired: true` adds a check on the `in_progress → completed` arrow: the script refuses it until `approved` is `true`. Only your click sets `approved`. See [The approval gate](/design/guards/approval-gate).
 
-`approved` is a flag on the step, not a status. A step waiting for you is `in_progress`, with `approvalRequired` and no `approved`. The status `awaiting_approval` is allowed, and the pane shows it as "waits for you", but the gate does not depend on it.
+`approved` is a flag on the step, not a status. A step waiting for you is `in_progress`, with `approvalRequired` and no `approved`. The status `awaiting_approval` is allowed, and the site shows it as "waits for you", but the gate does not depend on it.
 
 The agent sets `in_progress` **before** it starts the `step-executor` subagent. The stop guard reads this status to know that a subagent works the step. See [Stop prevention](/design/guards/stop-prevention).
 

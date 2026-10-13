@@ -65,7 +65,7 @@ async function openSite($: any): Promise<void> {
   const toast = async (text: string) => { try { await $.ui.toast(text) } catch { /* a surface with no toast */ } }
   const stored = (await $.store.get('livePageUrl')) as string | undefined
   if (!stored) return toast('Run /zeremai once to set up the site.')
-  const url = `${stored}#s=${await $.session.id()}` // the session that runs the actions of the site
+  const url = `${stored}#${await $.session.id()}` // the session that runs the actions of the site
   try { await callTool($, { tool: 'Artifact', action: 'open', url }); return } catch { /* the system opener next */ }
   const windows = (await $.env.get('OS')) === 'Windows_NT'
   for (const argv of windows ? [['cmd', '/c', 'start', '', url]] : [['open', url], ['xdg-open', url]]) {

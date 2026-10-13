@@ -34,6 +34,7 @@
         "group": "Guide",
         "pages": [
           "guide/concepts",
+          "guide/live-site",
           "guide/approvals",
           "guide/marketplaces",
           "guide/flow-files",
@@ -46,6 +47,7 @@
         "group": "Technical design",
         "pages": [
           "design/overview",
+          "design/live-site",
           {
             "group": "Lifecycles",
             "pages": [

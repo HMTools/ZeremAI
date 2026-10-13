@@ -21,7 +21,7 @@ Install guide, quick start, concepts, authoring templates and steps, and the ful
 claude plugin install zeremai@zeremai
 ```
 
-Then run `/zeremai`. Needs a Claude Code build with mods. See the [installation guide](https://zerem-ai.mintlify.app/guide/installation).
+Then run `/zeremai`. It opens the ZeremAI site, a live page on claude.ai where you start flows, approve steps and manage templates. Needs a Claude Code build with mods and a claude.ai sign-in. See the [installation guide](https://zerem-ai.mintlify.app/guide/installation) and [the site](https://zerem-ai.mintlify.app/guide/live-site).
 
 ## Links
 

@@ -13,8 +13,9 @@ The mod is a set of hooks. Claude Code calls a hook when something happens. Each
 | `prompt.submit` | You send a prompt (or the plugin sends one) | `on-user-prompt`: logs your prompt, reopens a closed approval dialog |
 | `tool.call` | The agent is about to run a tool | `on-flow-tools`, `on-approval-gate`, `on-pending-checkpoint`, `on-todo-tool` |
 | `turn.complete` | The agent ends a turn | `on-agent-stopping`: sends a re-prompt if the flow has work left |
-| `command.run`, `ui.*` | `/zeremai` runs, the pane draws or you press a button | `on-flow-pane` |
-| a timer | Every 5 seconds while the pane is open | `on-flow-pane`: refreshes the pane |
+| `command.run` | `/zeremai` runs (any word) | `on-live-page`: opens the site, and publishes it the first time |
+| `ui.render` | Claude Code draws the line above the prompt | `on-flow-pane`: the button with the flow summary and **ZeremAI ↗** |
+| a timer | Every 5 seconds | `on-live-page`: reads the commands you pressed on the site and writes the changed flow state. `on-flow-pane`: keeps the button current |
 
 ## One turn, as the mod sees it
 
@@ -41,12 +42,12 @@ Claude Code loads the mod again when its files change. A load is fresh: `registe
 
 | Kept | Lost |
 |---|---|
-| The mod store (`session:<id>`, `gate:<id>`) | Module variables: the re-prompt count, toast timers, the one-dialog-at-a-time set |
-| Files in `~/.claude/zeremai/` | Pane state (which tab is open) |
+| The mod store (`session:<id>`, `gate:<id>`, and the link of the site, `livePageUrl`) | Module variables: the re-prompt count, toast timers, the one-dialog-at-a-time set, the versions of the page documents |
+| Files in `~/.claude/zeremai/` | The last text sent for each page document (the next tick sends them again) |
 
 The kept state decides what matters. The bound flow and an open approval gate are in the store, so a reload does not lose them. A count or a timer can start again without harm.
 
-A resumed Claude Code session has a new session id, and so a new list of bound flows. You resume the flow from the **Continue** tab, and the pane binds it again.
+A resumed Claude Code session has a new session id, and so a new list of bound flows. You resume the flow with **Continue** on [the site](/design/live-site), and the mod binds it again.
 
 ## Faults
 

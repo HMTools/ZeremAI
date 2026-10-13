@@ -1,0 +1,93 @@
+---
+title: "The ZeremAI site"
+description: "One live page on claude.ai where you see every flow, approve steps, start flows and manage templates."
+---
+
+ZeremAI has no terminal pane. You use it through **one live site**: a page on claude.ai that shows every flow and changes while you watch. You press buttons on it, and your Claude Code session does the work.
+
+## Open the site
+
+Run `/zeremai`, or press the button above the prompt. It ends with **ZeremAI ↗**:
+
+```
+▲ Payoflows E2E · step 3/12 · approve step 3 · ZeremAI ↗
+```
+
+- **The first time**, ZeremAI publishes the page and pins it to your claude.ai sidebar. It keeps the link.
+- **Every other time**, it opens the same page. Any word after `/zeremai` does the same (`/zeremai live` too).
+- The link carries the id of your session (`#<session id>`). The site uses it to know which session runs your actions.
+
+If the Artifact tool cannot open the page, ZeremAI uses the system opener, and then shows the link in a message.
+
+When a new version of the plugin ships a new page, the next `/zeremai` publishes it to the same link. You do not install it.
+
+<Warning>
+  The site needs a **claude.ai sign-in** and a Claude Code surface with the **Artifact tool**. Without them you cannot start or resume a flow. This is the case in print mode and in the VS Code extension. See [Installation](/guide/installation).
+</Warning>
+
+## The screens
+
+| Screen | What you do |
+|---|---|
+| **Flows** | See every flow, with the flows that need you first. Pick one to see its steps. Approve a step, request changes, continue a paused flow, or close a flow. |
+| **New flow** | Pick a template, fill in its fields, and press **Create flow**. |
+| **Templates** | See the templates of each marketplace. **Install**, **Remove**, or **Refresh** the catalogs. |
+
+### Flows
+
+- The steps show as a **runbook** or as **two lanes** (Claude on the left, you on the right). Each step has a symbol and a word: `waits for you`, `running`, `done`, `failed`, `paused` or `pending`. Colour is never the only signal.
+- The tabs **Steps**, **Logs**, **Memory** and **Files** show what the flow did, what it remembers, and the files it changed. Only you, the owner, can read the last three.
+- A step that waits for you gets a card at the top. **Approve** is the same click as in the approval dialog. **Request changes** needs a reason, and the agent reads it before it redoes the step. See [Approvals](/guide/approvals).
+- **Continue** resumes a flow from its last incomplete step.
+- **Close flow** asks you to confirm. It makes your session stop working on that flow. The flow files stay where they are, and you can **Continue** the flow later.
+
+### New flow
+
+1. Pick a template. Search works, and your favourites stay at the top.
+2. Fill in the fields. Required ones have a star, and the examples show in the boxes.
+3. Optional: write what you want in the box **Describe it in your own words** and press **Fill the fields**. Claude suggests values for the fields. You can change them.
+4. Press **Create flow**. ZeremAI creates the flow, binds it to your session, and the agent starts the first step.
+
+### Templates
+
+The list is grouped by marketplace. **Install** copies a template (and updates it when the marketplace has a newer commit). **Remove** deletes an installed template and asks first. **Refresh** fetches the latest catalogs.
+
+To add, edit, switch off or remove a marketplace itself, edit `marketplaces.json`. See [Marketplaces](/guide/marketplaces#config-file).
+
+## What happens when you press a button
+
+Each button sends one **command** to your session. The button then shows:
+
+1. **Sending…** while the page writes the command.
+2. **Running…** while your session works. This starts within about 5 seconds.
+3. The result in plain words, or the error. A button stays off while its command is pending, so you cannot press it twice.
+
+Your session checks every command before it runs it. A wrong one gets an error message and changes nothing.
+
+## Which session runs an action
+
+| Situation | What the site does |
+|---|---|
+| You opened it with the button in session A | Actions run in A. The header names the session. |
+| A flow belongs to session B | Flow actions run in B. A new flow runs in A. |
+| The session is closed | The site says **Session closed. Press ZeremAI in a live session.** and turns the actions off. |
+| You opened the pinned link with no session | The site only shows. It says **Open ZeremAI from a session to use actions.** |
+| Another person opens the page | The site only shows. It says **Only the owner of this page can use actions.** |
+
+A session counts as closed when its heartbeat is older than 3 minutes. If you see "Session closed", go to a live Claude Code session and press **ZeremAI ↗** again. The site then works with that session.
+
+A new flow starts in the project folder of the session where you pressed ZeremAI, because the agent edits files there.
+
+## What stays in the terminal
+
+- The agent works in your session as before. The line under the prompt shows the step.
+- The approval dialog still opens in the terminal when the agent asks. You can answer there or on the site. See [The approval gate](/design/guards/approval-gate).
+- The button above the prompt shows the flow that is bound to the session and how many flows need you.
+
+## Limits
+
+- The site cannot work offline. When it loses the connection it says **Offline** and shows the last data it got.
+- The data is private. Only the owner of the page can read the logs, the memory, the file names and the commands, and only the owner can write commands.
+- Everything on the site comes from your session. If no session is live, the site shows the last data it has, with its age.
+
+For how it works inside, see [The live site](/design/live-site).

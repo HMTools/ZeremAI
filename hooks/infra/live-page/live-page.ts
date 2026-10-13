@@ -18,7 +18,7 @@ const CAP = 2000 // ponytail: a string longer than this is cut; the page links n
 const MAX_ROWS = 200 // ponytail: one cap for every list so a document stays far under 256 KiB; raise it with per-flow paging if needed
 const BATCH = 50 // ArtifactData takes 1 to 50 writes in one batch
 
-const cut = (v: unknown): unknown => {
+export const cut = (v: unknown): unknown => {
   if (typeof v === 'string') return v.length > CAP ? `${v.slice(0, CAP)}…` : v
   if (Array.isArray(v)) return v.slice(0, MAX_ROWS).map(cut)
   if (v && typeof v === 'object') return Object.fromEntries(Object.entries(v).map(([k, x]) => [k, cut(x)]))
@@ -27,6 +27,7 @@ const cut = (v: unknown): unknown => {
 const readDoc = async (files: FileSystem, path: string): Promise<Doc | undefined> => {
   try { return JSON.parse(await files.read(path)) } catch { /* unreadable: leave it out */ }
 }
+export const flowIdOf = (flow: Doc, dir: string) => String(flow.id ?? dir.split('/').pop())
 const isDone = (s: Doc) => s.status === 'completed' || s.status === 'skipped'
 
 // What the page draws for one flow: the same facts the terminal pane reads (flowKind, stepKind), as one document.
@@ -61,7 +62,7 @@ export function flowDoc(flow: Doc, counts: { topics: number; files: number }): D
 export async function snapshot(files: FileSystem, dir: string): Promise<{ flowId: string; docs: Record<string, DocWrite> } | undefined> {
   const flow = await readDoc(files, `${dir}/flow.json`)
   if (!flow) return
-  const flowId = String(flow.id ?? dir.split('/').pop())
+  const flowId = flowIdOf(flow, dir)
   const [logs, memory, rows, counts] = await Promise.all([logView(files, dir), memoryView(files, dir), filesView(files, dir), tabCounts(files, dir)])
   const put = (collection: string, doc_id: string, data: unknown): [string, DocWrite] => [`${collection}/${doc_id}`, { op: 'set', collection, doc_id, data: cut(data) as Doc }]
   return {
@@ -79,13 +80,8 @@ export async function snapshot(files: FileSystem, dir: string): Promise<{ flowId
 export const changed = (last: Map<string, string>, docs: Record<string, DocWrite>): DocWrite[] =>
   Object.entries(docs).filter(([path, w]) => last.get(path) !== JSON.stringify(w.data)).map(([, w]) => w)
 
-// Read every active flow and write what changed, in batches of 50. A batch that fails leaves `last` as it was, so the next push tries it again.
-export async function pushFlows(ports: LivePorts, last: Map<string, string>): Promise<number> {
-  const writes: DocWrite[] = []
-  for (const info of await listFlows(ports.files)) {
-    const snap = await snapshot(ports.files, info.dir)
-    if (snap) writes.push(...changed(last, snap.docs))
-  }
+// Write the documents in batches of 50. A batch that fails leaves `last` as it was, so the next push tries it again.
+async function send(ports: LivePorts, last: Map<string, string>, writes: DocWrite[]): Promise<number> {
   for (let i = 0; i < writes.length; i += BATCH) {
     const part = writes.slice(i, i + BATCH)
     await ports.batch(part)
@@ -94,7 +90,24 @@ export async function pushFlows(ports: LivePorts, last: Map<string, string>): Pr
   return writes.length
 }
 
+// Any documents: only those whose text differs from the last push are written.
+export const pushDocs = (ports: LivePorts, last: Map<string, string>, docs: DocWrite[]): Promise<number> =>
+  send(ports, last, docs.filter(w => last.get(`${w.collection}/${w.doc_id}`) !== JSON.stringify(w.data)))
+
+// Read every active flow and write what changed.
+export async function pushFlows(ports: LivePorts, last: Map<string, string>): Promise<number> {
+  const writes: DocWrite[] = []
+  for (const info of await listFlows(ports.files)) {
+    const snap = await snapshot(ports.files, info.dir)
+    if (snap) writes.push(...changed(last, snap.docs))
+  }
+  return send(ports, last, writes)
+}
+
 export const heartbeat = (ports: LivePorts): Promise<void> => ports.batch([{ op: 'set', collection: 'meta', doc_id: 'mod', data: { beat: ports.now(), v: 1 } }])
 
 // The rules the page declares when it is published.
-export const PAGE_CAPABILITIES = { db: { rules: [{ path: '', read: 'view', write: 'owner' }, { path: 'details', read: 'owner', write: 'owner' }] }, user: {} }
+export const PAGE_CAPABILITIES = {
+  db: { rules: [{ path: '', read: 'view', write: 'owner' }, ...['details', 'commands', 'sessions', 'templates', 'marketplaces'].map(path => ({ path, read: 'owner', write: 'owner' }))] },
+  user: {},
+}
