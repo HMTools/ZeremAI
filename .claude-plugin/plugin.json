@@ -1,6 +1,6 @@
 {
   "name": "zeremai",
-  "version": "4.9.2",
+  "version": "5.0.0",
   "description": "Flow automation framework for agentic coding environments. Define, execute, and manage structured workflows with state tracking and approval checkpoints.",
   "author": {
     "name": "HM",
