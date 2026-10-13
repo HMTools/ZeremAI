@@ -351,7 +351,8 @@ async function ensureCurrent($: any): Promise<void> {
 }
 
 // The link that names this session: the site sends its actions to the session that opened it. A bare token after #: a #key=value never reaches the page.
-const siteUrl = async ($: any, url: string) => `${url}#${await $.session.id()}`
+// It also rides after ?, in case the host passes the query and not the fragment.
+const siteUrl = async ($: any, url: string) => { const id = await $.session.id(); return `${url}?s=${id}#${id}` }
 
 // The Artifact tool shows the page in the surface the user works in. A surface that cannot (print mode, no tool) refuses: the link is in the answer anyway.
 async function openPage($: any, url: string): Promise<boolean> {
@@ -378,7 +379,7 @@ export const register: Register = on => {
     const action = (e as any).action as string
     const collections: unknown[] = action === 'batch' ? ((e as any).writes ?? []).map((w: any) => w?.collection) : [(e as any).collection]
     const writes = !['get', 'list', 'query', 'profiles'].includes(action)
-    if (url && writes && next.origin.plugin !== $.plugin.name && String((e as any).url).split('#')[0] === url && collections.some(c => typeof c !== 'string' || c === 'commands' || c.startsWith('commands/'))) {
+    if (url && writes && next.origin.plugin !== $.plugin.name && String((e as any).url).split(/[?#]/)[0] === url && collections.some(c => typeof c !== 'string' || c === 'commands' || c.startsWith('commands/'))) {
       return { deny: 'The commands of the ZeremAI site are written by the site only. Only the user presses its buttons.' } as never
     }
     return next(e)
@@ -402,7 +403,12 @@ export const register: Register = on => {
 
   // Every word of /zeremai opens the site. It is published the first time.
   on('command.run', { command: COMMANDS }, async ($, e) => {
-    if (String(e.args ?? '').trim().split(/\s+/)[0]?.toLowerCase() === 'help') return { text: HELP } as never
+    const word = String(e.args ?? '').trim().split(/\s+/)[0]?.toLowerCase()
+    if (word === 'help') return { text: HELP } as never
+    if (word === 'sync') { // the button above the prompt: write the row of this session before it opens the page, so the page finds a live session at once
+      if (await $.store.get(URL_KEY)) { await ensureTimer($); openedAt = new Date().toISOString(); await push($, true) }
+      return { text: '' } as never
+    }
     try {
       let url = (await $.store.get(URL_KEY)) as string | undefined
       if (!url) {

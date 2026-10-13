@@ -103,7 +103,7 @@ On each heartbeat the mod also deletes the commands that are older than one day.
 
 ## The link and the republish
 
-The mod stores the link of the page in its store (`livePageUrl`). The button and `/zeremai` open `<link>#<sessionId>`. The page reads the id after `#` to know where to send the actions that have no flow, such as a new flow.
+The mod stores the link of the page in its store (`livePageUrl`). The button and `/zeremai` open `<link>?s=<sessionId>#<sessionId>`. Before the button opens the page, it runs `/zeremai sync`, which writes the row of the session. The page reads the id after `#`, or `?s=` to know where to send the actions that have no flow, such as a new flow.
 
 When the mod starts its timer, and on each `/zeremai`, it makes a short hash of `skills/live-flow/page.html` and of the rules above. If the hash is not the one in the store (`livePageHash`), it publishes the page again to the **same** link, with the same rules, and stores the new hash. A new version of the plugin therefore updates the page, and the pinned link stays the same.
 

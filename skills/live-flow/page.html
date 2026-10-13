@@ -175,7 +175,7 @@
   function words(n, one, many) { return n + ' ' + (n === 1 ? one : many); }
 
   /* ---- state ---- */
-  var HASH = decodeURIComponent((location.hash || '').slice(1)).replace(/^s=/, ''); // a page link carries only a bare token after #
+  var HASH = decodeURIComponent((location.hash || '').slice(1)).replace(/^s=/, '') || new URLSearchParams(location.search).get('s') || ''; // a page link carries only a bare token after #
   var PREVIEW = /^preview/.test(HASH);
   if (HASH && !PREVIEW) store('zf-session', HASH, 's');
   var S = { flows: {}, details: {}, sessions: {}, templates: [], markets: {}, cmds: [], sent: {}, beat: null, ready: false, offline: !navigator.onLine, owner: false, ownerKnown: false, noDb: false,
@@ -260,7 +260,7 @@
     if (S.bad.commands) return 'Actions are not available to you.';
     if (S.ownerKnown && !S.owner) return 'Only the owner of this page can use actions.';
     var s = sessionFor(flowId, scope);
-    if (!s) return 'Open ZeremAI from a session to use actions.';
+    if (!s) return 'This page has no session. Press ZeremAI in the session you want.';
     if (!isOpen(s)) return 'Session closed. Press ZeremAI in a live session.';
     return '';
   }
