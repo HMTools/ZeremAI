@@ -15,6 +15,14 @@
   "navigation": {
     "groups": [
       {
+        "group": "Build",
+        "pages": [
+          "authoring/templates",
+          "authoring/steps",
+          "authoring/verifiers"
+        ]
+      },
+      {
         "group": "Get started",
         "pages": [
           "index",
@@ -55,14 +63,6 @@
           },
           "design/template-sources",
           "design/improvement-findings"
-        ]
-      },
-      {
-        "group": "Authoring",
-        "pages": [
-          "authoring/templates",
-          "authoring/steps",
-          "authoring/verifiers"
         ]
       },
       {
