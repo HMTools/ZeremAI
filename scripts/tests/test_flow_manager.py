@@ -648,5 +648,79 @@ class FindingsTest(FlowBase):
         self.err('update-finding-status', 'Finding zzz not found', flowId='p1', findingId='zzz', status='applied')
 
 
+class VerifiersTest(FlowBase):
+    def verify(self, *scripts, **definition):
+        """A step with one verifier for each (source, extra) of scripts. Returns the answer of run-verifiers."""
+        entries = []
+        for i, (source, extra) in enumerate(scripts):
+            path = '%s/v%d.py' % (self.root, i)
+            self.put(path, source)
+            entries.append({'script': path, **extra})
+        self.put_flow(steps=[step(stepDefinition={'verifiers': entries, **definition})])
+        return self.ok('run-verifiers', flowDir=self.dir, stepId='s1')
+
+    def answer(self, status, checks):
+        return 'print(%r)' % json.dumps({'status': status, 'checks': checks})
+
+    def test_a_step_with_no_verifiers_passes_with_no_checks(self):
+        self.put_flow()
+        self.assertEqual(self.ok('run-verifiers', flowDir=self.dir, stepId='s1'), {'status': 'ok', 'result': 'pass', 'checks': []})
+
+    def test_a_passing_verifier_passes(self):
+        r = self.verify((self.answer('pass', [{'name': 'has plan', 'passed': True}]), {}))
+        self.assertEqual((r['result'], r['checks']), ('pass', [{'name': 'has plan', 'passed': True, 'message': ''}]))
+
+    def test_one_failed_check_fails_the_step_and_keeps_its_message_and_the_other_checks(self):
+        r = self.verify((self.answer('fail', [{'name': 'a', 'passed': True}, {'name': 'b', 'passed': False, 'message': 'add a rollback section'}]), {}),
+                        (self.answer('pass', [{'name': 'c', 'passed': True}]), {}))
+        self.assertEqual(r['result'], 'fail')
+        self.assertEqual([(c['name'], c['passed']) for c in r['checks']], [('a', True), ('b', False), ('c', True)])
+        self.assertEqual(r['checks'][1]['message'], 'add a rollback section')
+
+    def test_a_crash_is_a_failed_check_with_the_last_line_of_the_error(self):
+        r = self.verify(('raise ValueError("no design file")', {}))
+        self.assertEqual(r['result'], 'fail')
+        self.assertEqual(r['checks'][0]['name'], 'v0.py')
+        self.assertIn('verifier crashed: ValueError: no design file', r['checks'][0]['message'])
+
+    def test_a_script_that_runs_too_long_is_a_failed_check(self):
+        r = self.verify(('import time\ntime.sleep(20)', {'timeoutSec': 1}))
+        self.assertEqual((r['result'], r['checks'][0]['message']), ('fail', 'verifier timed out after 1s'))
+
+    def test_the_time_limit_has_a_ceiling(self):
+        r = self.verify(('import time\ntime.sleep(30)', {'timeoutSec': 600}))
+        self.assertEqual(r['checks'][0]['message'], 'verifier timed out after 8s')
+
+    def test_an_answer_that_is_not_the_shape_is_a_failed_check(self):
+        for source in ['print("fine")', '', 'print({"status": "pass"})',
+                       self.answer('pass', [{'name': 'a', 'passed': False}]),  # the status disagrees with the checks
+                       self.answer('fail', []),
+                       self.answer('pass', [{'name': 'a'}])]:
+            r = self.verify((source, {}))
+            self.assertEqual((r['result'], r['checks'][0]['message']), ('fail', 'verifier answer is not valid'), source)
+
+    def test_a_missing_file_is_a_failed_check(self):
+        self.put_flow(steps=[step(stepDefinition={'verifiers': [{'script': self.root + '/none.py'}]})])
+        r = self.ok('run-verifiers', flowDir=self.dir, stepId='s1')
+        self.assertEqual((r['result'], r['checks'][0]['message']), ('fail', 'verifier file not found'))
+
+    def test_a_flow_that_starts_from_a_template_keeps_the_full_path_of_the_verifier_and_max_fixes(self):
+        os.makedirs(self.plugin + '/framework-steps')
+        t = self.root + '/t/tpl'
+        self.put(t + '/template.json', {'name': 'T', 'id': 'tid', 'steps': [{'name': 'Design', 'stepRef': 'ref1'}]})
+        self.put(t + '/design/design.json', {'type': 'step', 'id': 'ref1', 'guidance': {}, 'maxFixes': 3, 'verifiers': [{'script': 'check.py'}]})
+        self.ok('create-flow', flowDir=self.active + '/new1', templatePath=t + '/template.json')
+        definition = self.get(self.active + '/new1/flow.json')['steps'][0]['stepDefinition']
+        self.assertEqual((definition['verifiers'], definition['maxFixes']), ([{'script': t + '/design/check.py'}], 3))
+
+    def test_a_verifier_outside_its_step_folder_stops_the_flow_from_starting(self):
+        os.makedirs(self.plugin + '/framework-steps')
+        t = self.root + '/t/tpl'
+        self.put(t + '/template.json', {'name': 'T', 'id': 'tid', 'steps': [{'name': 'Design', 'stepRef': 'ref1'}]})
+        for script in ['../x.py', '/etc/x.py', '']:
+            self.put(t + '/design/design.json', {'type': 'step', 'id': 'ref1', 'guidance': {}, 'verifiers': [{'script': script}]})
+            self.err('create-flow', 'inside its step folder', flowDir=self.active + '/new1', templatePath=t + '/template.json')
+
+
 if __name__ == '__main__':
     unittest.main()

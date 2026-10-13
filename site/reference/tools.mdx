@@ -35,6 +35,12 @@ After `update_flow_status` moves a folder, use the `relocated_to` path from the 
 | `add_memory_entry` | Add or merge what a step produced into `memory/<topic>.json`. Respects the step's `writeTo`. |
 | `read_memory_topic` | Read a topic. Respects the step's `readFrom`. `_cross-references` is always readable. |
 
+## Verifiers
+
+| Tool | Purpose |
+|---|---|
+| `run_verifiers` | Run the verifier scripts of a step. Always `status: ok`, with `result` (`pass` or `fail`) and `checks` (`name`, `passed`, `message`). It only reads. The plugin runs it when a step subagent ends. |
+
 ## Logging
 
 | Tool | Purpose |

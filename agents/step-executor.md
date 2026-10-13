@@ -60,6 +60,10 @@ If the brief shows an empty step definition (no guidance, no substeps) and the s
 3. **Do not write memory or log**: the plugin saves them from your Final Answer. Never use Write/Edit tools on `flow.json`, `log.json` or memory files
 4. **Handle approval checkpoints**: If the step has `approvalRequired: true`, prepare deliverables and return to parent for user approval. Step approval is user-only -- the agent cannot and should not approve steps. The parent asks with the subcommand `request-approval` of the flow script. After the user clicks Approve in the dialog, the step has `approved: true`, and the subcommand `update-step-status` will complete it.
 
+## Verifiers
+
+The step can have verifier scripts. When you end with the result block, the plugin runs them. If a check fails, the plugin sends you the failed checks. Fix the work and end your answer again with the result block. You can run the tool `run_verifiers` yourself before you end.
+
 ## Final Answer
 
 Before you answer, check:

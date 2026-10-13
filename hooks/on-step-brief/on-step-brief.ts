@@ -2,7 +2,7 @@ import type { Register } from 'claude-code'
 import { findFlowDir, readFlow, sessionKey } from '../infra/flow-repository/flow-repository'
 import { runScript } from '../infra/flow-manager/script'
 import { slash } from '../infra/flow-manager/move'
-import { FIX_MESSAGE, briefedKey, correctionsOf, fixesKey, readResultBlock, stepInProgress } from '../infra/step-brief/step-brief'
+import { FIX_MESSAGE, briefedKey, correctionsOf, failedChecksMessage, failedLines, fixLimit, fixesKey, readResultBlock, readVerifierRun, stepInProgress } from '../infra/step-brief/step-brief'
 import type { StepRef } from '../infra/step-brief/step-brief'
 import type { FileSystem, SessionLinks } from '../infra/ports/ports'
 
@@ -11,9 +11,10 @@ import type { FileSystem, SessionLinks } from '../infra/ports/ports'
 //    brief (step, parameters, memory, and on a re-run the earlier summary and the corrections) and makes it the prompt.
 //  - turn.complete: the subagent ends with a result block. The mod saves the memory and the log with the flow script.
 //    A missing or wrong block is sent back to the subagent itself, so the orchestrator does not carry it.
+//    Then the mod runs the verifier scripts of the step. A failed check goes back to the subagent the same way. A step saves once: when its checks pass, or when no fix is left.
 // The orchestrator still sets the step status: a step that needs approval completes only after the click of the user.
 
-const MAX_FIXES = 2
+const WAIT = (what: string) => `${what} The subagent is asked to fix it. Wait: the plugin tells you when it is saved.`
 
 const filesOf = ($: any): FileSystem => ({
   home: async () => (await $.env.get('HOME')) ?? (await $.env.get('USERPROFILE')), // Windows has no HOME in every shell
@@ -40,7 +41,7 @@ export const register: Register = on => {
     const brief = await scriptOf($)('get-step-brief', { flowDir, stepId: step.id, corrections: correctionsOf(e.prompt) })
     if (brief.status !== 'ok') return { deny: String(brief.message ?? 'get-step-brief failed') }
     const started: any = await next({ ...e, prompt: String(brief.text) })
-    if (started.agentId) await $.store.set(briefedKey(started.agentId), { flowDir, stepId: step.id } satisfies StepRef)
+    if (started.agentId) await $.store.set(briefedKey(started.agentId), { flowDir, stepId: step.id, maxFixes: fixLimit(step) } satisfies StepRef)
     return started
   })
 
@@ -54,20 +55,32 @@ export const register: Register = on => {
     const fixes = ((await $.store.get(fixesKey(agentId))) as number | undefined) ?? 0 // fix rounds so far
     const say = (text: string) => fixes ? (tellOrchestrator($, text), done) : { ...done, text } // in a fix round the orchestrator already waits
 
+    // The mod talks to the subagent itself. A hook has a short budget, so it does not wait: the next end of the subagent comes back here.
+    // The answer is the reply to give, or undefined when no fix is left or the message did not arrive.
+    const askFix = async (message: string, what: string) => {
+      const sent = fixes < ref.maxFixes ? await $.session.send({ to: { agentId }, text: message }).catch(() => ({ isDelivered: false })) : { isDelivered: false }
+      if (!sent.isDelivered) return
+      await $.store.set(fixesKey(agentId), fixes + 1)
+      return fixes ? done : { ...done, text: WAIT(what) }
+    }
+
     const result = readResultBlock(e.answer)
     if (!result) {
-      // The mod talks to the subagent itself. A hook has a short budget, so it does not wait: the next end of the subagent comes back here.
-      const sent = fixes < MAX_FIXES ? await $.session.send({ to: { agentId }, text: FIX_MESSAGE }).catch(() => ({ isDelivered: false })) : { isDelivered: false }
-      if (sent.isDelivered) {
-        await $.store.set(fixesKey(agentId), fixes + 1)
-        return fixes ? done : { ...done, text: 'The result of the step is missing. The subagent is asked to fix it. Wait: the plugin tells you when it is saved.' }
-      }
+      const asked = await askFix(FIX_MESSAGE, 'The result of the step is missing.')
+      if (asked) return asked
       await forget($, agentId)
       return say('Step result missing: nothing was saved. Start the step again.')
     }
 
-    await forget($, agentId)
     const script = scriptOf($)
+    const out = await script('run-verifiers', { flowDir: ref.flowDir, stepId: ref.stepId })
+    const run = readVerifierRun(out)
+    if (run?.result === 'fail') {
+      const asked = await askFix(failedChecksMessage(run.checks), 'The result of the step failed its checks.')
+      if (asked) return asked
+    }
+
+    await forget($, agentId)
     const saves = [
       ...result.memory.map(m => script('add-memory-entry', { flowDir: ref.flowDir, stepId: ref.stepId, ...m })),
       script('add-memory-entry', { flowDir: ref.flowDir, stepId: ref.stepId, topic: 'rerun-summary', info: { summary: result.summary } }),
@@ -75,6 +88,11 @@ export const register: Register = on => {
     ]
     const failed: string[] = []
     for (const save of await Promise.all(saves)) if (save.status !== 'ok') failed.push(String(save.message))
-    return say(failed.length ? `${result.summary}\n\nNot saved: ${failed.join(' | ')}` : result.summary)
+    const notes = [
+      ...(run ? [] : [`Verifiers did not run: ${String(out.message ?? 'bad answer')}`]),
+      ...(run?.result === 'fail' ? [`Checks still fail after ${fixes} fix tries (the result is saved anyway):\n${failedLines(run.checks)}`] : []),
+      ...(failed.length ? [`Not saved: ${failed.join(' | ')}`] : []),
+    ]
+    return say([result.summary, ...notes].join('\n\n'))
   })
 }

@@ -61,7 +61,15 @@ A regular step runs in a `step-executor` subagent. The subagent starts with noth
 
 The mod finds the step: it is the one `in_progress` in the newest flow of the session. The subagent reads no flow file to find its job.
 
-When the step ends, the subagent's last words are one result block (a summary, the memory entries and the log). The mod reads it and saves it with the flow script. The summary also goes to a private topic, `rerun-summary`, that only a re-run of the same step reads. If the block is missing or wrong, the mod asks the subagent to fix it (2 tries), then tells the main agent.
+When the step ends, the subagent's last words are one result block (a summary, the memory entries and the log). The mod reads it and saves it with the flow script. The summary also goes to a private topic, `rerun-summary`, that only a re-run of the same step reads. If the block is missing or wrong, the mod asks the subagent to fix it (2 tries), then tells the main agent. A step can also have verifier scripts (below).
+
+### Verifiers
+
+A step file can list **verifier** scripts (`"verifiers": [{"script": "check-design.py", "timeoutSec": 5}]`). Each script is a Python file in the step folder. The flow script copies its full path into the flow when the flow starts. When the subagent ends with a good result block, the mod runs the verifiers with the command `run-verifiers`, before it saves anything.
+
+A verifier prints one line of JSON and exits with 0: `{"status": "pass" | "fail", "checks": [{"name", "passed", "message"}]}`. It gets two arguments: the flow folder and the step id. The command never fails. A crash, a timeout (8 seconds at most, because a hook is short) or an answer in the wrong shape is one failed check, so a broken script counts as a failed step.
+
+If a check fails, the mod sends the failed checks to the same subagent, as it does for a missing result block. The step saves once: when all checks pass, or when no try is left. After the last try the mod saves the result anyway and tells the main agent which checks still fail. A step sets the number of tries with `maxFixes` (0 to 5, default 2). It also applies to a missing result block.
 
 When the step ends, its context is gone. Anything a later step needs must be in a memory topic or a deliverable file. If you ask for changes, the step runs again as a new subagent, with the brief above.
 

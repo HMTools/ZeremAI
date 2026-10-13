@@ -5,7 +5,14 @@ import type { Flow } from '../flow-types/flow-types'
 
 export const briefedKey = (agentId: string) => `briefed:${agentId}`
 export const fixesKey = (agentId: string) => `fixes:${agentId}`
-export type StepRef = { flowDir: string; stepId: string }
+export type StepRef = { flowDir: string; stepId: string; maxFixes: number }
+
+// How many times the mod asks the subagent to fix its result or its failed checks. A step can set it with `maxFixes`.
+export const DEFAULT_FIXES = 2
+export const fixLimit = (step: { stepDefinition?: { maxFixes?: number } } | undefined) => {
+  const n = step?.stepDefinition?.maxFixes
+  return Number.isInteger(n) && n! >= 0 && n! <= 5 ? n! : DEFAULT_FIXES
+}
 
 export const stepInProgress = (flow: Flow | undefined) => flow?.steps?.find(s => s.status === 'in_progress')
 
@@ -52,3 +59,14 @@ export function readResultBlock(text: string): StepResult | undefined {
 export const FIX_MESSAGE =
   'Your result block is missing or wrong. End your answer again with one ```json block with "summary" (text), ' +
   '"memory" (a list of {topic, info, decisions, files}) and "log" (lists: actions, reasoning, filesModified, problems, decisions, performanceNotes).'
+
+export type Check = { name: string; passed: boolean; message?: string }
+// The answer of the run-verifiers command: the script never fails it, so anything else is a fault of the script itself.
+export function readVerifierRun(out: Record<string, unknown>): { result: 'pass' | 'fail'; checks: Check[] } | undefined {
+  if (out.status !== 'ok' || (out.result !== 'pass' && out.result !== 'fail') || !Array.isArray(out.checks)) return
+  return { result: out.result, checks: out.checks as Check[] }
+}
+
+export const failedLines = (checks: Check[]) => checks.filter(c => !c.passed).map(c => `- ${c.name}${c.message ? `: ${c.message}` : ''}`).join('\n')
+export const failedChecksMessage = (checks: Check[]) =>
+  `Your work failed these checks:\n${failedLines(checks)}\nFix the work. Then end your answer again with the result block.`

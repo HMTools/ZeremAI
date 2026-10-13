@@ -335,6 +335,34 @@ class Installed(Base):
         self.assertEqual(self.run_check('--dir', folder), {'status': 'ok', 'findings': []})
 
 
+class Verifiers(Base):
+    def with_step(self, **extra):
+        return self.edit(lambda d: d['newSteps'][0].update(extra))
+
+    def test_a_good_verifier_and_max_fixes_pass(self):
+        self.assertEqual(self.check(self.with_step(verifiers=[{'script': 'check-design.py', 'timeoutSec': 5}], maxFixes=3)), {'status': 'ok', 'findings': []})
+
+    def test_bad_verifiers_are_must_fix(self):
+        for extra, text in [({'verifiers': 'check.py'}, 'verifiers must be a list'),
+                            ({'verifiers': [{}]}, 'a verifier needs "script"'),
+                            ({'verifiers': [{'script': '../check.py'}]}, 'a verifier needs "script"'),
+                            ({'verifiers': [{'script': 'check.sh'}]}, 'a verifier needs "script"'),
+                            ({'verifiers': [{'script': 'c.py', 'timeoutSec': 60}]}, 'timeoutSec must be'),
+                            ({'maxFixes': 9}, 'maxFixes must be'),
+                            ({'maxFixes': True}, 'maxFixes must be')]:
+            self.bad(self.with_step(**extra), text)
+
+    def test_a_folder_must_hold_the_script(self):
+        folder = self.root + '/fix-bug'
+        self.put(folder + '/fix-bug.json', template())
+        self.put(folder + '/diagnose/diagnose.json', {**step_file(), 'verifiers': [{'script': 'check.py'}]})
+        out = self.run_check('--dir', folder)
+        self.assertTrue([f for f in out['findings'] if 'verifier "check.py" is not in the step folder' in f['text']], out)
+        with open(folder + '/diagnose/check.py', 'w') as f:
+            f.write('')
+        self.assertEqual(self.run_check('--dir', folder), {'status': 'ok', 'findings': []})
+
+
 class DirMode(Base):
     def test_stepref_must_be_a_step_file_of_the_folder(self):
         folder = self.root + '/fix-bug'

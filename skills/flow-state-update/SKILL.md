@@ -109,6 +109,16 @@ The answer is `{"status": "ok", "topic": "context", "data": {...}}`, or `"data":
 
 ---
 
+### run_verifiers
+
+Run the verifier scripts of a step. The answer is always `status: ok`, with `result` (`pass` or `fail`) and `checks` (`name`, `passed`, `message`). A step with no verifiers passes. It only reads. The plugin runs it when a step subagent ends, so a step subagent can use it to check its own work first.
+
+| Input | Required | Description |
+|-------|----------|-------------|
+| `flowDir`, `stepId` | Yes | Flow folder and step |
+
+---
+
 ### get_step_brief
 
 Give the prompt of a step subagent as one text: the step, the flow parameters, the content of the memory topics it reads, and on a re-run its earlier summary and the corrections. It only reads. The plugin runs it when you start a step subagent: you never need it.

@@ -1,5 +1,5 @@
 import { test, expect } from 'claude-code/testing'
-import { correctionsOf, readResultBlock, stepInProgress } from './step-brief'
+import { correctionsOf, failedChecksMessage, fixLimit, readResultBlock, readVerifierRun, stepInProgress } from './step-brief'
 
 const block = (value: unknown) => `Done.\n\n\`\`\`json\n${JSON.stringify(value)}\n\`\`\``
 
@@ -36,4 +36,21 @@ test('the step in progress, or none', () => {
   expect(stepInProgress({ steps: [{ id: 'a', status: 'completed' }, { id: 'b', status: 'in_progress' }] })?.id).toBe('b')
   expect(stepInProgress({ steps: [{ id: 'a', status: 'pending' }] })).toBeUndefined()
   expect(stepInProgress(undefined)).toBeUndefined()
+})
+
+test('the fix limit is the maxFixes of the step, 2 if it is not a whole number from 0 to 5', () => {
+  const of = (maxFixes: unknown) => fixLimit({ stepDefinition: { maxFixes } as never })
+  expect([of(0), of(3), of(5)]).toEqual([0, 3, 5])
+  expect([of(undefined), of(-1), of(6), of(1.5), of('3')]).toEqual([2, 2, 2, 2, 2])
+  expect(fixLimit(undefined)).toBe(2)
+})
+test('a verifier run is the answer of the script when it says pass or fail with a list of checks', () => {
+  expect(readVerifierRun({ status: 'ok', result: 'fail', checks: [{ name: 'a', passed: false }] })).toEqual({ result: 'fail', checks: [{ name: 'a', passed: false }] })
+  for (const bad of [{ status: 'error', message: 'x' }, { status: 'ok' }, { status: 'ok', result: 'maybe', checks: [] }, { status: 'ok', result: 'pass' }])
+    expect(readVerifierRun(bad)).toBeUndefined()
+})
+test('the message to the subagent lists only the failed checks', () => {
+  const text = failedChecksMessage([{ name: 'a', passed: false, message: 'fix a' }, { name: 'b', passed: true }, { name: 'c', passed: false }])
+  expect(text).toContain('- a: fix a\n- c\n')
+  expect(text).not.toContain('- b')
 })

@@ -9,12 +9,14 @@ Exit code 0 for ok, 1 for error.
 
 Test hooks (environment): FLOW_MANAGER_NOW, FLOW_MANAGER_HOME, FLOW_MANAGER_PLUGIN_ROOT.
 """
+import concurrent.futures
 import contextlib
 import datetime
 import hashlib
 import json
 import os
 import shutil
+import subprocess
 import sys
 import tempfile
 import uuid
@@ -34,7 +36,7 @@ FINDING_STATUSES = ['applied', 'rejected', 'deferred']
 PATH_INPUTS = ['flowDir', 'templatePath', 'projectPath', 'parentFlowPath', 'childFlowPath']
 
 # A step definition is copied into the flow, so the flow does not change when the template does.
-EMBED_FIELDS = ['output', 'guidance', 'substeps', 'flow', 'memoryFileUsage', 'parameters']
+EMBED_FIELDS = ['output', 'guidance', 'substeps', 'flow', 'memoryFileUsage', 'parameters', 'verifiers', 'maxFixes']
 EXTRA_EMBED_FIELDS = ['improvementCategories', 'prioritization', 'workflow', 'successCriteria', 'searchModes', 'changeProposalFormat', 'captureTypes']
 
 # The summary of a step's last run. Only the mod writes it (it is always allowed), and only a re-run of the same step reads it.
@@ -202,6 +204,14 @@ def embed(data):
     return {f: data[f] for f in EMBED_FIELDS + EXTRA_EMBED_FIELDS if f in data}
 
 
+def verifier_path(folder, script):
+    """The full path of a verifier file: a file of the step folder, never one outside it."""
+    path = os.path.realpath(os.path.join(folder, script)) if isinstance(script, str) and script else ''
+    if not path.startswith(os.path.realpath(folder) + os.sep):
+        fail('A verifier must name a file inside its step folder, got: ' + js_text(script))
+    return slash(path)
+
+
 def create_flow(a):
     flow_dir = a['flowDir']
     if os.path.exists(flow_dir + '/flow.json'):
@@ -224,6 +234,9 @@ def create_flow(a):
         if truthy(ref):
             if ref in step_files:
                 definition = embed(read_json(step_files[ref]))
+                step_folder = os.path.dirname(step_files[ref])
+                for verifier in nn(definition.get('verifiers'), []):
+                    verifier['script'] = verifier_path(step_folder, verifier.get('script') if isinstance(verifier, dict) else None)
             else:
                 # No fallback: the id must be found.
                 definition = nn(d.get('stepDefinition'), {})
@@ -490,6 +503,71 @@ def get_step_brief(a):
             parts.append(block('Earlier summary', earlier))
         parts.append(block('User corrections', corrections))
     return {'status': 'ok', 'text': '\n'.join(parts)}
+
+
+# ── verifiers ─────────────────────────────────────────────────────────────
+
+# The mod runs the verifiers inside a hook, which has about 10 seconds. So no script can run longer than this.
+VERIFIER_MAX_SEC = 8
+
+
+def read_answer(text):
+    """The checks of a verifier answer: the last line of stdout, {"status": "pass"|"fail", "checks": [{name, passed, message?}]}.
+    None if it is not that shape, or if the status does not agree with the checks."""
+    try:
+        answer = json.loads(text.strip().splitlines()[-1])
+    except (ValueError, IndexError):
+        return None
+    if not isinstance(answer, dict) or answer.get('status') not in ('pass', 'fail') or not isinstance(answer.get('checks'), list):
+        return None
+    checks = []
+    for c in answer['checks']:
+        if not (isinstance(c, dict) and isinstance(c.get('name'), str) and isinstance(c.get('passed'), bool) and isinstance(c.get('message', ''), str)):
+            return None
+        checks.append({'name': c['name'], 'passed': c['passed'], 'message': c.get('message', '')[:500]})
+    return checks if (answer['status'] == 'pass') == all(c['passed'] for c in checks) else None
+
+
+def run_verifier(verifier, flow_dir, step_id, cwd):
+    """The checks of one verifier. It never raises: a crash, a timeout or a wrong answer is one failed check."""
+    script = verifier.get('script') if isinstance(verifier, dict) else None
+    name = os.path.basename(script) if isinstance(script, str) else 'verifier'
+
+    def failed(text):
+        return [{'name': name, 'passed': False, 'message': text}]
+    if not isinstance(script, str) or not os.path.isfile(script):
+        return failed('verifier file not found')
+    try:
+        limit = min(max(float(nn(verifier.get('timeoutSec'), 5)), 1), VERIFIER_MAX_SEC)
+    except (TypeError, ValueError):
+        limit = 5
+    try:
+        done = subprocess.run([sys.executable, script, flow_dir, step_id], capture_output=True, text=True, encoding='utf-8', errors='replace', timeout=limit, cwd=cwd)
+    except subprocess.TimeoutExpired:
+        return failed('verifier timed out after %gs' % limit)
+    except Exception as error:
+        return failed('verifier could not start: ' + (str(error) or error.__class__.__name__))
+    if done.returncode != 0:
+        return failed('verifier crashed: ' + ((done.stderr.strip().splitlines() or ['no message'])[-1])[:300])
+    checks = read_answer(done.stdout)
+    return checks if checks is not None else failed('verifier answer is not valid')
+
+
+def run_verifiers(a):
+    """Run the verifiers of a step. The answer is always status ok: result is pass or fail, with the checks of all verifiers.
+    A step with no verifiers passes with no checks. It only reads."""
+    d = a['flowDir']
+    flow = read_flow(d)
+    step = next((s for s in flow['steps'] if s.get('id') == a['stepId']), None)
+    if step is None:
+        fail('Step %s not found' % a['stepId'])
+    verifiers = nn((step.get('stepDefinition') or {}).get('verifiers'), [])
+    paths = nn((flow.get('metadata') or {}).get('projectPaths'), [])
+    cwd = paths[0] if paths and os.path.isdir(paths[0]) else None
+    with concurrent.futures.ThreadPoolExecutor(max_workers=max(1, len(verifiers))) as pool:
+        groups = list(pool.map(lambda v: run_verifier(v, d, a['stepId'], cwd), verifiers))
+    checks = [c for g in groups for c in g]
+    return {'status': 'ok', 'result': 'pass' if all(c['passed'] for c in checks) else 'fail', 'checks': checks}
 
 
 # ── log ───────────────────────────────────────────────────────────────────
@@ -773,6 +851,7 @@ TOOLS = {
     'add_memory_entry': (['flowDir', 'stepId', 'topic'], {}, add_memory_entry),
     'read_memory_topic': (['flowDir', 'stepId', 'topic'], {}, read_memory_topic),
     'get_step_brief': (['flowDir', 'stepId'], {}, get_step_brief),
+    'run_verifiers': (['flowDir', 'stepId'], {}, run_verifiers),
     'add_log_entry': (['flowDir', 'stepId'], {}, add_log_entry),
     'log_interaction': (['flowDir', 'stepId', 'request', 'reason', 'response'], {}, log_interaction),
     'update_flow_status': (['flowDir', 'status'], {'status': FLOW_STATUSES}, update_flow_status),

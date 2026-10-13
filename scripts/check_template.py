@@ -222,6 +222,22 @@ def check_template(t, steps, installed, known_ids, prefix='', overwrite=True, lo
     return out
 
 
+def verifier_problems(s):
+    """Shape of the verifiers and maxFixes of a step file."""
+    out = []
+    if 'verifiers' in s and not isinstance(s['verifiers'], list):
+        return ['verifiers must be a list']
+    for v in s.get('verifiers') or []:
+        script = v.get('script') if isinstance(v, dict) else None
+        if not (isinstance(script, str) and re.match(r'^[\w.-]+\.py$', script)):
+            out.append('a verifier needs "script": a .py file name in the step folder')
+        if isinstance(v, dict) and 'timeoutSec' in v and not (isinstance(v['timeoutSec'], (int, float)) and not isinstance(v['timeoutSec'], bool) and 0 < v['timeoutSec'] <= 8):
+            out.append('timeoutSec must be a number above 0 and up to 8')
+    if 'maxFixes' in s and not (isinstance(s['maxFixes'], int) and not isinstance(s['maxFixes'], bool) and 0 <= s['maxFixes'] <= 5):
+        out.append('maxFixes must be a whole number from 0 to 5')
+    return out
+
+
 def check_step_files(steps, prefix=''):
     """Findings of the step definitions of one template, plus a duplicate id check inside it."""
     out, seen = [], set()
@@ -241,6 +257,7 @@ def check_step_files(steps, prefix=''):
             problems.append('metadata.title is missing')
         if not s.get('guidance'):
             problems.append('guidance is missing')
+        problems += verifier_problems(s)
         if s.get('id') in seen:
             problems.append('id is used twice')
         seen.add(s.get('id'))
@@ -275,9 +292,15 @@ def check_dir(folder, known=(), overwrite=True, lookup=None):
     path = '%s/%s.json' % (folder, os.path.basename(folder))
     template = read_json(path)
     steps = []
+    missing = []
     for id_, step_path in registry(folder, 'step').items():
-        steps.append(read_json(step_path))
-    return check_step_files(steps) + check_template(template, steps, installed_templates(folder), list(known), overwrite=overwrite, lookup=lookup)
+        step = read_json(step_path)
+        steps.append(step)
+        for v in step['verifiers'] if isinstance(step.get('verifiers'), list) else []:
+            script = v.get('script') if isinstance(v, dict) else None
+            if isinstance(script, str) and not os.path.isfile(os.path.join(os.path.dirname(step_path), script)):
+                missing.append({'at': step.get('name', id_), 'level': 'must-fix', 'text': 'Step file: verifier "%s" is not in the step folder.' % script})
+    return missing + check_step_files(steps) + check_template(template, steps, installed_templates(folder), list(known), overwrite=overwrite, lookup=lookup)
 
 
 def check_marketplace(root):
