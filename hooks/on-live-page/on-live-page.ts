@@ -34,6 +34,35 @@ async function call($: any, input: Record<string, unknown>): Promise<any> {
   return result
 }
 
+// The database refuses a write to a document that exists unless it names the version it last saw. This mod is the only writer, so it keeps the version of each
+// document it wrote, learns the rest with one list of the collection (ponytail: first 1000 documents), and learns again when a write says the version is wrong.
+const versions = new Map<string, number>() // `url collection/doc` → version
+type Write = { op: string; collection: string; doc_id: string; data?: unknown; if_version?: number }
+const keyOf = (url: string, w: Write) => `${url} ${w.collection}/${w.doc_id}`
+
+async function learn($: any, url: string, collection: string): Promise<void> {
+  const text = String((await call($, { tool: 'ArtifactData', action: 'list', url, collection, query: { limit: 1000 } })).text ?? '')
+  for (const line of text.split('\n')) {
+    if (!line.startsWith('{"id":')) continue
+    try { const doc = JSON.parse(line); versions.set(`${url} ${collection}/${doc.id}`, doc.version) } catch { /* not a document line */ }
+  }
+}
+
+async function writeBatch($: any, url: string, writes: Write[]): Promise<void> {
+  for (let attempt = 0; ; attempt++) {
+    for (const collection of new Set(writes.filter(w => !versions.has(keyOf(url, w))).map(w => w.collection))) await learn($, url, collection)
+    const pinned = writes.map(w => (versions.has(keyOf(url, w)) ? { ...w, if_version: versions.get(keyOf(url, w)) } : w))
+    try {
+      const text = String((await call($, { tool: 'ArtifactData', action: 'batch', url, writes: pinned })).text ?? '')
+      for (const [, collection, id, version] of text.matchAll(/- (?:set|update) "([^"]+)"\/"([^"]+)" \(version (\d+)\)/g)) versions.set(`${url} ${collection}/${id}`, Number(version))
+      return
+    } catch (error) {
+      if (attempt > 0 || !/version_mismatch/.test(String((error as Error)?.message))) throw error
+      for (const key of [...versions.keys()]) if (key.startsWith(`${url} `)) versions.delete(key)
+    }
+  }
+}
+
 const portsOf = ($: any, url: string): LivePorts => ({
   files: {
     home: async () => (await $.env.get('HOME')) ?? (await $.env.get('USERPROFILE')),
@@ -41,7 +70,7 @@ const portsOf = ($: any, url: string): LivePorts => ({
     exists: path => $.fs.exists(path),
     read: path => $.fs.read(path),
   },
-  batch: async writes => { await call($, { tool: 'ArtifactData', action: 'batch', url, writes }) },
+  batch: writes => writeBatch($, url, writes as Write[]),
   now: () => new Date().toISOString(),
 })
 
@@ -88,6 +117,22 @@ async function openPage($: any, url: string): Promise<boolean> {
   try { await call($, { tool: 'Artifact', action: 'open', url }); return true } catch { return false }
 }
 
+// The system opener, as the flow pane opens a file on Desktop. It shows the page in the default browser.
+async function openWithSystem($: any, url: string): Promise<boolean> {
+  const windows = (await $.env.get('OS')) === 'Windows_NT'
+  for (const argv of windows ? [['cmd', '/c', 'start', '', url]] : [['open', url], ['xdg-open', url]]) {
+    const run = await $.process.run(argv).catch(() => undefined)
+    if (run && run.exitCode === 0) return true
+  }
+  return false
+}
+
+// A press opens the stored link. The Artifact tool does not always answer from inside a press (it did from the command), so the system opener comes next, then the link in a toast.
+async function pressLive($: any, url: string): Promise<void> {
+  if ((await openPage($, url)) || (await openWithSystem($, url))) return
+  try { await $.ui.toast(`Live page: ${url}`) } catch { /* a surface with no toast */ }
+}
+
 // One message, once, when the first flow starts and the page does not exist yet.
 async function tip($: any): Promise<void> {
   if ((await $.store.get(URL_KEY)) || (await $.store.get(TIP_KEY))) return
@@ -117,7 +162,7 @@ export const register: Register = on => {
     const theirs = await next(e).catch(() => undefined)
     if (!url) return theirs
     const { Box, Button } = $.ui.resolve(e)
-    return Box({ flexDirection: 'column', children: [...(theirs ? [theirs] : []), Button({ key: 'band-live', plain: true, onPress: () => void openPage($, url), children: ['Live page ↗'] })] })
+    return Box({ flexDirection: 'column', children: [...(theirs ? [theirs] : []), Button({ key: 'band-live', plain: true, onPress: () => void pressLive($, url), children: ['Live page ↗'] })] })
   })
 
   // on-flow-pane answers every other word of /zeremai and passes "live" on.

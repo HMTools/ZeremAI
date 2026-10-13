@@ -8,7 +8,7 @@ const flow = { id: 'f1', name: 'Fix', status: 'running', metadata: { template: '
 const OK = JSON.stringify({ status: 'ok', files_written: ['flow.json'] })
 
 // A fake disk with one flow, a store, and stand-ins for the engine's Bash, ArtifactData and Artifact tools.
-function world(on: On, { url = '', fail = false, page = true, noOpen = false } = {}) {
+function world(on: On, { url = '', fail = false, page = true, noOpen = false, stale = 0 } = {}) {
   const all: Record<string, string> = { [`${DIR}/flow.json`]: JSON.stringify(flow) }
   const store: Record<string, unknown> = { 'session:S1': [DIR] }
   if (url) store.livePageUrl = url
@@ -31,7 +31,13 @@ function world(on: On, { url = '', fail = false, page = true, noOpen = false } =
   on('prompt.submit', async () => ({ drop: 'test' }))
   on('session.start', async () => ({ cwd: '/work' }) as never)
   on('tool.call', async (_$, e: any) => {
-    if (e.tool === 'ArtifactData') { data.push(e); return (fail ? { result: {}, isError: true, text: 'not allowed' } : { result: {}, text: 'ok' }) as never }
+    if (e.tool === 'ArtifactData' && e.action === 'list') return { result: {}, text: `1 document\n${JSON.stringify({ id: 'mod', data: {}, version: 7 })}` } as never
+    if (e.tool === 'ArtifactData') {
+      data.push(e)
+      if (fail) return { result: {}, isError: true, text: 'not allowed' } as never
+      if (stale-- > 0) return { result: {}, isError: true, text: 'db batch write failed (version_mismatch)' } as never
+      return { result: {}, text: e.writes.map((x: any) => `- ${x.op} "${x.collection}"/"${x.doc_id}" (version ${(x.if_version ?? 0) + 1})`).join('\n') } as never
+    }
     if (e.tool === 'Artifact' && e.action === 'open') { if (noOpen) throw new Error('no browser'); opened.push(e.url); return { result: {}, text: 'shown' } as never }
     if (e.tool === 'Artifact') { published.push(e); return { result: {}, text: `Published ${e.file_path} at ${URL} (Version 1)` } as never }
     return { result: { stdout: OK, stderr: '', interrupted: false } } as never
@@ -60,6 +66,15 @@ test('with a link stored, a flow command writes the flow once, and an unchanged 
   const first = w.data.length
   await $.tool.call({ tool: 'Bash', command: command(root) })
   expect(w.data).toHaveLength(first)
+})
+
+test('a document that already exists is written with the version the database holds; a wrong version is learned once and retried', async ($, on) => {
+  const w = world(on, { url: 'https://claude.ai/artifact/Pinned', stale: 1 })
+  await $.command.run({ command: 'zeremai', args: 'live' })
+  const beat = w.data.flatMap(d => d.writes).filter((x: any) => x.doc_id === 'mod')
+  expect(w.data.flatMap(d => d.writes).filter((x: any) => x.doc_id === 'f1')).toHaveLength(2) // the first try failed on a wrong version, the retry went through
+  expect(beat.map((x: any) => x.if_version)).toEqual([7, 8]) // pinned to the version the database holds, then to the one the last write returned
+  expect(w.store.livePageError).toBeUndefined()
 })
 
 test('a page that refuses the write never breaks the flow command: the reason is kept', async ($, on) => {
@@ -105,7 +120,25 @@ test('the band shows a Live page button only when a link is stored, and a press 
   const band = await $.ui.mount(BAND)
   expect(await band.find({ type: 'Button', key: 'band-live' })).toBeDefined()
   await band.press({ key: 'band-live' })
+  for (let i = 0; i < 100 && !w.opened.length; i++) await new Promise(r => setTimeout(r, 5)) // the press starts the command and does not wait for it
+  expect(w.toasts).toEqual([])
   expect(w.opened).toEqual([URL])
+})
+
+test('a press that the Artifact tool cannot open goes to the system opener, then to the link in a toast', async ($, on) => {
+  const w = world(on, { url: URL, noOpen: true })
+  const ran: string[][] = []
+  let code = 0
+  on('process.run', async (_$, e: any) => { ran.push(e.argv); return { value: { exitCode: code, stdout: '', stderr: '', timedOut: false } } as never })
+  const band = await $.ui.mount(BAND)
+  await band.press({ key: 'band-live' })
+  for (let i = 0; i < 100 && !ran.length; i++) await new Promise(r => setTimeout(r, 5))
+  expect(ran[0]).toEqual(['open', URL])
+  expect(w.toasts).toEqual([])
+  code = 1
+  await band.press({ key: 'band-live' })
+  for (let i = 0; i < 100 && !w.toasts.length; i++) await new Promise(r => setTimeout(r, 5))
+  expect(w.toasts).toEqual([`Live page: ${URL}`])
 })
 
 const createCommand = (root: string) => `python3 ${root}/scripts/flow_manager.py create-flow --json '${JSON.stringify({ flowDir: DIR, templatePath: '/h/.claude/zeremai/templates/flows/dev/bug/bug.json', name: 'Fix' })}'`
