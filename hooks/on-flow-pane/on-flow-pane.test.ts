@@ -10,7 +10,7 @@ const BAND = {
 } as const
 
 // A fake disk (path → text), a store, and stand-ins for the Artifact tool (`opened`) and the system opener (`ran`).
-function world(on: On, disk: Record<string, unknown>, { url = '', noOpen = false, opener = 0 } = {}) {
+function world(on: On, disk: Record<string, unknown>, { url = '', noOpen = false, opener = 0, cmdFail = false } = {}) {
   const files: Record<string, string> = Object.fromEntries(Object.entries(disk).map(([k, v]) => [k, JSON.stringify(v)]))
   const under = (folder: string) => Object.keys(files).filter(p => p.startsWith(`${folder}/`))
   mock.env(on, { HOME: '/h' })
@@ -28,6 +28,7 @@ function world(on: On, disk: Record<string, unknown>, { url = '', noOpen = false
   on('fs.read', async (_$, e) => ({ value: files[e.path] }))
   on('ui.toast', async (_$, e: any) => { toasts.push(e.text); return { value: undefined } })
   on('process.run', async (_$, e: any) => { ran.push(e.argv); return { value: { exitCode: code, stdout: '', stderr: '', timedOut: false } } as never })
+  on('command.run', async (_$, e: any) => { if (cmdFail) throw new Error('command failed'); if (e.command === 'zeremai') store.livePageUrl = URL; return { value: undefined } as never })
   on('tool.call', async (_$, e: any) => {
     if (e.tool === 'Artifact' && e.action === 'open') { if (noOpen) return { result: {}, isError: true, text: 'no browser' } as never; opened.push(e.url); return { result: {}, text: 'shown' } as never }
     return { result: {}, text: '' } as never
@@ -86,9 +87,16 @@ test('a press that nothing can open shows the link in a toast', async ($, on) =>
   expect(w.toasts).toEqual([`ZeremAI: ${URL}#S1`])
 })
 
-test('a press with no site set up says what to run', async ($, on) => {
+test('a press with no site set up auto-runs /zeremai and opens it', async ($, on) => {
   const w = world(on, {})
   await press(await $.ui.mount(BAND))
-  expect(w.toasts).toEqual(['Run /zeremai once to set up the site.'])
+  expect(w.opened).toEqual([`${URL}#S1`])
+  expect(w.toasts).toEqual([])
+})
+
+test('a press with no site set up and command fails shows error', async ($, on) => {
+  const w = world(on, {}, { cmdFail: true })
+  await press(await $.ui.mount(BAND))
+  expect(w.toasts).toEqual(['Could not set up ZeremAI. Run /zeremai to try again.'])
   expect(w.opened).toEqual([])
 })

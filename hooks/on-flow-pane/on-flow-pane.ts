@@ -63,8 +63,12 @@ async function callTool($: any, input: Record<string, unknown>): Promise<void> {
 // The Artifact tool shows the page in the surface the user works in. If it fails, the system opener shows it in the browser. If that fails too, the link goes in a toast.
 async function openSite($: any): Promise<void> {
   const toast = async (text: string) => { try { await $.ui.toast(text) } catch { /* a surface with no toast */ } }
-  const stored = (await $.store.get('livePageUrl')) as string | undefined
-  if (!stored) return toast('Run /zeremai once to set up the site.')
+  let stored = (await $.store.get('livePageUrl')) as string | undefined
+  if (!stored) {
+    try { await $.command.run('zeremai'); return } catch { /* command failed: fall through to toast */ }
+  }
+  stored = (await $.store.get('livePageUrl')) as string | undefined
+  if (!stored) return toast('Could not set up ZeremAI. Run /zeremai to try again.')
   const url = `${stored}#${await $.session.id()}` // the session that runs the actions of the site
   try { await callTool($, { tool: 'Artifact', action: 'open', url }); return } catch { /* the system opener next */ }
   const windows = (await $.env.get('OS')) === 'Windows_NT'
