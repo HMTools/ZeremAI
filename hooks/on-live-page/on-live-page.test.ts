@@ -77,6 +77,14 @@ test('a document that already exists is written with the version the database ho
   expect(w.store.livePageError).toBeUndefined()
 })
 
+test('an error that an older copy of the module stored is cleared by the next good push', async ($, on) => {
+  const w = world(on, { url: URL })
+  w.store.livePageError = 'version_mismatch from before the reload'
+  const r: any = await $.command.run({ command: 'zeremai', args: 'live' })
+  expect(r.text).not.toContain('last write failed')
+  expect(w.store.livePageError).toBeUndefined()
+})
+
 test('a page that refuses the write never breaks the flow command: the reason is kept', async ($, on) => {
   const w = world(on, { url: URL, fail: true })
   const r: any = await $.tool.call({ tool: 'Bash', command: command(await rootOf($)) })

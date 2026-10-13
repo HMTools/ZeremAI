@@ -20,7 +20,6 @@ const last = new Map<string, string>() // the text of each document at the last 
 let timer: { cancel(): void } | undefined
 let ticks = 0
 let busy = false
-let hadError = false
 
 // ArtifactData and Artifact are deferred tools: a call before they are loaded fails, so load them once with ToolSearch and call again.
 async function call($: any, input: Record<string, unknown>): Promise<any> {
@@ -82,9 +81,8 @@ async function push($: any, beat = false): Promise<void> {
     const ports = portsOf($, url)
     await pushFlows(ports, last)
     if (beat) await heartbeat(ports)
-    if (hadError) { hadError = false; await $.store.delete(ERR_KEY) }
+    if ((await $.store.get(ERR_KEY)) !== undefined) await $.store.delete(ERR_KEY) // also an error that an older copy of this module stored, before a reload
   } catch (error) {
-    hadError = true
     await $.store.set(ERR_KEY, error instanceof Error ? error.message : String(error)).catch(() => {})
   }
   busy = false
