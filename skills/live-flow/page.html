@@ -1,0 +1,372 @@
+<title>ZeremAI Flows</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;600;700&family=Fragment+Mono&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,600;1,6..72,400&display=swap">
+<style>
+  /* Layout: a title and a freshness pill, a row of flow chips, then the picked flow: a needs-you card, the steps (runbook or two lanes), and a side panel with Step, Logs, Memory and Files. Same look as the view-template page, with a status colour on every step. */
+  :root {
+    --bg: #ffffff; --surface: #ffffff; --fg: #141413; --muted: #6b6a63; --line: #ecebe6; --line2: #d6d4cc; --hover: #f8f7f3; --sel: #fdf0e9;
+    --accent: #d97757; --accent-text: #b4532f; --accent-bg: #fdeee6; --ink: #141413; --on-ink: #ffffff;
+    --k-waiting: #8a5200; --k-waiting-bg: #fff1d6; --k-running: #1b6e49; --k-running-bg: #e3f3eb; --k-done: #6b6a63; --k-done-bg: #f1f0ec;
+    --k-failed: #b3261e; --k-failed-bg: #fdeae8; --k-paused: #5546a8; --k-paused-bg: #eceaf9; --k-pending: #6b6a63; --k-pending-bg: #f6f5f1;
+    --font-body: "Schibsted Grotesk", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --font-mono: "Fragment Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+    --bg: #1f1e1d; --surface: #2a2927; --fg: #f0eee6; --muted: #a8a69c; --line: #3a3834; --line2: #55524b; --hover: #32302d; --sel: #3a3834;
+    --accent: #e8845f; --accent-text: #e8845f; --accent-bg: #4a2e23; --ink: #f0eee6; --on-ink: #1f1e1d;
+    --k-waiting: #f0b84d; --k-waiting-bg: #3d3017; --k-running: #5fd39b; --k-running-bg: #17332a; --k-done: #a8a69c; --k-done-bg: #2f2e2b;
+    --k-failed: #ff8a80; --k-failed-bg: #432220; --k-paused: #b3a8ff; --k-paused-bg: #2b2850; --k-pending: #a8a69c; --k-pending-bg: #302f2c; color-scheme: dark; } }
+  :root[data-theme="dark"] {
+    --bg: #1f1e1d; --surface: #2a2927; --fg: #f0eee6; --muted: #a8a69c; --line: #3a3834; --line2: #55524b; --hover: #32302d; --sel: #3a3834;
+    --accent: #e8845f; --accent-text: #e8845f; --accent-bg: #4a2e23; --ink: #f0eee6; --on-ink: #1f1e1d;
+    --k-waiting: #f0b84d; --k-waiting-bg: #3d3017; --k-running: #5fd39b; --k-running-bg: #17332a; --k-done: #a8a69c; --k-done-bg: #2f2e2b;
+    --k-failed: #ff8a80; --k-failed-bg: #432220; --k-paused: #b3a8ff; --k-paused-bg: #2b2850; --k-pending: #a8a69c; --k-pending-bg: #302f2c; color-scheme: dark; }
+
+  body { background: var(--bg); color: var(--fg); font: 15px/1.55 var(--font-body); padding-inline: 16px; padding-block: 24px 40px; }
+  .wrap { max-width: 1180px; margin-inline: auto; display: grid; gap: 18px; }
+  h1, h2, h3, h4, p { margin: 0; } h1 { font-size: 24px; line-height: 1.15; letter-spacing: -.015em; font-weight: 650; } h2 { font-size: 22px; line-height: 1.2; letter-spacing: -.01em; font-weight: 650; text-wrap: balance; }
+  h4 { font-size: 13px; font-weight: 600; color: var(--muted); margin-bottom: 6px; }
+  code, .mono { font-family: var(--font-mono); font-size: 12.5px; }
+  button { font: inherit; color: inherit; cursor: pointer; } :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .muted { color: var(--muted); } .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .link { background: none; border: 0; padding: 0; color: var(--accent-text); font-weight: 550; text-align: left; } .link:hover { text-decoration: underline; }
+  .k { color: var(--k); } .k-waiting { --k: var(--k-waiting); --kb: var(--k-waiting-bg); } .k-running { --k: var(--k-running); --kb: var(--k-running-bg); } .k-done { --k: var(--k-done); --kb: var(--k-done-bg); }
+  .k-failed { --k: var(--k-failed); --kb: var(--k-failed-bg); } .k-paused { --k: var(--k-paused); --kb: var(--k-paused-bg); } .k-pending { --k: var(--k-pending); --kb: var(--k-pending-bg); }
+  .pill { display: inline-flex; gap: 5px; align-items: center; font-size: 12.5px; font-weight: 600; padding: 1px 9px; border-radius: 999px; background: var(--kb); color: var(--k); white-space: nowrap; }
+
+  /* top */
+  .top { display: flex; flex-wrap: wrap; gap: 6px 16px; align-items: center; } .fresh { margin-left: auto; font-size: 13px; font-weight: 600; display: inline-flex; gap: 7px; align-items: center; color: var(--muted); }
+  .fresh i { width: 9px; height: 9px; border-radius: 50%; background: var(--muted); display: inline-block; } .fresh.live { color: var(--k-running); } .fresh.live i { background: var(--k-running); animation: beat 2.4s ease-in-out infinite; }
+  .fresh.slow { color: var(--k-waiting); } .fresh.slow i { background: var(--k-waiting); } .fresh.off i { background: transparent; border: 2px solid var(--muted); }
+  @keyframes beat { 50% { opacity: .35; } }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip { display: inline-flex; gap: 8px; align-items: center; border: 1px solid var(--line2); background: var(--surface); border-radius: 12px; padding: 7px 12px; text-align: left; max-width: 100%; min-width: 0; }
+  .chip:hover { background: var(--hover); } .chip[aria-pressed="true"] { background: var(--sel); border-color: var(--accent); }
+  .chip b { font-weight: 600; overflow-wrap: anywhere; } .chip .w { font-size: 12.5px; color: var(--k); font-weight: 600; } .chip .sy { color: var(--k); }
+  .chip.need { border-color: var(--k); }
+
+  /* the picked flow */
+  .fhead { display: grid; gap: 6px; } .facts { color: var(--muted); font-size: 14px; display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; }
+  .vt { margin-left: auto; display: inline-flex; border: 1px solid var(--line2); border-radius: 8px; overflow: hidden; } .vt button { background: none; border: 0; padding: 3px 12px; font-size: 13px; font-weight: 550; color: var(--muted); }
+  .vt button + button { border-left: 1px solid var(--line2); } .vt button[aria-pressed="true"] { background: var(--sel); color: var(--fg); }
+  .need-card { border: 1px solid var(--k-waiting); background: var(--k-waiting-bg); border-radius: 14px; padding: 14px 16px; display: grid; gap: 4px; } .need-card b { font-size: 16.5px; color: var(--fg); }
+  .need-card .row2 { display: flex; flex-wrap: wrap; gap: 4px 14px; align-items: baseline; color: var(--fg); } .need-card small { color: var(--muted); font-size: 13.5px; }
+  .shell { display: grid; gap: 22px; grid-template-columns: minmax(0, 1fr); align-items: start; }
+  @media (min-width: 980px) { .shell { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 28px; } .side { position: sticky; top: 12px; max-height: calc(100vh - 40px); overflow: auto; } }
+  .list { min-width: 0; }
+
+  /* runbook */
+  .rb { font-family: "Newsreader", Georgia, serif; max-width: 600px; }
+  .rb .part { margin: 22px 0 2px; font: 700 11px/1.2 var(--font-body); letter-spacing: .12em; text-transform: uppercase; color: var(--accent-text); border-bottom: 1px solid var(--ink); padding-bottom: 6px; } .rb .part:first-child { margin-top: 0; }
+  .rb .st { display: grid; grid-template-columns: 32px minmax(0, 1fr); padding: 8px 10px 3px 0; cursor: pointer; border-radius: 8px; } .rb .st:hover { background: var(--hover); } .rb .st[aria-pressed="true"] { background: var(--sel); }
+  .rb .no { text-align: right; padding-right: 10px; font-size: 16px; line-height: 1.4; color: var(--k); font-family: var(--font-body); }
+  .rb .st b { font-size: 16.5px; font-weight: 600; line-height: 1.3; display: flex; flex-wrap: wrap; gap: 2px 10px; align-items: baseline; } .rb .st b .pill { font-family: var(--font-body); font-size: 12px; }
+  .rb .st p { font-size: 14.5px; line-height: 1.4; color: var(--muted); margin-top: 1px; }
+  .rb .stop { margin: 5px 0 2px 32px; border: 1px solid var(--accent-text); color: var(--accent-text); padding: 3px 9px; font: 700 10.5px var(--font-body); letter-spacing: .06em; text-transform: uppercase; display: inline-block; }
+  .rb .nt { margin: 3px 0 0 32px; font-style: italic; color: var(--muted); font-size: 14px; line-height: 1.4; }
+  .rb .nt button { font: inherit; font-style: italic; background: none; border: 0; padding: 0; color: var(--accent-text); text-decoration: underline; cursor: pointer; }
+  /* two lanes */
+  .lanes { border: 1px solid var(--line); border-radius: 14px; background: var(--surface); padding: 10px 6px 4px; overflow-x: auto; } .lanes svg { display: block; width: 100%; min-width: 560px; height: auto; }
+  .lp { cursor: pointer; } .lp rect { fill: var(--surface); stroke: var(--line2); stroke-width: 1.4; } .lp.you rect { fill: var(--accent-bg); stroke: var(--accent); } .lp:hover rect { stroke: var(--muted); }
+  .lp.k-waiting rect, .lp.k-failed rect, .lp.k-paused rect { stroke: var(--k); stroke-width: 2.2; } .lp.k-running rect { stroke: var(--k); } .lp.k-done { opacity: .75; }
+  .lp.sel rect { stroke: var(--accent); stroke-width: 2.8; } .lp:focus-visible rect { stroke: var(--accent); stroke-width: 2.8; }
+  .lp text { fill: var(--fg); font-family: var(--font-body); font-size: 13.5px; font-weight: 600; } .lp text.lnu { fill: var(--muted); font-family: var(--font-mono); font-size: 11.5px; font-weight: 400; } .lp text.lsy { fill: var(--k); font-size: 14px; }
+  .lnt { fill: var(--muted); font-family: var(--font-mono); font-size: 11px; } .lph { fill: var(--muted); font-family: var(--font-body); font-size: 12px; font-weight: 600; }
+  .lw { fill: none; stroke: var(--line2); stroke-width: 1.4; } .lw.you { stroke: var(--accent); opacity: .7; } .lmid { stroke: var(--line); stroke-dasharray: 3 5; }
+  .lhd { font-family: var(--font-mono); font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; } .lhd.c { fill: var(--muted); } .lhd.u { fill: var(--accent-text); }
+  .flash { animation: flash 2.6s ease-out; } .lp.flash rect { animation: flashr 2.6s ease-out; }
+  @keyframes flash { 0%, 25% { background: var(--accent-bg); box-shadow: 0 0 0 2px var(--accent); } 100% { box-shadow: 0 0 0 2px transparent; } }
+  @keyframes flashr { 0%, 25% { stroke: var(--accent); stroke-width: 4; } }
+
+  /* side panel */
+  .side { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; min-width: 0; }
+  .tabs { display: flex; border-bottom: 1px solid var(--line); padding: 0 10px; gap: 4px; overflow-x: auto; }
+  .tabs button { background: none; border: 0; padding: 14px 8px 11px; font-weight: 550; font-size: 14px; color: var(--muted); border-bottom: 2px solid transparent; white-space: nowrap; }
+  .tabs button[aria-selected="true"] { color: var(--fg); border-bottom-color: var(--accent); }
+  .pane { padding: 18px; display: grid; gap: 16px; min-width: 0; } .pane > * { min-width: 0; }
+  .pnav { display: flex; align-items: center; gap: 8px; } .pnav .arrows { margin-left: auto; display: inline-flex; gap: 4px; }
+  .pnav .arrows button { width: 28px; height: 28px; padding: 0; border: 1px solid var(--line2); border-radius: 8px; background: none; font-size: 17px; line-height: 1; }
+  .pnav .arrows button:hover:not(:disabled) { background: var(--hover); } .pnav .arrows button:disabled { opacity: .4; cursor: default; }
+  .sthead { display: grid; gap: 6px; } .sthead h3 { font-size: 19px; line-height: 1.25; font-weight: 650; overflow-wrap: anywhere; } .sub { color: var(--muted); font-size: 13.5px; }
+  .pane ul { margin: 0; padding-left: 18px; display: grid; gap: 4px; } .pane li { overflow-wrap: anywhere; }
+  .note { border-left: 2px solid var(--line2); padding: 2px 0 2px 12px; display: grid; gap: 4px; } .note.warn { border-left-color: var(--k-failed); } .note b { font-weight: 600; }
+  .lg, .tp { border-top: 1px solid var(--line); padding-top: 10px; } .lg:first-child, .tp:first-child { border-top: 0; padding-top: 0; }
+  details > summary { cursor: pointer; font-weight: 600; display: flex; flex-wrap: wrap; gap: 2px 10px; align-items: baseline; } details > summary .sub { font-weight: 400; } details[open] > summary { margin-bottom: 8px; }
+  .kv { display: grid; grid-template-columns: minmax(0, auto) minmax(0, 1fr); gap: 2px 12px; margin: 0; font-size: 14px; } .kv dt { color: var(--muted); font-family: var(--font-mono); font-size: 12.5px; } .kv dd { margin: 0; overflow-wrap: anywhere; }
+  .ent { display: grid; gap: 6px; padding: 8px 0 8px 12px; border-left: 2px solid var(--line2); margin-bottom: 6px; }
+  pre.df { margin: 0; font: 12.5px/1.6 var(--font-mono); overflow-x: auto; background: var(--hover); border-radius: 8px; padding: 8px 10px; } .df .a { color: var(--k-running); } .df .d { color: var(--k-failed); } .df .c { color: var(--k-waiting); }
+  .frow { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 10px; padding: 6px 0; border-top: 1px solid var(--line); align-items: baseline; } .frow:first-child { border-top: 0; } .frow .mono { overflow-wrap: anywhere; }
+  .empty { border: 1px dashed var(--line2); border-radius: 14px; padding: 36px 20px; text-align: center; display: grid; gap: 8px; justify-items: center; } .empty h2 { font-size: 20px; }
+  .none { color: var(--muted); }
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; scroll-behavior: auto !important; } }
+</style>
+
+<div class="wrap">
+  <header class="top"><h1>ZeremAI flows</h1><span class="fresh" id="fresh" role="group" aria-label="Data freshness"><i aria-hidden="true"></i><span id="freshTx">Connecting…</span></span></header>
+  <nav class="chips" id="chips" aria-label="Flows" hidden></nav>
+  <main id="main"></main>
+  <div class="sr" id="say" role="status" aria-live="polite"></div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+  /* ---- the six states: same symbols and words as hooks/infra/flow-pane/status-look.ts ---- */
+  var LOOK = { waiting: ['▲', 'waits for you'], running: ['●', 'running'], done: ['✓', 'done'], failed: ['✕', 'failed'], paused: ['‖', 'paused'], pending: ['○', 'pending'] };
+  var NEEDS = { waiting: 1, failed: 1, paused: 1 };
+  var $ = function (id) { return document.getElementById(id); };
+  function arr(x) { return Array.isArray(x) ? x : []; }
+  function str(x) { return typeof x === 'string' ? x : x == null ? '' : typeof x === 'object' ? JSON.stringify(x) : String(x); }
+  function kind(x) { return LOOK[x] ? x : 'pending'; }
+  function el(tag, attrs) {
+    var e = document.createElement(tag), k, kids = Array.prototype.slice.call(arguments, 2);
+    for (k in attrs || {}) { var v = attrs[k]; if (v == null || v === false) continue; if (k === 'class') e.className = v; else if (k.slice(0, 2) === 'on') e[k] = v; else e.setAttribute(k, v === true ? '' : v); }
+    (function add(list) { list.forEach(function (c) { if (Array.isArray(c)) return add(c); if (c == null || c === false) return; e.append(c.nodeType ? c : document.createTextNode(String(c))); }); })(kids);
+    return e;
+  }
+  function store(k, v) { try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v); } catch (e) { return null; } }
+  function ms(iso) { var t = Date.parse(iso); return isNaN(t) ? null : t; }
+  function hhmm(t) { return new Date(t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); }
+  function ago(t) { var s = Math.max(0, Math.round((Date.now() - t) / 1000)); return s < 60 ? s + ' s ago' : s < 3600 ? Math.round(s / 60) + ' min ago' : s < 86400 ? Math.round(s / 3600) + ' h ago' : Math.round(s / 86400) + ' d ago'; }
+  function pill(k) { k = kind(k); return el('span', { class: 'pill k-' + k }, LOOK[k][0], ' ', LOOK[k][1]); }
+
+  /* ---- state ---- */
+  var PREVIEW = /preview=1/.test(location.search) || location.hash === '#preview';
+  var S = { flows: {}, details: {}, beat: null, ready: false, offline: !navigator.onLine, owner: false, detailsBad: false, noDb: false,
+    sel: store('zf-flow'), stepSel: {}, view: store('zf-view') || (window.innerWidth < 720 ? 'runbook' : 'lanes'), tab: 'step', flash: {} };
+  var say = function (t) { $('say').textContent = t; };
+
+  /* ---- data in: one subscription each, never from render ---- */
+  function flowDoc(id, d) {
+    var steps = arr(d.steps).map(function (s) { s = s || {}; return { id: str(s.id), number: s.number, name: str(s.name), phase: str(s.phase), status: kind(s.status), approval: !!s.approval, loopBackTo: s.loopBackTo == null ? '' : str(s.loopBackTo), childFlowId: str(s.childFlowId), summary: str(s.summary) }; });
+    var n = d.needsYou && typeof d.needsYou === 'object' ? d.needsYou : null;
+    return { id: id, name: str(d.name) || id, template: str(d.template), status: kind(d.status), activeStepId: str(d.activeStepId), updatedAt: ms(d.updatedAt), parentFlowId: str(d.parentFlowId), counts: d.counts || {}, steps: steps,
+      needsYou: n ? { stepId: str(n.stepId), stepNumber: n.stepNumber, stepName: str(n.stepName), waitsFor: str(n.waitsFor), since: ms(n.since) } : null };
+  }
+  function takeFlows(docs) {
+    var next = {};
+    docs.forEach(function (d) {
+      var f = flowDoc(d.id, d.data() || {}), old = S.flows[d.id];
+      next[d.id] = f;
+      if (!old || !S.ready) return;
+      f.steps.forEach(function (s) {
+        var o = old.steps.filter(function (x) { return x.id === s.id; })[0];
+        if (o && o.status !== s.status) { S.flash[d.id + ':' + s.id] = 1; say(f.name + ', step ' + s.number + ' ' + s.name + ': ' + LOOK[s.status][1]); }
+      });
+      if (old.status !== f.status) { S.flash[d.id] = 1; if (NEEDS[f.status]) say(f.name + ' ' + LOOK[f.status][1]); }
+    });
+    S.flows = next; S.ready = true;
+    setTimeout(function () { S.flash = {}; }, 2700);
+    render();
+  }
+  function connect(db) {
+    db.collection('flows').onSnapshot(function (q) { S.offline = false; takeFlows(q.docs); }, function () { S.offline = true; S.ready = true; render(); });
+    db.collection('details').onSnapshot(function (q) { var m = {}; q.docs.forEach(function (d) { m[d.id] = d.data() || {}; }); S.details = m; render(); }, function () { S.detailsBad = true; render(); });
+    db.doc('meta/mod').onSnapshot(function (d) { var v = d.data(); S.beat = v ? ms(v.beat) : null; renderFresh(); }, function () {});
+  }
+  window.addEventListener('offline', function () { S.offline = true; renderFresh(); });
+  window.addEventListener('online', function () { S.offline = false; renderFresh(); });
+
+  /* ---- helpers on the data ---- */
+  function ordered() {
+    var rank = function (f) { return NEEDS[f.status] ? 0 : f.status === 'running' ? 1 : f.status === 'pending' ? 2 : 3; };
+    return Object.keys(S.flows).map(function (k) { return S.flows[k]; }).sort(function (a, b) { return rank(a) - rank(b) || (b.updatedAt || 0) - (a.updatedAt || 0) || a.name.localeCompare(b.name); });
+  }
+  function current(list) { return S.flows[S.sel] || list[0]; }
+  function activeIdx(f) {
+    var i = f.steps.map(function (s) { return s.id; }).indexOf(S.stepSel[f.id] || '');
+    if (i >= 0) return i;
+    i = f.steps.map(function (s) { return s.id; }).indexOf(f.activeStepId);
+    if (i >= 0) return i;
+    for (i = 0; i < f.steps.length; i++) if (f.steps[i].status !== 'done') return i;
+    return Math.max(0, f.steps.length - 1);
+  }
+  function stepNo(f) { var i = f.steps.map(function (s) { return s.id; }).indexOf(f.activeStepId); if (i < 0) i = f.steps.filter(function (s) { return s.status === 'done'; }).length; return Math.min(f.steps.length, i + 1); }
+  function showDetails() { return !S.detailsBad && (S.owner || Object.keys(S.details).length > 0); }
+  function det(f, kindName) { return S.details[f.id + '~' + kindName]; }
+  function pick(f, id, tab) { S.sel = f.id; store('zf-flow', f.id); S.stepSel[f.id] = id; if (tab) S.tab = tab; render(); }
+
+  /* ---- freshness: from the heartbeat, checked on a timer, never written ---- */
+  function lastChange() { var m = null; Object.keys(S.flows).forEach(function (k) { var t = S.flows[k].updatedAt; if (t && (!m || t > m)) m = t; }); return m; }
+  function renderFresh() {
+    var box = $('fresh'), tx = $('freshTx'), cls = '', text, last = lastChange(), ref = S.beat || last;
+    if (S.noDb) { box.className = 'fresh off'; tx.textContent = 'No page database'; return; }
+    if (S.offline) { cls = 'off'; text = 'Offline. This is the last data it got.'; }
+    else if (!S.ready) text = 'Connecting…';
+    else if (!ref) text = 'Waiting for ZeremAI';
+    else {
+      var age = (Date.now() - ref) / 1000;
+      if (age < 60) { cls = 'live'; text = 'Live' + (last ? ' · last change ' + ago(last) : ''); }
+      else if (age < 180) { cls = 'slow'; text = 'Updating…'; }
+      else { cls = 'off'; text = 'Paused. The session may be closed.' + (last ? ' Last change at ' + hhmm(last) + '.' : ''); }
+    }
+    box.className = 'fresh ' + cls; tx.textContent = text;
+  }
+  setInterval(renderFresh, 10000);
+
+  /* ---- render ---- */
+  var SVGNS = 'http://www.w3.org/2000/svg';
+  function sv(tag, attrs) {
+    var e = document.createElementNS(SVGNS, tag), k, kids = Array.prototype.slice.call(arguments, 2);
+    for (k in attrs || {}) if (attrs[k] != null) e.setAttribute(k, attrs[k]);
+    kids.forEach(function (c) { if (c != null && c !== false) e.append(c.nodeType ? c : document.createTextNode(String(c))); });
+    return e;
+  }
+  function render() {
+    var keep = document.activeElement && document.activeElement.getAttribute && document.activeElement.getAttribute('data-key');
+    var list = ordered(), f = current(list), chips = $('chips'), main = $('main');
+    chips.textContent = ''; main.textContent = '';
+    renderFresh();
+    if (S.noDb) { chips.hidden = true; main.append(el('div', { class: 'empty' }, el('h2', null, 'The page database is not available'), el('p', { class: 'muted' }, 'Sign in to Claude and open this page again.'))); return; }
+    if (!S.ready) return;
+    if (!list.length) { chips.hidden = true; main.append(el('div', { class: 'empty' }, el('h2', null, 'No flows yet'), el('p', { class: 'muted' }, 'Start one with ', el('code', null, '/zeremai'), '. It shows up here as soon as it starts.'))); return; }
+    S.sel = f.id; chips.hidden = false;
+    list.forEach(function (x) { chips.append(el('button', { type: 'button', class: 'chip k-' + x.status + (NEEDS[x.status] ? ' need' : '') + (S.flash[x.id] ? ' flash' : ''), 'aria-pressed': String(x.id === f.id), 'data-key': 'c:' + x.id, onclick: function () { S.sel = x.id; store('zf-flow', x.id); render(); } },
+      el('span', { class: 'sy', 'aria-hidden': 'true' }, LOOK[x.status][0]), el('b', null, x.name), el('span', { class: 'w' }, LOOK[x.status][1]))); });
+    main.append(el('div', { style: 'display:grid;gap:18px' }, head(f), needCard(f), el('div', { class: 'shell' }, el('div', { class: 'list', id: 'list', role: 'group', 'aria-label': 'Steps' }, S.view === 'lanes' ? lanes(f) : runbook(f)), side(f))));
+    if (keep) { var again = document.querySelector('[data-key="' + keep.replace(/"/g, '') + '"]'); if (again) again.focus({ preventScroll: true }); }
+  }
+  function head(f) {
+    var parent = f.parentFlowId && S.flows[f.parentFlowId];
+    return el('div', { class: 'fhead' }, el('h2', null, f.name),
+      el('p', { class: 'facts' }, pill(f.status), el('span', null, 'step ' + stepNo(f) + ' of ' + f.steps.length), f.template ? el('span', null, f.template) : null, f.updatedAt ? el('span', null, 'changed ' + ago(f.updatedAt)) : null,
+        parent ? el('span', null, 'child of ', el('button', { class: 'link', type: 'button', onclick: function () { S.sel = parent.id; render(); } }, parent.name)) : null,
+        el('span', { class: 'vt', role: 'group', 'aria-label': 'View' },
+          el('button', { type: 'button', 'aria-pressed': String(S.view === 'runbook'), onclick: function () { S.view = 'runbook'; store('zf-view', 'runbook'); render(); } }, 'Runbook'),
+          el('button', { type: 'button', 'aria-pressed': String(S.view === 'lanes'), onclick: function () { S.view = 'lanes'; store('zf-view', 'lanes'); render(); } }, 'Two lanes'))));
+  }
+  function needCard(f) {
+    var n = f.needsYou; if (!n) return null;
+    return el('section', { class: 'need-card k-waiting', 'aria-label': 'Needs you' },
+      el('b', null, LOOK.waiting[0] + ' ' + (n.stepNumber != null ? 'Step ' + n.stepNumber + ' · ' : '') + (n.stepName || 'A step') + ' waits for you'),
+      n.waitsFor ? el('p', null, n.waitsFor) : null,
+      el('p', { class: 'row2' }, el('small', null, (n.since ? 'Waiting since ' + hhmm(n.since) + ' (' + ago(n.since) + '). ' : '') + 'Answer in Claude to approve. This page only shows the state.'),
+        n.stepId ? el('button', { class: 'link', type: 'button', onclick: function () { pick(f, n.stepId, 'step'); } }, 'Show the step') : null));
+  }
+  function stepNote(f, s, i) {
+    var out = [];
+    if (s.approval) out.push(el('div', { class: 'stop' }, 'Stop · you approve before you go on'));
+    if (s.loopBackTo) out.push(el('div', { class: 'nt' }, 'If this fails, go back to step ' + s.loopBackTo + '.'));
+    if (s.childFlowId) { var c = S.flows[s.childFlowId]; out.push(el('div', { class: 'nt' }, 'Runs a child flow. ', c ? el('button', { type: 'button', onclick: function (e) { e.stopPropagation(); S.sel = c.id; render(); } }, 'Open “' + c.name + '”') : 'It has not started yet.')); }
+    return out;
+  }
+  function runbook(f) {
+    var rb = el('div', { class: 'rb' }), cur = null, part = 0, sel = activeIdx(f);
+    f.steps.forEach(function (s, i) {
+      if (s.phase && s.phase !== cur) { cur = s.phase; part++; rb.append(el('div', { class: 'part' }, 'Part ' + part + ' · ' + s.phase)); }
+      rb.append(el('div', { class: 'st k-' + s.status + (S.flash[f.id + ':' + s.id] ? ' flash' : ''), role: 'button', tabindex: '0', 'data-key': 's:' + s.id, 'aria-pressed': String(i === sel), 'aria-label': 'Step ' + s.number + ', ' + s.name + ', ' + LOOK[s.status][1] + (s.approval ? ', you approve' : ''),
+        onclick: function () { pick(f, s.id, 'step'); }, onkeydown: function (e) { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); pick(f, s.id, 'step'); } } },
+        el('div', { class: 'no', 'aria-hidden': 'true' }, LOOK[s.status][0]), el('div', null, el('b', null, s.name, pill(s.status)), s.summary ? el('p', null, s.summary) : null)));
+      stepNote(f, s, i).forEach(function (x) { rb.append(x); });
+    });
+    return rb;
+  }
+  function lanes(f) {
+    var n = f.steps.length, W = 640, RH = 58, TOP = 36, PW = 250, PH = 38, CX = [200, 500], H = TOP + n * RH + 12, sel = activeIdx(f);
+    var svg = sv('svg', { viewBox: '0 0 ' + W + ' ' + H, role: 'group', 'aria-label': 'Steps of ' + f.name + ' in two lanes' });
+    svg.append(sv('text', { class: 'lhd c', x: CX[0], y: 16, 'text-anchor': 'middle' }, 'Claude works'), sv('text', { class: 'lhd u', x: CX[1], y: 16, 'text-anchor': 'middle' }, 'You approve'), sv('line', { class: 'lmid', x1: W / 2 + 4, y1: 28, x2: W / 2 + 4, y2: H - 6 }));
+    function pt(i) { var lane = f.steps[i].approval ? 1 : 0; return { x: CX[lane] - PW / 2, y: TOP + i * RH, cx: CX[lane], lane: lane }; }
+    f.steps.forEach(function (s, i) {
+      if (!i) return; var a = pt(i - 1), b = pt(i), y1 = a.y + PH, y2 = b.y, my = (y1 + y2) / 2;
+      svg.append(sv('path', { class: 'lw' + (s.approval || f.steps[i - 1].approval ? ' you' : ''), d: a.cx === b.cx ? 'M' + a.cx + ' ' + y1 + ' L' + b.cx + ' ' + y2 : 'M' + a.cx + ' ' + y1 + ' C' + a.cx + ' ' + my + ' ' + b.cx + ' ' + my + ' ' + b.cx + ' ' + y2 }));
+    });
+    var phase = '';
+    f.steps.forEach(function (s, i) {
+      var p = pt(i), notes = [];
+      if (s.phase && s.phase !== phase) { phase = s.phase; svg.append(sv('text', { class: 'lph', x: 4, y: p.y + PH / 2 + 4 }, s.phase.length > 12 ? s.phase.slice(0, 11) + '…' : s.phase)); }
+      if (s.loopBackTo) notes.push('↺ ' + s.loopBackTo);
+      if (s.childFlowId) notes.push('↳ ' + (S.flows[s.childFlowId] ? S.flows[s.childFlowId].name : 'child'));
+      var g = sv('g', { class: 'lp k-' + s.status + (s.approval ? ' you' : '') + (i === sel ? ' sel' : '') + (S.flash[f.id + ':' + s.id] ? ' flash' : ''), tabindex: '0', role: 'button', 'data-key': 'l:' + s.id, 'aria-pressed': String(i === sel), 'aria-label': 'Step ' + s.number + ', ' + s.name + ', ' + LOOK[s.status][1] + (s.approval ? ', you approve' : '') });
+      g.append(sv('title', null, s.name), sv('rect', { x: p.x, y: p.y, width: PW, height: PH, rx: PH / 2 }), sv('text', { class: 'lnu', x: p.x + 16, y: p.y + PH / 2 + 4 }, String(s.number == null ? i + 1 : s.number).padStart(2, '0')),
+        sv('text', { x: p.x + 42, y: p.y + PH / 2 + 4.5 }, s.name.length > 24 ? s.name.slice(0, 23) + '…' : s.name), sv('text', { class: 'lsy', x: p.x + PW - 18, y: p.y + PH / 2 + 5, 'text-anchor': 'middle' }, LOOK[s.status][0]));
+      if (notes.length) g.append(sv('text', { class: 'lnt', x: p.lane ? p.x - 10 : p.x + PW + 10, y: p.y + PH / 2 + 4, 'text-anchor': p.lane ? 'end' : 'start' }, notes.join(' · ')));
+      g.addEventListener('click', function () { pick(f, s.id, 'step'); });
+      g.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pick(f, s.id, 'step'); } });
+      svg.append(g);
+    });
+    return el('div', { class: 'lanes' }, svg);
+  }
+
+  /* ---- side panel ---- */
+  function side(f) {
+    var tabs = [['step', 'Step']], logs = det(f, 'logs'), mem = det(f, 'memory'), files = det(f, 'files');
+    if (showDetails()) tabs.push(['logs', 'Logs' + (logs ? ' ' + arr(logs.rows).length : '')], ['memory', 'Memory' + (f.counts.topics ? ' ' + f.counts.topics : mem ? ' ' + arr(mem.topics).length : '')], ['files', 'Files' + (f.counts.files ? ' ' + f.counts.files : files ? ' ' + arr(files.rows).length : '')]);
+    if (!tabs.some(function (t) { return t[0] === S.tab; })) S.tab = 'step';
+    var body = S.tab === 'logs' ? logPane(logs) : S.tab === 'memory' ? memPane(mem) : S.tab === 'files' ? filePane(files) : stepPane(f, logs);
+    return el('aside', { class: 'side', 'aria-label': 'Details' },
+      el('div', { class: 'tabs', role: 'tablist' }, tabs.map(function (t) { return el('button', { type: 'button', role: 'tab', id: 'tab-' + t[0], 'aria-selected': String(S.tab === t[0]), 'aria-controls': 'pane', 'data-key': 't:' + t[0], onclick: function () { S.tab = t[0]; render(); } }, t[1]); })),
+      el('div', { class: 'pane', id: 'pane', role: 'tabpanel', 'aria-labelledby': 'tab-' + S.tab }, body));
+  }
+  function stepPane(f, logs) {
+    var i = activeIdx(f), s = f.steps[i]; if (!s) return [el('p', { class: 'none' }, 'This flow has no steps yet.')];
+    var row = logs && arr(logs.rows).filter(function (r) { return str(r.id) === s.id; })[0];
+    return [
+      el('div', { class: 'pnav' }, pill(s.status), el('span', { class: 'sub' }, 'Step ' + (i + 1) + ' of ' + f.steps.length), el('span', { class: 'arrows' },
+        el('button', { type: 'button', 'aria-label': 'Previous step', disabled: i === 0, onclick: function () { pick(f, f.steps[i - 1].id); } }, '‹'),
+        el('button', { type: 'button', 'aria-label': 'Next step', disabled: i === f.steps.length - 1, onclick: function () { pick(f, f.steps[i + 1].id); } }, '›'))),
+      el('div', { class: 'sthead' }, el('h3', null, s.name), s.phase ? el('p', { class: 'sub' }, s.phase) : null),
+      s.summary ? el('p', null, s.summary) : null,
+      s.approval ? el('div', { class: 'note' }, el('b', null, 'You approve this step'), el('span', null, 'The flow stops here until you answer in Claude.')) : null,
+      s.loopBackTo ? el('div', { class: 'note' }, el('b', null, 'Can loop back'), el('span', null, 'If this step fails, the flow goes back to step ' + s.loopBackTo + '.')) : null,
+      s.childFlowId ? el('div', { class: 'note' }, el('b', null, 'Starts a child flow'), S.flows[s.childFlowId] ? el('button', { class: 'link', type: 'button', onclick: function () { S.sel = s.childFlowId; render(); } }, 'Open “' + S.flows[s.childFlowId].name + '”') : el('span', null, 'It has not started yet.')) : null,
+      row ? [el('div', null, el('h4', null, 'What it did'), list(row.actions, 'Nothing logged yet.'))] : null,
+      row && arr(row.problems).length ? el('div', { class: 'note warn' }, el('b', null, 'Problems'), list(row.problems)) : null,
+    ];
+  }
+  function list(items, none) { items = arr(items); return items.length ? el('ul', null, items.map(function (x) { return el('li', null, str(x)); })) : none ? el('p', { class: 'none' }, none) : null; }
+  function logPane(d) {
+    if (!d || !arr(d.rows).length) return [el('p', { class: 'none' }, 'No log entries yet.')];
+    return arr(d.rows).map(function (r) {
+      var k = kind(r.kind), t = r.started ? ms(r.started) : null, c = r.completed ? ms(r.completed) : null;
+      return el('details', { class: 'lg k-' + k }, el('summary', null, el('span', { class: 'k', 'aria-hidden': 'true' }, LOOK[k][0]), el('span', null, str(r.number) + '. ' + str(r.name)), el('span', { class: 'sub' }, LOOK[k][1] + (t ? ' · ' + hhmm(t) : '') + (c ? ' to ' + hhmm(c) : ''))),
+        el('div', { style: 'display:grid;gap:10px' }, arr(r.actions).length ? el('div', null, el('h4', null, 'Actions'), list(r.actions)) : null, arr(r.reasoning).length ? el('div', null, el('h4', null, 'Reasoning'), list(r.reasoning)) : null,
+          arr(r.problems).length ? el('div', { class: 'note warn' }, el('b', null, 'Problems'), list(r.problems)) : null, !arr(r.actions).length && !arr(r.reasoning).length && !arr(r.problems).length ? el('p', { class: 'none' }, 'Nothing logged for this step.') : null));
+    });
+  }
+  function memPane(d) {
+    if (!d || !arr(d.topics).length) return [el('p', { class: 'none' }, 'No memory written yet.')];
+    var out = arr(d.topics).map(function (t) {
+      return el('details', { class: 'tp' }, el('summary', null, el('span', null, str(t.topic)), el('span', { class: 'sub' }, arr(t.entries).length + ' entries' + (arr(t.writtenBy).length ? ' · written by ' + arr(t.writtenBy).join(', ') : '') + (arr(t.readBy).length ? ' · read by ' + arr(t.readBy).join(', ') : ''))),
+        arr(t.entries).map(function (e) {
+          return el('div', { class: 'ent' }, el('b', null, 'Step ' + str(e.step) + ' · ' + str(e.stepName)), arr(e.values).length ? el('dl', { class: 'kv' }, arr(e.values).map(function (kv) { return [el('dt', null, str(arr(kv)[0])), el('dd', null, str(arr(kv)[1]))]; })) : null,
+            arr(e.decisions).length ? el('div', null, el('h4', null, 'Decisions'), list(e.decisions)) : null, arr(e.files).length ? el('div', null, el('h4', null, 'Files'), list(e.files)) : null, arr(e.notes).length ? el('div', null, el('h4', null, 'Notes'), list(e.notes)) : null, e.updated ? el('span', { class: 'sub' }, str(e.updated)) : null);
+        }));
+    });
+    var diffs = arr(d.diffs);
+    if (diffs.length) out.push(el('div', null, el('h4', null, 'What changed between entries'), diffs.map(function (x) {
+      return el('div', { style: 'margin-bottom:8px' }, el('p', { class: 'sub' }, str(x.topic) + ' · step ' + str(x.from) + ' → ' + str(x.to)), el('pre', { class: 'df' }, arr(x.lines).map(function (l) { l = str(l); return el('span', { class: l[0] === '+' ? 'a' : l[0] === '-' ? 'd' : 'c' }, l + '\n'); })));
+    })));
+    return out;
+  }
+  function filePane(d) {
+    var rows = d ? arr(d.rows) : []; if (!rows.length) return [el('p', { class: 'none' }, 'No files yet.')];
+    return [el('div', null, rows.map(function (r) { return el('div', { class: 'frow', title: str(r.path) }, el('span', { class: 'mono' }, str(r.name)), el('span', { class: 'sub' }, (r.step != null ? 'step ' + str(r.step) + ' · ' : '') + (r.output ? 'output' : 'flow file'))); }))];
+  }
+
+  /* ---- preview: sample data, only with #preview or ?preview=1 and no database ---- */
+  function sample() {
+    var now = Date.now(), iso = function (m) { return new Date(now - m * 60000).toISOString(); };
+    var names = ['Read the PBI', 'Plan the design', 'Approve the design', 'Write the tests', 'Write the code', 'Run the tests', 'Open the pull request', 'Review comments', 'Merge', 'Deploy to dev', 'Approve production', 'Close the PBI'];
+    var steps = names.map(function (n, i) { return { id: 's' + (i + 1), number: i + 1, name: n, phase: i < 3 ? 'Design' : i < 7 ? 'Build' : i < 9 ? 'Review' : 'Release', status: i < 2 ? 'done' : i === 2 ? 'waiting' : 'pending', approval: i === 2 || i === 10, summary: ['Read the work item and its parent feature.', 'Write the design and the test plan.', 'The design file is ready. It changes 4 files.'][i] || '', loopBackTo: i === 5 ? '5' : '', childFlowId: i === 7 ? 'refund' : '' }; });
+    var f = [['payoflows', { name: 'Payoflows E2E', template: 'payoflows-e2e', status: 'waiting', activeStepId: 's3', updatedAt: iso(2), steps: steps, counts: { topics: 2, files: 3 }, needsYou: { stepId: 's3', stepNumber: 3, stepName: 'Approve the design', waitsFor: 'The design file is ready. It changes 4 files.', since: iso(12) } }],
+      ['refund', { name: 'Refund tool', template: 'tool-build', status: 'running', activeStepId: 'r2', updatedAt: iso(0.4), parentFlowId: 'payoflows', counts: { topics: 0, files: 1 }, steps: [{ id: 'r1', number: 1, name: 'Scaffold', status: 'done' }, { id: 'r2', number: 2, name: 'Write the handler', status: 'running', summary: 'Adds the refund route and its test.' }, { id: 'r3', number: 3, name: 'Run the tests', status: 'pending' }] }],
+      ['docs', { name: 'Docs sync', template: 'docs', status: 'done', activeStepId: 'd2', updatedAt: iso(240), counts: {}, steps: [{ id: 'd1', number: 1, name: 'Collect changes', status: 'done' }, { id: 'd2', number: 2, name: 'Publish', status: 'done' }] }]];
+    S.owner = true; S.beat = now;
+    S.details = { 'payoflows~logs': { rows: [{ id: 's1', number: 1, name: 'Read the PBI', kind: 'done', started: iso(40), completed: iso(35), actions: ['Read PBI 4821', 'Read the parent feature'], reasoning: ['The acceptance criteria name four screens.'], problems: [] }, { id: 's2', number: 2, name: 'Plan the design', kind: 'done', started: iso(34), completed: iso(14), actions: ['Wrote the design file'], reasoning: [], problems: ['One test needs data that does not exist yet.'] }] },
+      'payoflows~memory': { topics: [{ topic: 'design', entries: [{ step: '2', stepName: 'Plan the design', values: [['screens', '4'], ['flag', 'large_payout_approval']], decisions: ['Limit is $10,000'], files: ['docs/design.md'], notes: [], updated: iso(14) }], writtenBy: ['2'], readBy: ['3', '5'] }], diffs: [{ topic: 'design', from: '1', to: '2', lines: ['+ screens: 4', '~ flag: none → large_payout_approval', '- draft'] }] },
+      'payoflows~files': { rows: [{ path: '/x/docs/design.md', name: 'docs/design.md', output: true, step: '2', openable: true }, { path: '/x/flow.json', name: 'flow.json', output: false, openable: true }] } };
+    takeFlows(f.map(function (p) { return { id: p[0], data: function () { return Object.assign({}, p[1], { updatedAt: p[1].updatedAt }); } }; }));
+    setInterval(function () { S.beat = Date.now(); renderFresh(); }, 30000);
+  }
+
+  /* ---- start ---- */
+  render();
+  var use = window.claude && window.claude.use ? window.claude.use('db') : Promise.resolve(null);
+  use.then(function (db) {
+    if (!db) { if (PREVIEW) return sample(); S.noDb = true; return render(); }
+    connect(db);
+    if (window.claude.use) window.claude.use('user').then(function (u) { try { S.owner = !!(u && u.isOwner && u.isOwner()); } catch (e) {} render(); }).catch(function () {});
+  }).catch(function () { if (PREVIEW) sample(); else { S.noDb = true; render(); } });
+})();
+</script>

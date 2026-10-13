@@ -291,8 +291,8 @@ async function viewTemplate($: any, path: string): Promise<void> {
 }
 
 const HELP = ['/zeremai          open the pane: the bound flow, or the list', '/zeremai new      pick a template and start a flow', '/zeremai continue pick a flow to go on with',
-  '/zeremai templates  add or refresh marketplaces', '/zeremai <text>   start from a template, with the text in its first field', '/zeremai debug    toasts for each press, to find a lost click', '/zeremai look 0-4  how much color Desktop draws; 0 is none'].join('\n')
-const WORDS = ['new', 'continue', 'templates', 'help', 'debug', 'look']
+  '/zeremai templates  add or refresh marketplaces', '/zeremai <text>   start from a template, with the text in its first field', '/zeremai debug    toasts for each press, to find a lost click', '/zeremai look 0-4  how much color Desktop draws; 0 is none', '/zeremai live    publish the live page of all flows, or show its link'].join('\n')
+const WORDS = ['new', 'continue', 'templates', 'help', 'debug', 'look', 'live']
 // The number of single-letter edits between two words: enough to tell a typo from a first field.
 function distance(a: string, b: string): number {
   const row = Array.from({ length: b.length + 1 }, (_, i) => i)
@@ -307,9 +307,10 @@ function distance(a: string, b: string): number {
 export const register: Register = on => {
   // The command is registered in on-flow-tools: a plugin can have only one session.start hook without a matcher.
   // A first word that is a tab name opens that tab. Any other text goes to the first field, as before.
-  on('command.run', { command: COMMANDS }, async ($, e) => {
+  on('command.run', { command: COMMANDS }, async ($, e, next) => {
     const text = String(e.args ?? '').trim()
     const [word = '', ...others] = text.split(/\s+/)
+    if (word.toLowerCase() === 'live') return next(e) // the live page: see ../on-live-page
     if (word.toLowerCase() === 'debug') { // /zeremai debug: show a toast for each press and focus move, to find a lost click
       await ensureLoaded($)
       st.debugClicks = !st.debugClicks

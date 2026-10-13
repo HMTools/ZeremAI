@@ -7,6 +7,7 @@ import { register as onApprovalGate } from './on-approval-gate/on-approval-gate'
 import { register as onFlowTools } from './on-flow-tools/on-flow-tools'
 import { register as onFlowPane } from './on-flow-pane/on-flow-pane'
 import { register as onStepBrief } from './on-step-brief/on-step-brief'
+import { register as onLivePage } from './on-live-page/on-live-page'
 
 export const register: Register = (on, options) => {
   onAgentStopping(on, options)
@@ -17,4 +18,5 @@ export const register: Register = (on, options) => {
   onFlowTools(on, options)
   onFlowPane(on, options)
   onStepBrief(on, options)
+  onLivePage(on, options)
 }
