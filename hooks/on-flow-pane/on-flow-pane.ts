@@ -69,7 +69,6 @@ async function openSite($: any): Promise<void> {
   }
   stored = (await $.store.get('livePageUrl')) as string | undefined
   if (!stored) return toast('Could not set up ZeremAI. Run /zeremai to try again.')
-  await $.command.run({ command: 'zeremai', args: 'sync' }).catch(() => {}) // the row of this session exists before the page opens
   const id = await $.session.id()
   const url = `${stored}?s=${id}#${id}` // the session that runs the actions of the site
   try { await callTool($, { tool: 'Artifact', action: 'open', url }); return } catch { /* the system opener next */ }

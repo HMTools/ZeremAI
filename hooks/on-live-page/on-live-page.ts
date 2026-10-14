@@ -403,12 +403,7 @@ export const register: Register = on => {
 
   // Every word of /zeremai opens the site. It is published the first time.
   on('command.run', { command: COMMANDS }, async ($, e) => {
-    const word = String(e.args ?? '').trim().split(/\s+/)[0]?.toLowerCase()
-    if (word === 'help') return { text: HELP } as never
-    if (word === 'sync') { // the button above the prompt: write the row of this session before it opens the page, so the page finds a live session at once
-      if (await $.store.get(URL_KEY)) { await ensureTimer($); openedAt = new Date().toISOString(); await push($, true) }
-      return { text: 'ZeremAI session synced.' } as never // an empty text counts as no answer
-    }
+    if (String(e.args ?? '').trim().split(/\s+/)[0]?.toLowerCase() === 'help') return { text: HELP } as never
     try {
       let url = (await $.store.get(URL_KEY)) as string | undefined
       if (!url) {
