@@ -1,5 +1,5 @@
 import { test, expect } from 'claude-code/testing'
-import { checkCommand, hashOf, parseDocs, sessionDoc, templateDocs } from './live-site'
+import { checkCommand, hashOf, parseDocs, sessionDoc, sessionTitle, templateDocs } from './live-site'
 import type { CommandWorld } from './live-site'
 
 const waiting = { id: 'f1', steps: [{ id: 's1', number: 1, name: 'Design', status: 'in_progress', approvalRequired: true }, { id: 's2', number: 2, name: 'Code', status: 'pending' }] }
@@ -73,4 +73,15 @@ test('the catalog and the installed templates become one row each, with fields f
   expect(by['templates/ops~deploy']).toMatchObject({ installed: false, state: 'available', fields: [] })
   expect(by['templates/my~local']).toMatchObject({ installed: true, description: 'Fix a bug' })
   expect(by['marketplaces/m1']).toEqual({ name: 'm1', templates: 2, enabled: true, cached: true, refreshedAt: 'S' })
+})
+
+test('the session title is the last ai-title of the transcript, and empty when there is none', async () => {
+  const at = (read: (p: string) => Promise<string>) => ({ home: async () => '/h', list: async () => [], exists: async () => true, read })
+  const seen: string[] = []
+  const text = '{"type":"ai-title","aiTitle":"Old","sessionId":"S1"}\n{"type":"x"}\n{"type":"ai-title","aiTitle":"Say \\"hi\\"","sessionId":"S1"}\n'
+  expect(await sessionTitle(at(async p => { seen.push(p); return text }), 'S1', '/work/my.app')).toBe('Say "hi"')
+  expect(seen).toEqual(['/h/.claude/projects/-work-my-app/S1.jsonl'])
+  expect(await sessionTitle(at(async () => '{"type":"x"}'), 'S1', '/w')).toBe('')
+  expect(await sessionTitle(at(async () => { throw new Error('no file') }), 'S1', '/w')).toBe('')
+  expect((await sessionDoc(at(async () => ''), 'S1', [], '/w/a', 'T', undefined, 'Plan')).data.title).toBe('Plan')
 })

@@ -13,7 +13,7 @@ import { catalog, installTemplate, listMarketplaces, refreshMarketplaces, remove
 import type { TemplatePorts } from '../infra/templates/templates'
 import { PAGE_CAPABILITIES, heartbeat, pushDocs, pushFlows } from '../infra/live-page/live-page'
 import type { LivePorts } from '../infra/live-page/live-page'
-import { checkCommand, commandWorld, hashOf, parseDocs, sessionDoc, templateDocs } from '../infra/live-site/live-site'
+import { checkCommand, commandWorld, hashOf, parseDocs, sessionDoc, sessionTitle, templateDocs } from '../infra/live-site/live-site'
 import type { Row } from '../infra/live-site/live-site'
 import type { FileSystem, Gate, GateStore, ManagerPorts } from '../infra/ports/ports'
 import { startCountingAgain } from '../on-agent-stopping/on-agent-stopping'
@@ -137,6 +137,9 @@ const portsOf = ($: any, url: string): LivePorts => ({
 
 // ── the push ───────────────────────────────────────────────────────────────────────────────────────────────────────
 
+let title = ''
+let titleAt = 0
+
 async function push($: any, beat = false): Promise<void> {
   const url = (await $.store.get(URL_KEY)) as string | undefined
   if (!url || busy) return
@@ -146,7 +149,9 @@ async function push($: any, beat = false): Promise<void> {
     await pushFlows(ports, last)
     if (beat || !lastBeat) lastBeat = ports.now()
     const session = await $.session.id()
-    await pushDocs(ports, last, [await sessionDoc(ports.files, session, await linksOf($).get(session), await $.session.cwd(), lastBeat, (await $.store.get(`openedAt:${session}`)) as string | undefined)])
+    const cwd = await $.session.cwd()
+    if (Date.now() - titleAt > 300_000) { title = await sessionTitle(ports.files, session, cwd); titleAt = Date.now() } // the title changes rarely
+    await pushDocs(ports, last, [await sessionDoc(ports.files, session, await linksOf($).get(session), cwd, lastBeat, (await $.store.get(`openedAt:${session}`)) as string | undefined, title)])
     if (beat) await heartbeat(ports)
     if ((await $.store.get(ERR_KEY)) !== undefined) await $.store.delete(ERR_KEY) // also an error that an older copy of this module stored, before a reload
   } catch (error) {

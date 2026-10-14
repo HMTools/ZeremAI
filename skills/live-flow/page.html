@@ -65,6 +65,7 @@
   .skel { background: linear-gradient(90deg, var(--hover), var(--line), var(--hover)); background-size: 200% 100%; animation: shim 1.4s ease-in-out infinite; border-radius: 12px; } @keyframes shim { to { background-position: -200% 0; } }
 
   /* chips */
+  .here { font-size: 12px; font-weight: 600; padding: 1px 8px; border-radius: 999px; background: var(--kb); color: var(--k); }
   .chips { display: flex; flex-wrap: wrap; gap: 8px; }
   .chip { display: inline-flex; gap: 8px; align-items: center; border: 1px solid var(--line2); background: var(--surface); border-radius: 12px; padding: 7px 12px; text-align: left; max-width: 100%; min-width: 0; }
   .chip:hover { background: var(--hover); } .chip[aria-pressed="true"] { background: var(--sel); border-color: var(--accent); }
@@ -214,7 +215,7 @@
     setTimeout(function () { S.flash = {}; }, 2700);
     render();
   }
-  function sessDoc(id, d) { return { id: id, folder: str(d.folder), name: str(d.name), beat: ms(d.beat), opened: ms(d.openedAt), flows: arr(d.flows).map(str) }; }
+  function sessDoc(id, d) { return { id: id, folder: str(d.folder), name: str(d.name), title: str(d.title), beat: ms(d.beat), opened: ms(d.openedAt), flows: arr(d.flows).map(str) }; }
   function tplDoc(id, d) {
     return { id: id, name: str(d.name) || id, category: str(d.category), description: str(d.description), installed: !!d.installed, marketplace: str(d.marketplace), steps: arr(d.steps),
       fields: arr(d.fields).map(function (f) { f = f || {}; return { name: str(f.name), required: !!f.required, type: str(f.type) || 'text', description: str(f.description), example: str(f.example) }; }).filter(function (f) { return f.name; }) };
@@ -257,9 +258,15 @@
     Object.keys(S.sessions).forEach(function (id) { var s = S.sessions[id]; if (isOpen(s) && s.opened && Date.now() - s.opened < 600000 && (!best || s.opened > best.opened)) best = s; });
     return best ? best.id : '';
   }
-  function sessionFor(flowId, scope) {
+  function holderOf(flowId) {
     var holder = null;
-    if (flowId && scope !== 'session') Object.keys(S.sessions).forEach(function (id) { var s = S.sessions[id]; if (s.flows.indexOf(flowId) >= 0 && (!holder || (isOpen(s) && !isOpen(holder)))) holder = s; });
+    Object.keys(S.sessions).forEach(function (id) { var s = S.sessions[id]; if (s.flows.indexOf(flowId) >= 0 && (!holder || (isOpen(s) && !isOpen(holder)))) holder = s; });
+    return holder;
+  }
+  function sessName(s) { return s.title || s.name || (s.folder ? s.folder.split('/').filter(Boolean).pop() : '') || 'Session'; }
+  function here(flowId) { var h = holderOf(flowId), me = sid(); return !!(h && me && h.id === me); }
+  function sessionFor(flowId, scope) {
+    var holder = flowId && scope !== 'session' ? holderOf(flowId) : null;
     var me = sid(); return holder || (me ? (S.sessions[me] || { id: me, beat: null, flows: [] }) : null);
   }
   function cantAct(flowId, scope) {
@@ -274,7 +281,7 @@
   function sessText() {
     var me = sid(), s = me && (S.sessions[me] || { id: me });
     if (!s) return ['No session', 'pending'];
-    var name = s.name || (s.folder ? s.folder.split('/').filter(Boolean).pop() : '') || 'Session ' + s.id.slice(0, 8);
+    var name = sessName(s) + ' · ' + s.id.slice(0, 8);
     return isOpen(s) ? [name + ' · live', 'running'] : [name + ' · closed', 'paused'];
   }
 
@@ -372,7 +379,7 @@
   function lastChange() { var m = null; Object.keys(S.flows).forEach(function (k) { var t = S.flows[k].updatedAt; if (t && (!m || t > m)) m = t; }); return m; }
   function renderFresh() {
     var box = $('fresh'), tx = $('freshTx'), cls = '', text, last = lastChange(), ref = S.beat || last, st = sessText(), se = $('sess');
-    se.className = 'sess k-' + st[1]; se.textContent = st[0]; se.title = sid() ? 'The session that runs your actions' : 'Press ZeremAI in a session to link this page to it';
+    se.className = 'sess k-' + st[1]; se.textContent = st[0]; se.title = sid() ? 'The session that runs your actions. Session id: ' + sid() : 'Press ZeremAI in a session to link this page to it';
     if (S.noDb) { box.className = 'fresh off'; tx.textContent = 'No page database'; return; }
     if (S.offline) { cls = 'off'; text = 'Offline. This is the last data it got.'; }
     else if (!S.ready) text = 'Connecting…';
@@ -424,12 +431,21 @@
     S.sel = f.id;
     main.append(el('div', { style: 'display:grid;gap:18px' },
       el('div', { class: 'chips', role: 'group', 'aria-label': 'Flows' }, list.map(function (x) { return el('button', { type: 'button', class: 'chip k-' + x.status + (NEEDS[x.status] ? ' need' : '') + (S.flash[x.id] ? ' flash' : ''), 'aria-pressed': String(x.id === f.id), 'data-key': 'c:' + x.id, onclick: function () { S.sel = x.id; store('zf-flow', x.id); render(); } },
-        el('span', { class: 'sy', 'aria-hidden': 'true' }, LOOK[x.status][0]), el('b', null, x.name), el('span', { class: 'w' }, LOOK[x.status][1])); })),
+        el('span', { class: 'sy', 'aria-hidden': 'true' }, LOOK[x.status][0]), el('b', null, x.name), el('span', { class: 'w' }, LOOK[x.status][1]), here(x.id) ? el('span', { class: 'here', title: 'Runs in this session' }, 'here') : null); })),
       head(f), needCard(f), el('div', { class: 'shell' }, el('div', { class: 'list', id: 'list', role: 'group', 'aria-label': 'Steps' }, S.view === 'lanes' ? lanes(f) : runbook(f)), side(f))));
+  }
+  // Which session holds the flow: name, folder, short id (tap to copy the full id), live or closed, and a tag when it is the session of this page.
+  function runsIn(f) {
+    var h = holderOf(f.id);
+    if (!h) return el('p', { class: 'facts' }, el('span', null, 'Runs in: no session'));
+    var folder = h.folder ? h.folder.split('/').filter(Boolean).pop() : '';
+    return el('p', { class: 'facts' }, el('span', null, 'Runs in: ', el('b', null, sessName(h))), folder && folder !== sessName(h) ? el('span', null, folder) : null,
+      el('button', { class: 'link', type: 'button', title: 'Copy the session id ' + h.id, onclick: function (e) { var b = e.currentTarget; try { navigator.clipboard.writeText(h.id).then(function () { b.textContent = 'copied'; }, function () { b.textContent = h.id; }); } catch (x) { b.textContent = h.id; } } }, h.id.slice(0, 8)),
+      el('span', null, isOpen(h) ? 'live' : 'closed'), here(f.id) ? el('span', { class: 'here' }, 'here') : null);
   }
   function head(f) {
     var parent = f.parentFlowId && S.flows[f.parentFlowId];
-    return el('div', { class: 'fhead' }, el('h2', null, f.name),
+    return el('div', { class: 'fhead' }, el('h2', null, f.name), runsIn(f),
       el('p', { class: 'facts' }, pill(f.status), el('span', null, 'step ' + stepNo(f) + ' of ' + f.steps.length), f.template ? el('span', null, f.template) : null, f.updatedAt ? el('span', null, 'changed ' + ago(f.updatedAt)) : null,
         parent ? el('span', null, 'child of ', el('button', { class: 'link', type: 'button', onclick: function () { S.sel = parent.id; render(); } }, parent.name)) : null,
         el('span', { class: 'vt', role: 'group', 'aria-label': 'View' },

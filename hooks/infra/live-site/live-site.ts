@@ -91,10 +91,20 @@ export function checkCommand(data: unknown, world: CommandWorld): Checked {
 }
 
 // The row of one session: its folder, a heartbeat, and the flows it holds. The page treats a beat older than 3 minutes as a closed session.
-export async function sessionDoc(files: FileSystem, session: string, dirs: string[], folder: string, beat: string, openedAt?: string): Promise<DocWrite> {
+// The title that Claude Code shows in its sidebar: the last `ai-title` line of the transcript. Empty when there is none.
+// ponytail: reads the whole transcript; the caller caches it. Read only the tail if a transcript is ever too big.
+export async function sessionTitle(files: FileSystem, session: string, folder: string): Promise<string> {
+  try {
+    const text = await files.read(`${await files.home()}/.claude/projects/${folder.replace(/[^a-zA-Z0-9]/g, '-')}/${session}.jsonl`)
+    const hits = text.match(/"type":"ai-title","aiTitle":"(?:[^"\\]|\\.)*"/g)
+    return hits ? String(JSON.parse(`{${hits[hits.length - 1]}}`).aiTitle).slice(0, 80) : ''
+  } catch { return '' }
+}
+
+export async function sessionDoc(files: FileSystem, session: string, dirs: string[], folder: string, beat: string, openedAt?: string, title?: string): Promise<DocWrite> {
   const flows: string[] = []
   for (const dir of dirs) { try { flows.push(flowIdOf(JSON.parse(await files.read(`${dir}/flow.json`)), dir)) } catch { /* the flow is gone */ } }
-  return { op: 'set', collection: 'sessions', doc_id: session, data: { folder, name: folder.split('/').filter(Boolean).pop() ?? folder, beat, flows, ...(openedAt ? { openedAt } : {}) } }
+  return { op: 'set', collection: 'sessions', doc_id: session, data: { folder, name: folder.split('/').filter(Boolean).pop() ?? folder, beat, flows, ...(openedAt ? { openedAt } : {}), ...(title ? { title } : {}) } }
 }
 
 const fieldsOf = (t?: TemplateInfo) => (t?.fields ?? []).map(f => ({ name: f.name, required: f.required, type: 'text', description: f.description, example: f.example }))

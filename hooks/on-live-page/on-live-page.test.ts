@@ -107,7 +107,7 @@ async function rootOf($: any): Promise<string> {
 }
 const open = ($: any, args = '') => $.command.run({ command: 'zeremai', args }) as Promise<{ text: string }>
 const put = (w: W, id: string, action: string, args: Record<string, unknown>, extra: Record<string, unknown> = {}) =>
-  w.db.set(`commands/${id}`, { data: { session: 'S1', at: `2026-10-13T10:00:0${id.length}`, action, args, status: 'new', ...extra }, version: 1 })
+  w.db.set(`commands/${id}`, { data: { session: 'S1', at: new Date(Date.now() - 60_000 - id.length).toISOString(), action, args, status: 'new', ...extra }, version: 1 })
 const row = (w: W, id: string) => w.db.get(`commands/${id}`)?.data
 // A command runs on the timer: open the site (which starts it), let one tick pass, and wait until no command of this session is left.
 const settle = async ($: any, w: W) => {
