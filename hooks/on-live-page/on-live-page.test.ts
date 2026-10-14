@@ -257,6 +257,15 @@ test('the band above the prompt starts the timer: a session with a stored link w
   await band.unmount()
 })
 
+for (const isInteractive of [true, false]) {
+  test(`a session start (isInteractive ${isInteractive}) with a stored link starts the timer: the row is written with no band and no command`, async ($, on) => {
+    const w = world(on, { url: URL })
+    await $.session.start({ source: 'startup', cwd: '/work', isInteractive })
+    await until(() => w.db.has('sessions/S1'))
+    expect(w.db.has('sessions/S1')).toBe(true)
+  })
+}
+
 // ── the commands from the site ───────────────────────────────────────────────────────────────────────────────────────
 
 test('approve: the same call the pane button made writes approved, the answer is logged, and the agent reads it as a prompt', async ($, on) => {

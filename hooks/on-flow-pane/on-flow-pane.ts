@@ -65,11 +65,12 @@ async function openSite($: any): Promise<void> {
   const toast = async (text: string) => { try { await $.ui.toast(text) } catch { /* a surface with no toast */ } }
   let stored = (await $.store.get('livePageUrl')) as string | undefined
   if (!stored) {
-    try { await $.command.run('zeremai'); return } catch { /* command failed: fall through to toast */ }
+    try { await $.command.run({ command: 'zeremai' }); return } catch { /* command failed: fall through to toast */ }
   }
   stored = (await $.store.get('livePageUrl')) as string | undefined
   if (!stored) return toast('Could not set up ZeremAI. Run /zeremai to try again.')
   const id = await $.session.id()
+  await $.store.set(`openedAt:${id}`, new Date().toISOString()).catch(() => {}) // the page picks the session that opened it last, when its link has no session
   const url = `${stored}?s=${id}#${id}` // the session that runs the actions of the site
   try { await callTool($, { tool: 'Artifact', action: 'open', url }); return } catch { /* the system opener next */ }
   const windows = (await $.env.get('OS')) === 'Windows_NT'

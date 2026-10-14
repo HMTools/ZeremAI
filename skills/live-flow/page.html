@@ -214,7 +214,7 @@
     setTimeout(function () { S.flash = {}; }, 2700);
     render();
   }
-  function sessDoc(id, d) { return { id: id, folder: str(d.folder), name: str(d.name), beat: ms(d.beat), flows: arr(d.flows).map(str) }; }
+  function sessDoc(id, d) { return { id: id, folder: str(d.folder), name: str(d.name), beat: ms(d.beat), opened: ms(d.openedAt), flows: arr(d.flows).map(str) }; }
   function tplDoc(id, d) {
     return { id: id, name: str(d.name) || id, category: str(d.category), description: str(d.description), installed: !!d.installed, marketplace: str(d.marketplace), steps: arr(d.steps),
       fields: arr(d.fields).map(function (f) { f = f || {}; return { name: str(f.name), required: !!f.required, type: str(f.type) || 'text', description: str(f.description), example: str(f.example) }; }).filter(function (f) { return f.name; }) };
@@ -250,10 +250,17 @@
 
   /* ---- sessions: which session runs an action ---- */
   function isOpen(s) { return !!(s && s.beat && Date.now() - s.beat < 180000); }
+  // The session of this page: the one in its link. A host may not pass the link to the page: then the live session that opened it in the last 10 minutes, newest first.
+  function sid() {
+    if (S.session) return S.session;
+    var best = null;
+    Object.keys(S.sessions).forEach(function (id) { var s = S.sessions[id]; if (isOpen(s) && s.opened && Date.now() - s.opened < 600000 && (!best || s.opened > best.opened)) best = s; });
+    return best ? best.id : '';
+  }
   function sessionFor(flowId, scope) {
     var holder = null;
     if (flowId && scope !== 'session') Object.keys(S.sessions).forEach(function (id) { var s = S.sessions[id]; if (s.flows.indexOf(flowId) >= 0 && (!holder || (isOpen(s) && !isOpen(holder)))) holder = s; });
-    return holder || (S.session ? (S.sessions[S.session] || { id: S.session, beat: null, flows: [] }) : null);
+    var me = sid(); return holder || (me ? (S.sessions[me] || { id: me, beat: null, flows: [] }) : null);
   }
   function cantAct(flowId, scope) {
     if (S.offline) return 'Offline. This is the last data it got.';
@@ -265,7 +272,7 @@
     return '';
   }
   function sessText() {
-    var s = S.session && (S.sessions[S.session] || { id: S.session });
+    var me = sid(), s = me && (S.sessions[me] || { id: me });
     if (!s) return ['No session', 'pending'];
     var name = s.name || (s.folder ? s.folder.split('/').filter(Boolean).pop() : '') || 'Session ' + s.id.slice(0, 8);
     return isOpen(s) ? [name + ' · live', 'running'] : [name + ' · closed', 'paused'];
@@ -365,7 +372,7 @@
   function lastChange() { var m = null; Object.keys(S.flows).forEach(function (k) { var t = S.flows[k].updatedAt; if (t && (!m || t > m)) m = t; }); return m; }
   function renderFresh() {
     var box = $('fresh'), tx = $('freshTx'), cls = '', text, last = lastChange(), ref = S.beat || last, st = sessText(), se = $('sess');
-    se.className = 'sess k-' + st[1]; se.textContent = st[0]; se.title = S.session ? 'The session that runs your actions' : 'Press ZeremAI in a session to link this page to it';
+    se.className = 'sess k-' + st[1]; se.textContent = st[0]; se.title = sid() ? 'The session that runs your actions' : 'Press ZeremAI in a session to link this page to it';
     if (S.noDb) { box.className = 'fresh off'; tx.textContent = 'No page database'; return; }
     if (S.offline) { cls = 'off'; text = 'Offline. This is the last data it got.'; }
     else if (!S.ready) text = 'Connecting…';

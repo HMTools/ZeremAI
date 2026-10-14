@@ -40,7 +40,6 @@ let ticks = 0
 let busy = false
 let draining = false
 let lastBeat = ''
-let openedAt: string | undefined
 let ruleShown = false // the permission rule is said once for each run of the mod
 
 const message = (error: unknown) => (error instanceof Error ? error.message : String(error)).split('\n')[0].slice(0, 300)
@@ -147,7 +146,7 @@ async function push($: any, beat = false): Promise<void> {
     await pushFlows(ports, last)
     if (beat || !lastBeat) lastBeat = ports.now()
     const session = await $.session.id()
-    await pushDocs(ports, last, [await sessionDoc(ports.files, session, await linksOf($).get(session), await $.session.cwd(), lastBeat, openedAt)])
+    await pushDocs(ports, last, [await sessionDoc(ports.files, session, await linksOf($).get(session), await $.session.cwd(), lastBeat, (await $.store.get(`openedAt:${session}`)) as string | undefined)])
     if (beat) await heartbeat(ports)
     if ((await $.store.get(ERR_KEY)) !== undefined) await $.store.delete(ERR_KEY) // also an error that an older copy of this module stored, before a reload
   } catch (error) {
@@ -291,8 +290,9 @@ async function prune($: any): Promise<void> {
   } catch { /* the rows stay until the next beat */ }
 }
 
-// One timer for the mod. A mod has no file watcher, and `session.start` and `prompt.submit` are taken (see on-flow-tools, on-user-prompt), so it starts at the
-// first flow command, at /zeremai, or when the band above the prompt draws (which is at the start of the session).
+// One timer for the mod. A mod has no file watcher. `session.start` is the hook that fires at the start of the session and again after each reload of the
+// plugin (a reload cancels the timers, and the band above the prompt does not draw on every surface). The engine refuses a module that registers `session.start`
+// twice with no matcher (on-flow-tools has that one), so it is registered here with a matcher, once for each value of `isInteractive`.
 async function ensureTimer($: any): Promise<void> {
   if (timer || starting) return
   starting = true
@@ -395,6 +395,14 @@ export const register: Register = on => {
     return result
   })
 
+  // The heartbeat must not depend on a surface that draws the band: it starts with the session, and again after each reload of the plugin.
+  for (const isInteractive of [true, false]) {
+    on('session.start', { isInteractive }, async ($, e, next) => {
+      void ensureTimer($).catch(error => $.store.set(ERR_KEY, message(error)).catch(() => {}))
+      return next(e)
+    })
+  }
+
   // The band above the prompt draws at the start of the session: the only hook that is sure to run before the user does anything. It draws nothing.
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
     if (!timer && !starting) void ensureTimer($).catch(() => {})
@@ -413,7 +421,7 @@ export const register: Register = on => {
         last.clear()
       } else await ensureCurrent($)
       await ensureTimer($)
-      openedAt = new Date().toISOString()
+      await $.store.set(`openedAt:${await $.session.id()}`, new Date().toISOString()) // the page picks the session that opened it last, when its link has no session
       await push($, true) // the commands wait for the timer: the host refuses a prompt from inside a command hook
       const link = await siteUrl($, url)
       const opened = (await openPage($, link)) || (await openPage($, url)) // a fragment may be refused: the plain link opens the site, the page then picks the newest session

@@ -74,6 +74,12 @@ test('a press opens the site with the session after #, through the Artifact tool
   expect(w.ran).toEqual([])
 })
 
+test('a press records that this session opened the page, so the page can find its session without the link', async ($, on) => {
+  const w = world(on, {}, { url: URL })
+  await press(await $.ui.mount(BAND))
+  expect(typeof w.store['openedAt:S1']).toBe('string')
+})
+
 test('a press that the Artifact tool cannot open goes to the system opener', async ($, on) => {
   const w = world(on, {}, { url: URL, noOpen: true })
   await press(await $.ui.mount(BAND))
@@ -87,13 +93,13 @@ test('a press that nothing can open shows the link in a toast', async ($, on) =>
   expect(w.toasts).toEqual([`ZeremAI: ${URL}?s=S1#S1`])
 })
 
-test('a press with no site set up auto-runs /zeremai and opens it', async ($, on) => {
+test('a press with no site set up auto-runs /zeremai, which opens the site itself', async ($, on) => {
   const w = world(on, {})
   await press(await $.ui.mount(BAND))
-  expect(w.opened).toEqual([`${URL}?s=S1#S1`])
+  expect(w.store.livePageUrl).toBe(URL) // the command ran
+  expect(w.opened).toEqual([]) // and it opened the page: the press does not open it twice
   expect(w.toasts).toEqual([])
 })
-
 test('a press with no site set up and command fails shows error', async ($, on) => {
   const w = world(on, {}, { cmdFail: true })
   await press(await $.ui.mount(BAND))
