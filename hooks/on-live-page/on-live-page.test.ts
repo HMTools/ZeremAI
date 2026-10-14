@@ -208,7 +208,7 @@ test('when the Artifact tool refuses a link with #, the plain link opens the sit
 
 test('"sync" writes the row of the session and opens nothing', async ($, on) => {
   const w = world(on, { url: URL })
-  expect((await open($, 'sync')).text).toBe('')
+  expect((await open($, 'sync')).text).toBe('ZeremAI session synced.')
   expect(w.db.get('sessions/S1')!.data.openedAt).toBeDefined()
   expect(w.opened).toEqual([])
 })

@@ -407,7 +407,7 @@ export const register: Register = on => {
     if (word === 'help') return { text: HELP } as never
     if (word === 'sync') { // the button above the prompt: write the row of this session before it opens the page, so the page finds a live session at once
       if (await $.store.get(URL_KEY)) { await ensureTimer($); openedAt = new Date().toISOString(); await push($, true) }
-      return { text: '' } as never
+      return { text: 'ZeremAI session synced.' } as never // an empty text counts as no answer
     }
     try {
       let url = (await $.store.get(URL_KEY)) as string | undefined
