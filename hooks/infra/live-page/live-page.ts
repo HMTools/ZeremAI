@@ -111,3 +111,8 @@ export const PAGE_CAPABILITIES = {
   db: { rules: [{ path: '', read: 'view', write: 'owner' }, ...['details', 'commands', 'sessions', 'templates', 'marketplaces'].map(path => ({ path, read: 'owner', write: 'owner' }))] },
   user: {},
 }
+
+// One page for each session. The link and the page hash are kept by session id; `livePageUrls` lists every page, so the lock on `commands` covers all of them.
+export const urlKey = (session: string) => `livePageUrl:${session}`
+export const hashKey = (session: string) => `livePageHash:${session}`
+export const ALL_URLS_KEY = 'livePageUrls'

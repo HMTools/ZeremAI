@@ -16,7 +16,7 @@ function world(on: On, disk: Record<string, unknown>, { url = '', noOpen = false
   mock.env(on, { HOME: '/h' })
   const clock = mock.clock(on)
   const store: Record<string, unknown> = {}
-  if (url) store.livePageUrl = url
+  if (url) store['livePageUrl:S1'] = url
   const toasts: string[] = [], opened: string[] = [], ran: string[][] = []
   let code = opener
   on('store.get', async (_$, e: any) => ({ value: store[e.key] }))
@@ -28,7 +28,7 @@ function world(on: On, disk: Record<string, unknown>, { url = '', noOpen = false
   on('fs.read', async (_$, e) => ({ value: files[e.path] }))
   on('ui.toast', async (_$, e: any) => { toasts.push(e.text); return { value: undefined } })
   on('process.run', async (_$, e: any) => { ran.push(e.argv); return { value: { exitCode: code, stdout: '', stderr: '', timedOut: false } } as never })
-  on('command.run', async (_$, e: any) => { if (cmdFail) throw new Error('command failed'); if (e.command === 'zeremai') store.livePageUrl = URL; return { value: undefined } as never })
+  on('command.run', async (_$, e: any) => { if (cmdFail) throw new Error('command failed'); if (e.command === 'zeremai') store['livePageUrl:S1'] = URL; return { value: undefined } as never })
   on('tool.call', async (_$, e: any) => {
     if (e.tool === 'Artifact' && e.action === 'open') { if (noOpen) return { result: {}, isError: true, text: 'no browser' } as never; opened.push(e.url); return { result: {}, text: 'shown' } as never }
     return { result: {}, text: '' } as never
@@ -96,7 +96,7 @@ test('a press that nothing can open shows the link in a toast', async ($, on) =>
 test('a press with no site set up auto-runs /zeremai, which opens the site itself', async ($, on) => {
   const w = world(on, {})
   await press(await $.ui.mount(BAND))
-  expect(w.store.livePageUrl).toBe(URL) // the command ran
+  expect(w.store['livePageUrl:S1']).toBe(URL) // the command ran
   expect(w.opened).toEqual([]) // and it opened the page: the press does not open it twice
   expect(w.toasts).toEqual([])
 })

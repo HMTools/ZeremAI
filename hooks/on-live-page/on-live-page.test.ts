@@ -25,7 +25,7 @@ function world(on: On, { url = '', fail = false, page = true, noOpen = false, no
     [`${ROOT}/cache/sources/m1/templates/flows/ops/deploy/deploy.json`]: JSON.stringify(remote),
   }
   const store: Record<string, unknown> = { 'session:S1': [DIR] }
-  if (url) store.livePageUrl = url
+  if (url) store['livePageUrl:S1'] = url
   if (gate) store['gate:S1'] = { dir: DIR, stepId: 's1' }
   const db = new Map<string, { data: any; version: number }>([['meta/mod', { data: {}, version: 7 }]])
   const fault = { run: '' }
@@ -183,7 +183,7 @@ test('/zeremai publishes the page once with its rules, keeps the link, opens it 
   expect(w.published[0].pin).toBe(true)
   for (const path of ['details', 'commands', 'sessions', 'templates', 'marketplaces']) expect(w.published[0].capabilities.db.rules).toContainEqual({ path, read: 'owner', write: 'owner' })
   expect(w.published[0].capabilities.user).toEqual({})
-  expect(w.store.livePageUrl).toBe(URL)
+  expect(w.store['livePageUrl:S1']).toBe(URL)
   expect(w.opened).toEqual([`${URL}?s=S1#S1`])
   expect(w.data.some(d => d.writes.some((x: any) => x.doc_id === 'f1'))).toBe(true)
   await open($)
@@ -242,7 +242,7 @@ test('the first flow start shows one message about the site, and only while no p
   await $.tool.call({ tool: 'Bash', command: create })
   await $.tool.call({ tool: 'Bash', command: create })
   expect(w.toasts).toEqual(['ZeremAI opens a live site for all your flows. Run /zeremai.'])
-  w.store.livePageUrl = URL
+  w.store['livePageUrl:S1'] = URL
   w.store.livePageTipped = undefined
   await $.tool.call({ tool: 'Bash', command: create })
   expect(w.toasts).toHaveLength(1)
@@ -438,4 +438,14 @@ test('the agent cannot write a command row (it runs as the owner and could appro
   expect(other.deny).toBeUndefined() // the rest of the database, and other pages, are not guarded
   const elsewhere: any = await $.tool.call({ tool: 'ArtifactData', action: 'batch', url: 'https://claude.ai/artifact/Other', writes: [{ op: 'set', collection: 'commands', doc_id: 'x', data: {} }] })
   expect(elsewhere.deny).toBeUndefined()
+})
+
+test('each session has its own page: the link of another session is not used, and the lock on commands covers every page of the mod', async ($, on) => {
+  const w = world(on)
+  w.store['livePageUrl:S2'] = 'https://claude.ai/artifact/Other1' // the page of another session
+  w.store.livePageUrls = ['https://claude.ai/artifact/Other1']
+  await $.tool.call({ tool: 'Bash', command: command(await rootOf($)) })
+  expect(w.data).toEqual([]) // S1 has no page: it writes nothing, and never to the page of S2
+  const set: any = await $.tool.call({ tool: 'ArtifactData', action: 'set', url: 'https://claude.ai/artifact/Other1', collection: 'commands', doc_id: 'x', data: { session: 'S2' } })
+  expect(set.deny).toContain('written by the site only')
 })

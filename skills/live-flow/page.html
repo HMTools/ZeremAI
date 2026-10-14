@@ -254,7 +254,8 @@
   // The session of this page: the one in its link. A host may not pass the link to the page: then the live session that opened it in the last 10 minutes, newest first.
   function sid() {
     if (S.session) return S.session;
-    var best = null;
+    var best = null, ids = Object.keys(S.sessions);
+    if (ids.length === 1) return ids[0]; // each page has its own database: one session
     Object.keys(S.sessions).forEach(function (id) { var s = S.sessions[id]; if (isOpen(s) && s.opened && Date.now() - s.opened < 600000 && (!best || s.opened > best.opened)) best = s; });
     return best ? best.id : '';
   }
@@ -437,7 +438,7 @@
   // Which session holds the flow: name, folder, short id (tap to copy the full id), live or closed, and a tag when it is the session of this page.
   function runsIn(f) {
     var h = holderOf(f.id);
-    if (!h) return el('p', { class: 'facts' }, el('span', null, 'Runs in: no session'));
+    if (!h) return el('p', { class: 'facts' }, el('span', null, 'Runs in: not held by this session'));
     var folder = h.folder ? h.folder.split('/').filter(Boolean).pop() : '';
     return el('p', { class: 'facts' }, el('span', null, 'Runs in: ', el('b', null, sessName(h))), folder && folder !== sessName(h) ? el('span', null, folder) : null,
       el('button', { class: 'link', type: 'button', title: 'Copy the session id ' + h.id, onclick: function (e) { var b = e.currentTarget; try { navigator.clipboard.writeText(h.id).then(function () { b.textContent = 'copied'; }, function () { b.textContent = h.id; }); } catch (x) { b.textContent = h.id; } } }, h.id.slice(0, 8)),

@@ -1,6 +1,7 @@
 import type { Register } from 'claude-code'
 import { findFlowDir, sessionKey } from '../infra/flow-repository/flow-repository'
 import type { FileSystem, ManagerPorts } from '../infra/ports/ports'
+import { urlKey } from '../infra/live-page/live-page'
 import { fingerprint, listFlows } from '../infra/flow-pane/flow-pane'
 import { activityOf, ago } from '../infra/flow-pane/activity'
 import { bandView } from '../infra/flow-pane/band'
@@ -63,11 +64,12 @@ async function callTool($: any, input: Record<string, unknown>): Promise<void> {
 // The Artifact tool shows the page in the surface the user works in. If it fails, the system opener shows it in the browser. If that fails too, the link goes in a toast.
 async function openSite($: any): Promise<void> {
   const toast = async (text: string) => { try { await $.ui.toast(text) } catch { /* a surface with no toast */ } }
-  let stored = (await $.store.get('livePageUrl')) as string | undefined
+  const key = urlKey(await $.session.id())
+  let stored = (await $.store.get(key)) as string | undefined
   if (!stored) {
     try { await $.command.run({ command: 'zeremai' }); return } catch { /* command failed: fall through to toast */ }
   }
-  stored = (await $.store.get('livePageUrl')) as string | undefined
+  stored = (await $.store.get(key)) as string | undefined
   if (!stored) return toast('Could not set up ZeremAI. Run /zeremai to try again.')
   const id = await $.session.id()
   await $.store.set(`openedAt:${id}`, new Date().toISOString()).catch(() => {}) // the page picks the session that opened it last, when its link has no session

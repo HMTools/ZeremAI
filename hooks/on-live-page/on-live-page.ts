@@ -11,7 +11,7 @@ import type { Started } from '../infra/flow-pane/flow-pane'
 import { stepLine } from '../infra/flow-pane/step-line'
 import { catalog, installTemplate, listMarketplaces, refreshMarketplaces, removeTemplate } from '../infra/templates/templates'
 import type { TemplatePorts } from '../infra/templates/templates'
-import { PAGE_CAPABILITIES, heartbeat, pushDocs, pushFlows } from '../infra/live-page/live-page'
+import { ALL_URLS_KEY, PAGE_CAPABILITIES, hashKey, heartbeat, pushDocs, pushFlows, urlKey } from '../infra/live-page/live-page'
 import type { LivePorts } from '../infra/live-page/live-page'
 import { checkCommand, commandWorld, hashOf, parseDocs, sessionDoc, sessionTitle, templateDocs } from '../infra/live-site/live-site'
 import type { Row } from '../infra/live-site/live-site'
@@ -24,8 +24,8 @@ import { startCountingAgain } from '../on-agent-stopping/on-agent-stopping'
 // With no link stored, nothing here does anything. A failed write never touches a flow: the reason is kept in the store as `livePageError`.
 
 const COMMANDS = ['zeremai', 'zeremai:zeremai']
-const URL_KEY = 'livePageUrl'
-const HASH_KEY = 'livePageHash'
+// The page of this session: its link is kept by session id.
+const urlOf = async ($: any) => (await $.store.get(urlKey(await $.session.id()))) as string | undefined
 const ERR_KEY = 'livePageError'
 const TIP_KEY = 'livePageTipped'
 const PUSH_MS = 5000
@@ -141,7 +141,7 @@ let title = ''
 let titleAt = 0
 
 async function push($: any, beat = false): Promise<void> {
-  const url = (await $.store.get(URL_KEY)) as string | undefined
+  const url = await urlOf($)
   if (!url || busy) return
   busy = true
   try {
@@ -162,7 +162,7 @@ async function push($: any, beat = false): Promise<void> {
 
 // The templates and marketplaces change rarely: at the start of the timer and after an install, a removal or a refresh.
 async function pushTemplates($: any): Promise<void> {
-  const url = (await $.store.get(URL_KEY)) as string | undefined
+  const url = await urlOf($)
   if (!url) return
   try {
     const ports = await templatePortsOf($)
@@ -257,7 +257,7 @@ const setStatus = ($: any, url: string, id: string, data: Record<string, unknown
 
 // The new commands of this session, one at a time, oldest first. Each row goes 'running', then 'done' or 'error' with a short result.
 async function drain($: any): Promise<void> {
-  const url = (await $.store.get(URL_KEY)) as string | undefined
+  const url = await urlOf($)
   if (!url || draining) return
   draining = true
   let ran = false
@@ -284,7 +284,7 @@ async function drain($: any): Promise<void> {
 
 // Rows older than one day go, whoever wrote them.
 async function prune($: any): Promise<void> {
-  const url = (await $.store.get(URL_KEY)) as string | undefined
+  const url = await urlOf($)
   if (!url) return
   try {
     const cutoff = new Date(Date.now() - DAY_MS).toISOString()
@@ -302,7 +302,7 @@ async function ensureTimer($: any): Promise<void> {
   if (timer || starting) return
   starting = true
   try {
-    if (!(await $.store.get(URL_KEY))) return
+    if (!(await urlOf($))) return
     await ensureCurrent($)
     try {
       timer = $.clock.every(PUSH_MS, async () => {
@@ -344,13 +344,13 @@ const hashOfPage = async ($: any) => hashOf(`${await $.fs.read(pagePath($))}${JS
 
 // The page and its rules change between versions of the plugin: when they differ from what was published, publish again to the same link.
 async function ensureCurrent($: any): Promise<void> {
-  const url = (await $.store.get(URL_KEY)) as string | undefined
+  const url = await urlOf($)
   if (!url) return
   try {
     const hash = await hashOfPage($)
-    if ((await $.store.get(HASH_KEY)) === hash) return
+    if ((await $.store.get(hashKey(await $.session.id()))) === hash) return
     await publish($, url)
-    await $.store.set(HASH_KEY, hash)
+    await $.store.set(hashKey(await $.session.id()), hash)
     last.clear()
   } catch (error) { await $.store.set(ERR_KEY, `The page was not updated: ${message(error)}`).catch(() => {}) }
 }
@@ -366,7 +366,7 @@ async function openPage($: any, url: string): Promise<boolean> {
 
 // One message, once, when the first flow starts and the page does not exist yet.
 async function tip($: any): Promise<void> {
-  if ((await $.store.get(URL_KEY)) || (await $.store.get(TIP_KEY))) return
+  if ((await urlOf($)) || (await $.store.get(TIP_KEY))) return
   await $.store.set(TIP_KEY, true)
   try { await $.ui.toast('ZeremAI opens a live site for all your flows. Run /zeremai.') } catch { /* a surface with no toast */ }
 }
@@ -380,11 +380,11 @@ export const register: Register = on => {
   // Only the site writes to `commands` of the live page. The agent runs as the owner, so it could write an approval itself: a call that does not come from
   // this plugin (the engine's, the model's) can read the rows but never write them. `next.origin` is set by the host, not by the caller.
   on('tool.call', { tool: 'ArtifactData' }, async ($, e, next) => {
-    const url = (await $.store.get(URL_KEY)) as string | undefined
+    const urls = new Set([...(((await $.store.get(ALL_URLS_KEY)) as string[] | undefined) ?? []), await urlOf($), (await $.store.get('livePageUrl')) as string | undefined]) // every page of the mod, and the old shared one
     const action = (e as any).action as string
     const collections: unknown[] = action === 'batch' ? ((e as any).writes ?? []).map((w: any) => w?.collection) : [(e as any).collection]
     const writes = !['get', 'list', 'query', 'profiles'].includes(action)
-    if (url && writes && next.origin.plugin !== $.plugin.name && String((e as any).url).split(/[?#]/)[0] === url && collections.some(c => typeof c !== 'string' || c === 'commands' || c.startsWith('commands/'))) {
+    if (writes && next.origin.plugin !== $.plugin.name && urls.has(String((e as any).url).split(/[?#]/)[0]) && collections.some(c => typeof c !== 'string' || c === 'commands' || c.startsWith('commands/'))) {
       return { deny: 'The commands of the ZeremAI site are written by the site only. Only the user presses its buttons.' } as never
     }
     return next(e)
@@ -418,11 +418,12 @@ export const register: Register = on => {
   on('command.run', { command: COMMANDS }, async ($, e) => {
     if (String(e.args ?? '').trim().split(/\s+/)[0]?.toLowerCase() === 'help') return { text: HELP } as never
     try {
-      let url = (await $.store.get(URL_KEY)) as string | undefined
+      let url = await urlOf($)
       if (!url) {
         url = await publish($)
-        await $.store.set(URL_KEY, url)
-        await $.store.set(HASH_KEY, await hashOfPage($))
+        await $.store.set(urlKey(await $.session.id()), url)
+        await $.store.set(ALL_URLS_KEY, [...new Set([...(((await $.store.get(ALL_URLS_KEY)) as string[] | undefined) ?? []), url])])
+        await $.store.set(hashKey(await $.session.id()), await hashOfPage($))
         last.clear()
       } else await ensureCurrent($)
       await ensureTimer($)

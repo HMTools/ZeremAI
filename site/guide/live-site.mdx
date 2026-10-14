@@ -13,8 +13,8 @@ Run `/zeremai`, or press the button above the prompt. It ends with **ZeremAI ↗
 ▲ Payoflows E2E · step 3/12 · approve step 3 · ZeremAI ↗
 ```
 
-- **The first time**, ZeremAI publishes the page and pins it to your claude.ai sidebar. It keeps the link.
-- **Every other time**, it opens the same page. Any word after `/zeremai` does the same (`/zeremai live` too).
+- **The first time in a session**, ZeremAI publishes a page for that session and pins it to your claude.ai sidebar. It keeps the link by session id.
+- **Every other time**, it opens the page of that session. A resumed session gets its page back. Any word after `/zeremai` does the same (`/zeremai live` too).
 - The link carries the id of your session (`#<session id>`). The site uses it to know which session runs your actions.
 
 If the Artifact tool cannot open the page, ZeremAI uses the system opener, and then shows the link in a message.
