@@ -28,3 +28,13 @@ test('the question names the fields and what was typed', () => {
   expect(q).toContain('a = "mine"')
   expect(q).toContain('Text: do it')
 })
+
+test('a reply outside a fixed list is dropped, unless the field allows another value', () => {
+  const t = { name: 'tpl', fields: [
+    { name: 'env', required: true, example: '', description: 'where', options: ['staging', 'production'] },
+    { name: 'region', required: false, example: '', description: 'which', options: ['eu'], allowOther: true },
+  ] } as TemplateInfo
+  expect(parseAnswer(t, '{"env":"prod","region":"us"}')).toEqual({ answer: { region: 'us' } })
+  expect(parseAnswer(t, '{"env":"production"}')).toEqual({ answer: { env: 'production' } })
+  expect(fillQuestion(t, '', {}, 'x')).toContain('env * : where (one of: staging, production)'.replace(' :', ':'))
+})

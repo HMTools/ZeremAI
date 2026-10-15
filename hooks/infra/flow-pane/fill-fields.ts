@@ -10,7 +10,7 @@ export type Filled = {
 }
 
 export function fillQuestion(template: TemplateInfo, purpose: string, values: Record<string, string>, text: string): string {
-  const fields = template.fields.map(f => `  ${f.name}${f.required ? ' *' : ''}: ${f.description}${f.example ? ` (e.g. ${f.example})` : ''}`).join('\n')
+  const fields = template.fields.map(f => `  ${f.name}${f.required ? ' *' : ''}: ${f.description}${f.options ? ` (one of: ${f.options.join(', ')}${f.allowOther ? ', or another value' : ''})` : f.example ? ` (e.g. ${f.example})` : ''}`).join('\n')
   const typed = Object.entries(values).filter(([, v]) => v.trim()).map(([k, v]) => `  ${k} = ${JSON.stringify(v)}`).join('\n')
   return [
     'Fill the fields of a flow template from the text below. Reply with one JSON object: field name -> text. Leave out a field the text does not cover. Never invent a value.',
@@ -18,6 +18,8 @@ export function fillQuestion(template: TemplateInfo, purpose: string, values: Re
     ...(typed ? [`Already typed by the user:\n${typed}`] : []), `Text: ${text}`,
   ].join('\n')
 }
+
+const listed = (f: TemplateInfo['fields'][number] | undefined, v: string) => !f?.options || f.allowOther || f.options.includes(v)
 
 // The first JSON object in the reply: a model sometimes wraps it in words. A name that is not a field, or a value that is not text, is dropped.
 export function parseAnswer(template: TemplateInfo, reply: string): { answer: Record<string, string> } | { error: string } {
@@ -27,8 +29,9 @@ export function parseAnswer(template: TemplateInfo, reply: string): { answer: Re
   try { data = JSON.parse(reply.slice(start, end + 1)) } catch { return { error: 'Claude did not answer with field values.' } }
   if (!data || typeof data !== 'object' || Array.isArray(data)) return { error: 'Claude did not answer with field values.' }
   const names = new Set(template.fields.map(f => f.name))
+  const fields = new Map(template.fields.map(f => [f.name, f]))
   const answer: Record<string, string> = {}
-  for (const [k, v] of Object.entries(data)) if (names.has(k) && typeof v === 'string' && v.trim()) answer[k] = v.trim()
+  for (const [k, v] of Object.entries(data)) if (names.has(k) && typeof v === 'string' && v.trim() && listed(fields.get(k), v.trim())) answer[k] = v.trim()
   return { answer }
 }
 

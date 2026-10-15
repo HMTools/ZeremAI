@@ -35,7 +35,7 @@ def params_of(t):
         for n in names or []:
             d = defs.get(n)
             d = d if isinstance(d, dict) else {}
-            out.append({'name': n, 'required': required, 'type': str(d.get('type') or 'text'), 'description': text(d.get('description')), 'example': str(d.get('example') or '')})
+            out.append({'name': n, 'required': required, 'type': str(d.get('type') or 'text'), 'description': text(d.get('description')), 'example': str(d.get('example') or ''), **({'options': [str(o) for o in d['options']], 'allowOther': bool(d.get('allowOther'))} if isinstance(d.get('options'), list) and d['options'] else {})})
     return out
 
 

@@ -112,6 +112,12 @@ Generate UUIDs with `uuidgen` or `node -e "console.log(crypto.randomUUID())"`. N
 
 Use `{{paramName}}` anywhere in step `context` or sub-flow parameters. Each `definitions` entry needs `description`, `type` and an `example`, since the **New flow** form on [the site](/guide/live-site) shows them. Required parameters get a star.
 
+Give a parameter `options`, a list of texts, when only a few values make sense. The form then shows a dropdown and refuses any other value. Add `"allowOther": true` to let the user also type their own.
+
+```json
+"env": { "description": "Where to deploy", "type": "string", "example": "staging", "options": ["staging", "production"] }
+```
+
 ## Step entries
 
 | Field | Meaning |

@@ -72,6 +72,11 @@ class Base(unittest.TestCase):
 
 
 class Good(Base):
+    def test_options_must_be_unique_non_empty_texts(self):
+        for bad in ([], ['a', 'a'], ['a', ''], 'a'):
+            self.bad(self.edit(lambda d, bad=bad: d['template']['parameters']['definitions']['bug'].update(options=bad)), 'options must be a list', 'parameters.bug')
+        self.assertEqual(self.check(self.edit(lambda d: d['template']['parameters']['definitions']['bug'].update(options=['x', 'y']))), {'status': 'ok', 'findings': []})
+
     def test_good_draft(self):
         self.assertEqual(self.check(draft()), {'status': 'ok', 'findings': []})
 

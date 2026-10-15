@@ -110,7 +110,7 @@ export async function sessionDoc(files: FileSystem, session: string, dirs: strin
   return { op: 'set', collection: 'sessions', doc_id: session, data: { folder, name: folder.split('/').filter(Boolean).pop() ?? folder, beat, flows, ...(openedAt ? { openedAt } : {}), ...(title ? { title } : {}) } }
 }
 
-const fieldsOf = (t?: TemplateInfo) => (t?.fields ?? []).map(f => ({ name: f.name, required: f.required, type: 'text', description: f.description, example: f.example }))
+const fieldsOf = (t?: TemplateInfo) => (t?.fields ?? []).map(f => ({ name: f.name, required: f.required, type: 'text', description: f.description, example: f.example, options: f.options, allowOther: f.allowOther }))
 
 // The catalog of the marketplaces joined with the installed templates (they know the fields), and one row for each marketplace.
 // ponytail: a template that is neither installed nor in a cache any more keeps its old row; delete rows when a reader shows that.

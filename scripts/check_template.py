@@ -158,6 +158,14 @@ def check_template(t, steps, installed, known_ids, prefix='', overwrite=True, lo
             for key in ['description', 'type']:
                 if not (isinstance(d.get(key), str) and d[key].strip()):
                     must('parameters.%s' % name, 'Parameter "%s" has no %s.' % (name, key))
+            opts = d.get('options')
+            if opts is not None:
+                if not (isinstance(opts, list) and opts and all(isinstance(o, str) and o.strip() for o in opts) and len(set(opts)) == len(opts)):
+                    must('parameters.%s' % name, 'Parameter "%s": options must be a list of unique, non-empty texts.' % name)
+                elif d.get('example') not in (None, '') and d['example'] not in opts and d.get('allowOther') is not True:
+                    should('parameters.%s' % name, 'Parameter "%s": the example is not one of the options.' % name)
+            if d.get('allowOther') is not None and opts is None:
+                should('parameters.%s' % name, 'Parameter "%s" has allowOther but no options.' % name)
             if d.get('example') in (None, ''):
                 should('parameters.%s' % name, 'Parameter "%s" has no example. The pane shows it in the form.' % name)
     defined = set(defs) | {n for k in ['required', 'optional'] for n in (params.get(k) if isinstance(params.get(k), list) else [])}

@@ -49,6 +49,10 @@ export interface TemplateDefinition {
       type: string;
       /** Example value (always as string for display) */
       example: string;
+      /** A fixed list. The form shows a dropdown and the value must be one of them. */
+      options?: string[];
+      /** With options: also let the user type another value. */
+      allowOther?: boolean;
     }>;
     /** Additional notes about parameters */
     notes?: string;

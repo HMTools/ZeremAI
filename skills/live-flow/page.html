@@ -218,7 +218,7 @@
   function sessDoc(id, d) { return { id: id, folder: str(d.folder), name: str(d.name), title: str(d.title), beat: ms(d.beat), opened: ms(d.openedAt), flows: arr(d.flows).map(str) }; }
   function tplDoc(id, d) {
     return { id: id, name: str(d.name) || id, category: str(d.category), description: str(d.description), installed: !!d.installed, edited: !!d.edited, state: str(d.state), marketplace: str(d.marketplace), steps: arr(d.steps),
-      fields: arr(d.fields).map(function (f) { f = f || {}; return { name: str(f.name), required: !!f.required, type: str(f.type) || 'text', description: str(f.description), example: str(f.example) }; }).filter(function (f) { return f.name; }) };
+      fields: arr(d.fields).map(function (f) { f = f || {}; return { name: str(f.name), required: !!f.required, type: str(f.type) || 'text', description: str(f.description), example: str(f.example), options: arr(f.options).map(str), allowOther: !!f.allowOther }; }).filter(function (f) { return f.name; }) };
   }
   function cmdDoc(id, d) {
     var a = {}; if (d.args && typeof d.args === 'object') Object.keys(d.args).forEach(function (k) { a[k] = str(d.args[k]); });
@@ -610,13 +610,21 @@
     main.append(el('div', { style: 'display:grid;gap:16px' }, el('h2', null, 'New flow'), el('div', { class: 'split' }, lst, formView(cur))));
     S.nqLive = true;
   }
+  // A field with options: a dropdown, or with allowOther a text box that suggests them.
+  function choice(k, f) {
+    var err = S.errs[k], opts = f.options.map(function (o) { return el('option', { value: o, selected: S.draft[k] === o }, o); });
+    if (f.allowOther) { var box = input(k, { required: f.required, placeholder: 'Pick or type' }); box[0].setAttribute('list', k + '-l'); return [box, el('datalist', { id: k + '-l' }, f.options.map(function (o) { return el('option', { value: o }); }))]; }
+    return [el('select', { class: 'in', id: k, 'data-key': k, 'aria-required': f.required ? 'true' : null, 'aria-invalid': err ? 'true' : null, 'aria-describedby': err ? k + '-e' : null,
+      onchange: function (e) { S.draft[k] = e.target.value; if (S.errs[k]) { delete S.errs[k]; render(); } } }, el('option', { value: '' }, 'Choose…'), opts),
+      err ? el('p', { class: 'err', id: k + '-e', role: 'alert' }, err) : null];
+  }
   function formView(t) {
     var id = tid(t), why = cantAct(null, 'session'), fk = function (n) { return 'fld:' + id + ':' + n; }, bits = [];
     var nameKey = 'fname:' + id, fillKey = 'fill:' + id;
     t.fields.forEach(function (f, i) {
       var k = fk(f.name), long = f.type === 'textarea' || f.type === 'longtext' || f.example.length > 60;
       bits.push(el('div', { class: 'fld' }, el('label', { for: k }, f.name, f.required ? [' ', el('span', { class: 'req', 'aria-hidden': 'true' }, '*'), el('span', { class: 'sr' }, ' (required)')] : el('span', { class: 'sub' }, ' (optional)')),
-        f.description ? el('small', { id: k + '-d' }, f.description) : null, input(k, { area: long, rows: 3, type: f.type === 'number' ? 'number' : 'text', required: f.required, placeholder: f.example ? 'For example: ' + f.example : null })));
+        f.description ? el('small', { id: k + '-d' }, f.description) : null, f.options.length ? choice(k, f) : input(k, { area: long, rows: 3, type: f.type === 'number' ? 'number' : 'text', required: f.required, placeholder: f.example ? 'For example: ' + f.example : null })));
       if (i === 0) S.firstField = k;
     });
     var valsNow = function () { var v = {}; t.fields.forEach(function (f) { v[f.name] = S.draft[fk(f.name)] || ''; }); return v; };

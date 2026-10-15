@@ -1,6 +1,6 @@
 import { test, expect } from 'claude-code/testing'
 import { ACTIVE, flowFile, step, world } from '../flow-manager/fake-world'
-import { boundView, deleteFlow, fingerprint, stepDetail, dirNameFor, handoff, inFolder, listFlows, listTemplates, resumeFlow, startFlow, waitingCount } from './flow-pane'
+import { boundView, deleteFlow, fingerprint, stepDetail, dirNameFor, handoff, inFolder, listFlows, listTemplates, resumeFlow, startFlow, waitingCount, wrongOptions } from './flow-pane'
 
 const T = '/h/.claude/zeremai/templates/flows/dev/bug'
 const template = {
@@ -213,4 +213,13 @@ test('a flow with a blocked step is blocked, and needs the user', async () => {
   expect(info.kind).toBe('blocked')
   expect(waitingCount([info])).toBe(1)
   expect((await boundView(w.ports.files, `${ACTIVE}/b`))?.attention?.reason).toBe('No access.')
+})
+
+test('a value outside a fixed list is wrong, unless the field allows another', () => {
+  const t = { fields: [
+    { name: 'env', required: true, example: '', description: '', options: ['staging', 'production'] },
+    { name: 'region', required: false, example: '', description: '', options: ['eu'], allowOther: true },
+  ] } as any
+  expect(wrongOptions(t, { env: 'prod', region: 'us' })).toEqual(['env must be one of: staging, production'])
+  expect(wrongOptions(t, { env: 'staging' })).toEqual([])
 })

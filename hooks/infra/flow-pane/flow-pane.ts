@@ -10,7 +10,7 @@ import type { Kind } from './status-look'
 
 export type TemplateInfo = {
   path: string; name: string; category: string; title: string; purpose: string; stepCount: number
-  fields: { name: string; required: boolean; example: string; description: string }[]
+  fields: { name: string; required: boolean; example: string; description: string; options?: string[]; allowOther?: boolean }[]
 }
 export type FlowInfo = {
   dir: string; name: string; step: number; total: number; updated: string; kind: Kind; folders: string[]
@@ -30,6 +30,8 @@ const readDoc = async (files: FileSystem, path: string): Promise<Doc | undefined
   try { return JSON.parse(await files.read(path)) } catch { /* unreadable: leave it out */ }
 }
 
+const optionsOf = (d?: Doc) => Array.isArray(d?.options) && d.options.length ? { options: d.options.map(String), ...(d.allowOther ? { allowOther: true } : {}) } : {}
+
 // Every `templates/flows/<category>/<name>/<name>.json` of type template, with its fields: required first.
 export async function listTemplates(files: FileSystem): Promise<TemplateInfo[]> {
   const root = await rootOf(files)
@@ -41,7 +43,7 @@ export async function listTemplates(files: FileSystem): Promise<TemplateInfo[]> 
       const data = await readDoc(files, path)
       if (data?.type !== 'template') continue
       const { required = [], optional = [], definitions = {} } = data.parameters ?? {}
-      const field = (name: string, isRequired: boolean) => ({ name, required: isRequired, example: definitions[name]?.example ?? '', description: definitions[name]?.description ?? '' })
+      const field = (name: string, isRequired: boolean) => ({ name, required: isRequired, example: definitions[name]?.example ?? '', description: definitions[name]?.description ?? '', ...optionsOf(definitions[name]) })
       found.push({ path, name: data.name ?? entry.name, category: category.name, title: data.metadata?.title ?? data.name ?? entry.name, purpose: data.metadata?.purposeAndUsage ?? '', stepCount: (data.steps ?? []).length, fields: [...required.map((n: string) => field(n, true)), ...optional.map((n: string) => field(n, false))] })
     }
   }
@@ -217,12 +219,18 @@ export const dirNameFor = (name: string, nowIso: string) => {
 export const missingFields = (template: TemplateInfo, values: Record<string, string>) =>
   template.fields.filter(f => f.required && !values[f.name]?.trim()).map(f => f.name)
 
+// A field with a fixed list takes only a listed value, unless the template allows another.
+export const wrongOptions = (template: TemplateInfo, values: Record<string, string>) =>
+  template.fields.filter(f => f.options && !f.allowOther && values[f.name]?.trim() && !f.options.includes(values[f.name].trim())).map(f => `${f.name} must be one of: ${f.options!.join(', ')}`)
+
 export type Started = { text: string; dir: string } | { error: string }
 
 // Create the files with the flow script (create-flow), bind the session, and return the message for the agent.
 export async function startFlow(ports: ManagerPorts, template: TemplateInfo, values: Record<string, string>): Promise<Started> {
   const missing = missingFields(template, values)
   if (missing.length) return { error: `Fill in: ${missing.join(', ')}` }
+  const wrong = wrongOptions(template, values)
+  if (wrong.length) return { error: wrong.join('. ') }
   const home = await ports.files.home()
   if (!home) return { error: 'No home folder found' }
   const params = Object.fromEntries(Object.entries(values).filter(([, v]) => v.trim()).map(([k, v]) => [k, v.trim()]))
