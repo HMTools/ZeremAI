@@ -1,6 +1,6 @@
 import { activityOf } from './activity'
 import type { FlowInfo } from './flow-pane'
-import { LOOK, symbolOf } from './status-look'
+import { LOOK, needsUser, symbolOf } from './status-look'
 import type { Kind } from './status-look'
 
 // The line above the prompt. It names the flow bound to the session, its step and its state, then counts the other flows
@@ -9,7 +9,7 @@ import type { Kind } from './status-look'
 export type BandPart = { text: string; tone?: 'warning' | 'error' | 'permission' | 'success' | 'dim' }
 export type Band = { parts: BandPart[]; text: string; hot: boolean }
 
-const TONE: Record<Kind, BandPart['tone']> = { waiting: 'warning', failed: 'error', paused: 'permission', running: 'success', done: 'dim', pending: 'dim' }
+const TONE: Record<Kind, BandPart['tone']> = { waiting: 'warning', blocked: 'warning', failed: 'error', paused: 'permission', running: 'success', done: 'dim', pending: 'dim' }
 
 // What the bound flow is doing, in the words the user acts on.
 export const stateWord = (p: FlowInfo) =>
@@ -17,8 +17,8 @@ export const stateWord = (p: FlowInfo) =>
 
 // "▲2 approve · ✕1 failed · ‖1 paused", without the kinds that have none.
 export function kindCounts(flows: FlowInfo[]): BandPart[] {
-  const word: Record<string, string> = { waiting: 'approve', failed: 'failed', paused: 'paused' }
-  return (['waiting', 'failed', 'paused'] as const).flatMap(kind => {
+  const word: Record<string, string> = { waiting: 'approve', blocked: 'blocked', failed: 'failed', paused: 'paused' }
+  return (['waiting', 'blocked', 'failed', 'paused'] as const).flatMap(kind => {
     const n = flows.filter(p => p.kind === kind).length
     return n ? [{ text: `${symbolOf(kind, false)}${n} ${word[kind]}`, tone: TONE[kind] }] : []
   })
@@ -33,5 +33,5 @@ export function bandView(flows: FlowInfo[], boundDir: string | undefined, now: n
   } else parts.push({ text: 'Flows', tone: undefined })
   const others = kindCounts(flows.filter(p => p !== bound))
   for (const part of others) parts.push({ text: ' · ', tone: 'dim' }, part)
-  return { parts, text: parts.map(p => p.text).join(''), hot: flows.some(p => p.kind === 'waiting' || p.kind === 'failed' || p.kind === 'paused') }
+  return { parts, text: parts.map(p => p.text).join(''), hot: flows.some(p => needsUser(p.kind)) }
 }

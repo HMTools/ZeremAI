@@ -10,7 +10,7 @@
     },
     "StepStatus": {
       "type": "string",
-      "enum": ["pending", "in_progress", "completed", "skipped", "awaiting_approval"]
+      "enum": ["pending", "in_progress", "completed", "skipped", "awaiting_approval", "blocked"]
     },
     "FlowMetadata": {
       "type": "object",
@@ -69,6 +69,13 @@
         "completedAt": { "type": "string", "format": "date-time" },
         "approvalRequired": { "type": "boolean" },
         "approved": { "type": "boolean" },
+        "blocked": {
+          "type": "object",
+          "description": "Only while status is blocked: what the user must do",
+          "required": ["reason", "since"],
+          "properties": { "reason": { "type": "string" }, "command": { "type": "string" }, "since": { "type": "string", "format": "date-time" } },
+          "additionalProperties": false
+        },
         "loopBackTo": { "type": "string", "description": "Step name to loop back to when loopCondition is met" },
         "loopCondition": { "type": "string", "description": "Condition expression for looping back" },
         "maxIterations": { "type": "integer", "description": "Maximum number of loop iterations" },

@@ -57,6 +57,7 @@ export function flowKind(flow: Doc): Kind {
   const steps: Doc[] = flow.steps ?? []
   if (flow.status === 'failed') return 'failed'
   if (flow.status === 'paused') return 'paused'
+  if (steps.some(s => s.status === 'blocked')) return 'blocked'
   if (steps.some(s => s.status === 'awaiting_approval')) return 'waiting'
   if (steps.length && steps.every(isDone)) return 'done'
   return 'running'
@@ -104,12 +105,12 @@ export type BoundView = { dir: string; name: string; step: number; total: number
 
 // The step a failed or paused flow stopped at, and the last problem its log holds. Empty reason: the log says nothing.
 async function attentionOf(files: FileSystem, dir: string, flow: Doc, kind: Kind): Promise<Attention | undefined> {
-  if (kind !== 'failed' && kind !== 'paused') return
+  if (kind !== 'failed' && kind !== 'paused' && kind !== 'blocked') return
   const steps: Doc[] = flow.steps ?? []
-  const step = steps.find(s => s.status === 'failed') ?? nextStep(flow)
+  const step = steps.find(s => s.status === 'failed' || s.status === 'blocked') ?? nextStep(flow)
   if (!step) return
   const problems = strings((await readDoc(files, `${dir}/log.json`))?.steps?.[step.id]?.problemsEncountered)
-  return { number: String(step.number ?? steps.indexOf(step) + 1), name: step.name ?? step.id ?? '', reason: problems[problems.length - 1] ?? '' }
+  return { number: String(step.number ?? steps.indexOf(step) + 1), name: step.name ?? step.id ?? '', reason: step.blocked?.reason ?? problems[problems.length - 1] ?? '' }
 }
 
 // A recorded sub-flow status, as a symbol kind.
@@ -238,7 +239,13 @@ export async function startFlow(ports: ManagerPorts, template: TemplateInfo, val
 export async function resumeFlow(ports: ManagerPorts, dir: string, note?: string): Promise<Started> {
   try {
     await bindSession(ports, dir)
-    return { text: handoff('resume', dir, JSON.parse(await ports.files.read(`${dir}/flow.json`)), note), dir }
+    const flow = JSON.parse(await ports.files.read(`${dir}/flow.json`))
+    for (const s of (flow.steps ?? []).filter((s: Doc) => s.status === 'blocked')) { // the user fixed the cause: the step runs again
+      const done = await ports.script('update-step-status', { flowDir: dir, stepId: s.id, status: 'in_progress' })
+      if (done.status !== 'ok') return { error: done.message ?? 'update-step-status failed' }
+      s.status = 'in_progress'
+    }
+    return { text: handoff('resume', dir, flow, note), dir }
   } catch (error) { return { error: error instanceof Error ? error.message : String(error) } }
 }
 

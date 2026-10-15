@@ -6,6 +6,7 @@ import { fingerprint, listFlows } from '../infra/flow-pane/flow-pane'
 import { activityOf, ago } from '../infra/flow-pane/activity'
 import { bandView } from '../infra/flow-pane/band'
 import { LOOK, needsUser } from '../infra/flow-pane/status-look'
+import { continueFlow } from '../on-live-page/on-live-page'
 import { COMMANDS, REFRESH_MS, st } from './pane-state'
 
 // The line above the prompt: the flow bound to the session, its step and state, and the flows that need the user. One button: a press opens the ZeremAI
@@ -92,13 +93,17 @@ export const register: Register = on => {
     ensureTimer($)
     const { Box, Button, Text } = $.ui.resolve(e)
     const band = bandView(st.flows, st.boundDir, Date.now())
+    const blocked = st.boundDir !== undefined && st.flows.some(p => p.dir === st.boundDir && p.kind === 'blocked') // this session's flow waits for the user
     const theirs = await next(e).catch(() => undefined) // a mod after this one that fails must not blank the button
     return Box({
       flexDirection: 'column',
       children: [
         // The parts carry a theme color each (a state is also a word and a symbol, never color alone).
-        Button({ key: 'band-open', plain: true, dimColor: !band.hot && !st.boundDir, onPress: () => void openSite($),
-          children: [...band.parts.map(part => (part.tone ? Text({ children: [part.text], ...(part.tone === 'dim' ? { dimColor: true } : { color: part.tone }) }) : part.text)), ' · ZeremAI ↗'] }),
+        Box({ flexDirection: 'row', children: [
+          Button({ key: 'band-open', plain: true, dimColor: !band.hot && !st.boundDir, onPress: () => void openSite($),
+            children: [...band.parts.map(part => (part.tone ? Text({ children: [part.text], ...(part.tone === 'dim' ? { dimColor: true } : { color: part.tone }) }) : part.text)), ' · ZeremAI ↗'] }),
+          ...(blocked ? [Button({ key: 'band-continue', onPress: () => void continueFlow($, st.boundDir!).catch((error: unknown) => $.ui.toast(`Continue failed: ${error instanceof Error ? error.message : String(error)}`)), children: [' ▶ Continue'] })] : []),
+        ] }),
         ...(theirs ? [theirs] : []), // keep what the mods after this one draw
       ],
     })

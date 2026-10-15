@@ -46,7 +46,11 @@ Change a step's status in `flow.json`. It sets `startedAt` when the step moves t
 |-------|----------|-------------|
 | `flowDir` | Yes | Flow folder |
 | `stepId` | Yes | Step id (UUID) |
-| `status` | Yes | `pending`, `in_progress`, `completed`, `skipped` or `awaiting_approval` |
+| `status` | Yes | `pending`, `in_progress`, `completed`, `skipped`, `awaiting_approval` or `blocked` |
+| `reason` | For `blocked` | One sentence: what the user must do (for example "The az login expired.") |
+| `command` | No | For `blocked`: the command the user runs |
+
+**Blocked**: use it only when a retry cannot help and the user must act (an expired login, no access, a missing secret). The step then shows as blocked with the reason, and the plugin does not push you to continue. A step that moves to any other status loses the note.
 
 **Note**: A step with `approvalRequired: true` cannot be completed until the user approved it. The user approves with a click in the dialog that the tool `request_approval` opens. If the step is not approved, this tool answers an error.
 

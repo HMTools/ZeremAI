@@ -84,6 +84,9 @@ async function promptToContinue($: any, sessionId: string): Promise<Prompt | und
   const flow = await readFlow(files, flowDir)
   if (!isFlowRunning(flow)) return
 
+  // A step is blocked: a retry cannot help, the user must act. Claude may stop and wait. Continue starts the step again.
+  if (flow.steps?.some(s => s.status === 'blocked')) return
+
   const runningStep = flow.steps?.find(s => s.status === 'in_progress')
   const pendingStep = flow.steps?.find(s => s.status === 'pending')
 

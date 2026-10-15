@@ -49,3 +49,10 @@ test('only the documents that differ from the last push are written, in batches 
   const many = Object.fromEntries(Array.from({ length: 120 }, (_, i) => [`c/${i}`, { op: 'set', collection: 'c', doc_id: String(i), data: { i } } as DocWrite]))
   expect(changed(new Map(), many)).toHaveLength(120)
 })
+
+test('a blocked step is what needs you: its reason and its command, not an approval', () => {
+  const doc: any = flowDoc(flowFile({}, [step({ id: 'a', number: 0, name: 'Read PBI', status: 'blocked', blocked: { reason: 'The az login expired.', command: 'az login', since: 'then' } })]), { topics: 0, files: 0 })
+  expect(doc.status).toBe('blocked')
+  expect(doc.needsYou).toEqual({ stepId: 'a', stepNumber: 0, stepName: 'Read PBI', waitsFor: 'The az login expired.', blocked: true, command: 'az login', since: 'then' })
+  expect(doc.steps[0].status).toBe('blocked')
+})

@@ -30,7 +30,7 @@ except ImportError:  # Windows
     except ImportError:
         msvcrt = None
 
-STEP_STATUSES = ['pending', 'in_progress', 'completed', 'skipped', 'awaiting_approval']
+STEP_STATUSES = ['pending', 'in_progress', 'completed', 'skipped', 'awaiting_approval', 'blocked']
 FLOW_STATUSES = ['running', 'completed', 'failed', 'paused']
 FINDING_STATUSES = ['applied', 'rejected', 'deferred']
 PATH_INPUTS = ['flowDir', 'templatePath', 'projectPath', 'parentFlowPath', 'childFlowPath']
@@ -343,7 +343,17 @@ def update_step_status(a):
                 'This step has approvalRequired: true but has not been approved.\n'
                 'Step approval is user-only. Call request_approval: the user approves with a click in a dialog.\n'
                 'Once approved, retry: update_step_status with status completed')
+        if step.get('status') == 'blocked' and a['status'] == 'completed':
+            fail('Step "%s" is blocked: the user must act first. Do not complete it; the user presses Continue and the step runs again.' % step.get('name'))
+        if a['status'] == 'blocked' and not str(a.get('reason') or '').strip():
+            fail('A blocked step needs a reason: say in one sentence what the user must do (input "reason", and "command" if there is one).')
         step['status'] = a['status']
+        # A blocked step carries what the user must do. Any other status clears it.
+        step.pop('blocked', None)
+        if a['status'] == 'blocked':
+            step['blocked'] = {'reason': a['reason'].strip(), 'since': stamp}
+            if str(a.get('command') or '').strip():
+                step['blocked']['command'] = a['command'].strip()
         if a['status'] == 'in_progress' and step.get('startedAt') is None:
             step['startedAt'] = stamp
         elif a['status'] == 'completed':

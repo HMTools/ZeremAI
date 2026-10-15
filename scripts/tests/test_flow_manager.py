@@ -191,6 +191,18 @@ class StepStatusTest(FlowBase):
         self.ok('update-step-status', flowDir=self.dir, stepId='s1', status='completed')
         self.assertEqual(self.get(self.flow)['steps'][0]['status'], 'completed')
 
+    def test_a_blocked_step_keeps_the_reason_and_the_command_until_it_moves_on(self):
+        self.put_flow(steps=[step(status='in_progress')])
+        self.err('update-step-status', 'needs a reason', flowDir=self.dir, stepId='s1', status='blocked')
+        self.ok('update-step-status', flowDir=self.dir, stepId='s1', status='blocked', reason=' The az login expired. ', command='az login')
+        blocked = self.get(self.flow)['steps'][0]
+        self.assertEqual(blocked['status'], 'blocked')
+        self.assertEqual((blocked['blocked']['reason'], blocked['blocked']['command']), ('The az login expired.', 'az login'))
+        self.assertIn('since', blocked['blocked'])
+        self.err('update-step-status', 'is blocked', flowDir=self.dir, stepId='s1', status='completed')
+        self.ok('update-step-status', flowDir=self.dir, stepId='s1', status='in_progress')
+        self.assertNotIn('blocked', self.get(self.flow)['steps'][0])
+
     def test_unknown_status_unknown_step_and_missing_flow_are_errors(self):
         self.put_flow()
         self.err('update-step-status', 'Invalid status', flowDir=self.dir, stepId='s1', status='nope')

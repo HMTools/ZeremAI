@@ -35,6 +35,7 @@ export function flowDoc(flow: Doc, counts: { topics: number; files: number }): D
   const steps: Doc[] = flow.steps ?? []
   const next = steps.find(s => !isDone(s))
   const waiting = steps.find(s => s.status === 'awaiting_approval')
+  const blocked = steps.find(s => s.status === 'blocked')
   const children: Doc[] = flow.subFlowState?.childFlows ?? []
   const parentId = flow.subFlowState?.parentFlow?.id
   return cut({
@@ -42,7 +43,8 @@ export function flowDoc(flow: Doc, counts: { topics: number; files: number }): D
     template: flow.metadata?.template ?? '',
     status: flowKind(flow),
     activeStepId: flow.currentState?.activeStep?.id ?? next?.id ?? '',
-    ...(waiting ? { needsYou: { stepId: waiting.id, stepNumber: Number(waiting.number ?? 0), stepName: waiting.name ?? '', waitsFor: waiting.stepDefinition?.output?.description || 'Your approval', since: flow.metadata?.lastUpdated ?? '' } } : {}), // ponytail: "since" is the last change of the flow, the files do not record when the wait began
+    ...(blocked ? { needsYou: { stepId: blocked.id, stepNumber: Number(blocked.number ?? 0), stepName: blocked.name ?? '', waitsFor: blocked.blocked?.reason ?? 'A retry cannot help.', blocked: true, ...(blocked.blocked?.command ? { command: blocked.blocked.command } : {}), since: blocked.blocked?.since ?? flow.metadata?.lastUpdated ?? '' } }
+      : waiting ? { needsYou: { stepId: waiting.id, stepNumber: Number(waiting.number ?? 0), stepName: waiting.name ?? '', waitsFor: waiting.stepDefinition?.output?.description || 'Your approval', since: flow.metadata?.lastUpdated ?? '' } } : {}), // ponytail: "since" is the last change of the flow, the files do not record when the wait began
     updatedAt: flow.metadata?.lastUpdated ?? '',
     ...(parentId ? { parentFlowId: parentId } : {}),
     counts,

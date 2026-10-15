@@ -23,8 +23,9 @@ export const FLOW_TOOLS: Tool[] = [
     parentFlowPath: str('Parent flow folder, for a sub-flow'), parentId: str('Parent flow id'),
     parentName: str('Parent flow name'), returnToStep: str('Step id in the parent to return to'),
   }, ['flowDir', 'templatePath']),
-  tool('update_step_status', 'Change the status of a step. A step that needs approval cannot be completed before the user approved it.', {
+  tool('update_step_status', 'Change the status of a step. A step that needs approval cannot be completed before the user approved it. Status blocked (a retry cannot help, the user must act) needs a reason.', {
     flowDir, stepId: str('Step id'), status: { type: 'string', enum: STEP_STATUSES },
+    reason: str('For blocked: one sentence on what the user must do'), command: str('For blocked: the command the user runs, if there is one'),
   }, ['flowDir', 'stepId', 'status']),
   tool('update_current_state', 'Set the active step of the flow, with a summary and optionally the active substep.', {
     flowDir, stepId: str('Step id'), stepName: str('Step name'), summary: str('What the step does now'), details: str('More detail'),

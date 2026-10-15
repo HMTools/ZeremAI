@@ -13,6 +13,7 @@ export async function stepLine(files: FileSystem, dir: string): Promise<string> 
   if (!step) return ''
   const parts = [`Step ${index + 1} of ${steps.length}`, active?.name ?? step.name]
   if (step.status === 'awaiting_approval') parts.push('waits for you')
+  else if (step.status === 'blocked') parts.push('blocked')
   else if (active?.totalSubsteps && active.currentSubstep) parts.push(`part ${active.currentSubstep.number} of ${active.totalSubsteps}`)
   return parts.join(' · ')
 }

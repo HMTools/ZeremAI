@@ -31,6 +31,10 @@ If the brief has a "User Corrections" section, you are being re-invoked to apply
 2. Apply only the requested corrections — do not redo the entire step
 3. End with a new result block (see Final Answer)
 
+## Blocked
+
+If a retry cannot help and only the user can fix the cause (an expired login, no access, a missing secret or setting, a tool that is not installed), stop and add `blocked` to your result block (see Final Answer). Do not retry, and do not guess around it. A slow call, a failed test or a question about the task is not blocked.
+
 ## Questions
 
 You cannot ask the user. If the step needs an answer, stop, list the questions in your result and say which step waits. The parent asks in the question dialog and starts the step again with the answers as "User Corrections".
@@ -90,6 +94,7 @@ End your answer with **one** fenced `json` block. The plugin reads the last one,
 ```
 
 - `memory`: one entry per topic you write. Use only the topics in `memoryFileUsage.writeTo` (any topic if the list is empty).
+- `blocked`: only when a retry cannot help and the user must act: `{ "reason": "one sentence on what the user must do", "command": "the command to run, if there is one" }`. The step then shows as blocked and the flow waits for the user.
 - Every key except `summary` may be left out. Every list holds text only.
 
 Above the block, say in plain words: whether the step completed, the outputs created, and any issues.

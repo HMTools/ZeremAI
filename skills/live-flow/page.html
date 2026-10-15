@@ -31,7 +31,7 @@
   button { font: inherit; color: inherit; cursor: pointer; } :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; } [tabindex="-1"]:focus { outline: none; }
   .muted { color: var(--muted); } .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
   .link { background: none; border: 0; padding: 0; color: var(--accent-text); font-weight: 550; text-align: left; } .link:hover { text-decoration: underline; }
-  .k { color: var(--k); } .k-waiting { --k: var(--k-waiting); --kb: var(--k-waiting-bg); } .k-running { --k: var(--k-running); --kb: var(--k-running-bg); } .k-done { --k: var(--k-done); --kb: var(--k-done-bg); }
+  .k { color: var(--k); } .k-waiting, .k-blocked { --k: var(--k-waiting); --kb: var(--k-waiting-bg); } .k-running { --k: var(--k-running); --kb: var(--k-running-bg); } .k-done { --k: var(--k-done); --kb: var(--k-done-bg); }
   .k-failed { --k: var(--k-failed); --kb: var(--k-failed-bg); } .k-paused { --k: var(--k-paused); --kb: var(--k-paused-bg); } .k-pending { --k: var(--k-pending); --kb: var(--k-pending-bg); }
   .pill { display: inline-flex; gap: 5px; align-items: center; font-size: 12.5px; font-weight: 600; padding: 1px 9px; border-radius: 999px; background: var(--kb); color: var(--k); white-space: nowrap; }
 
@@ -95,7 +95,7 @@
   /* two lanes */
   .lanes { border: 1px solid var(--line); border-radius: 14px; background: var(--surface); padding: 10px 6px 4px; overflow-x: auto; } .lanes svg { display: block; width: 100%; min-width: 560px; height: auto; }
   .lp { cursor: pointer; } .lp rect { fill: var(--surface); stroke: var(--line2); stroke-width: 1.4; } .lp.you rect { fill: var(--accent-bg); stroke: var(--accent); } .lp:hover rect { stroke: var(--muted); }
-  .lp.k-waiting rect, .lp.k-failed rect, .lp.k-paused rect { stroke: var(--k); stroke-width: 2.2; } .lp.k-running rect { stroke: var(--k); } .lp.k-done { opacity: .75; }
+  .lp.k-waiting rect, .lp.k-blocked rect, .lp.k-failed rect, .lp.k-paused rect { stroke: var(--k); stroke-width: 2.2; } .lp.k-running rect { stroke: var(--k); } .lp.k-done { opacity: .75; }
   .lp.sel rect { stroke: var(--accent); stroke-width: 2.8; } .lp:focus-visible rect { stroke: var(--accent); stroke-width: 2.8; }
   .lp text { fill: var(--fg); font-family: var(--font-body); font-size: 13.5px; font-weight: 600; } .lp text.lnu { fill: var(--muted); font-family: var(--font-mono); font-size: 11.5px; font-weight: 400; } .lp text.lsy { fill: var(--k); font-size: 14px; }
   .lnt { fill: var(--muted); font-family: var(--font-mono); font-size: 11px; } .lph { fill: var(--muted); font-family: var(--font-body); font-size: 12px; font-weight: 600; }
@@ -155,8 +155,8 @@
 (function () {
   'use strict';
   /* ---- the six states: same symbols and words as hooks/infra/flow-pane/status-look.ts ---- */
-  var LOOK = { waiting: ['▲', 'waits for you'], running: ['●', 'running'], done: ['✓', 'done'], failed: ['✕', 'failed'], paused: ['‖', 'paused'], pending: ['○', 'pending'] };
-  var NEEDS = { waiting: 1, failed: 1, paused: 1 };
+  var LOOK = { waiting: ['▲', 'waits for you'], blocked: ['▲', 'blocked'], running: ['●', 'running'], done: ['✓', 'done'], failed: ['✕', 'failed'], paused: ['‖', 'paused'], pending: ['○', 'pending'] };
+  var NEEDS = { waiting: 1, blocked: 1, failed: 1, paused: 1 };
   var $ = function (id) { return document.getElementById(id); };
   function arr(x) { return Array.isArray(x) ? x : []; }
   function str(x) { return typeof x === 'string' ? x : x == null ? '' : typeof x === 'object' ? JSON.stringify(x) : String(x); }
@@ -192,7 +192,7 @@
     var steps = arr(d.steps).map(function (s) { s = s || {}; return { id: str(s.id), number: s.number, name: str(s.name), phase: str(s.phase), status: kind(s.status), approval: !!s.approval, loopBackTo: s.loopBackTo == null ? '' : str(s.loopBackTo), childFlowId: str(s.childFlowId), summary: str(s.summary) }; });
     var n = d.needsYou && typeof d.needsYou === 'object' ? d.needsYou : null;
     return { id: id, name: str(d.name) || id, template: str(d.template), status: kind(d.status), activeStepId: str(d.activeStepId), updatedAt: ms(d.updatedAt), parentFlowId: str(d.parentFlowId), counts: d.counts || {}, steps: steps,
-      needsYou: n ? { stepId: str(n.stepId), stepNumber: n.stepNumber, stepName: str(n.stepName), waitsFor: str(n.waitsFor), since: ms(n.since) } : null };
+      needsYou: n ? { stepId: str(n.stepId), stepNumber: n.stepNumber, stepName: str(n.stepName), waitsFor: str(n.waitsFor), command: str(n.command), blocked: !!n.blocked, since: ms(n.since) } : null };
   }
   function takeFlows(docs) {
     var next = {}, before = S.flows;
@@ -455,7 +455,7 @@
       flowActions(f));
   }
   function flowActions(f) {
-    var why = cantAct(f.id), cont = f.status === 'paused' || f.status === 'failed' || f.status === 'pending', nk = 'note:' + f.id, closeKey = 'close:' + f.id, bits = [];
+    var why = cantAct(f.id), cont = f.status === 'paused' || f.status === 'failed' || f.status === 'pending' || f.status === 'blocked', nk = 'note:' + f.id, closeKey = 'close:' + f.id, bits = [];
     if (cont) {
       var a = function () { return { flowId: f.id, note: S.draft[nk] || '' }; };
       bits.push(el('div', { class: 'row' }, actBtn('Continue', 'continue', a, { flowId: f.id, primary: true }),
@@ -467,6 +467,11 @@
   }
   function needCard(f) {
     var n = f.needsYou; if (!n) return null;
+    if (n.blocked) return el('section', { class: 'need-card k-blocked', 'aria-label': 'Blocked' }, // nothing to approve: the reason, the command, and the Continue button of the flow
+      el('b', null, LOOK.blocked[0] + ' ' + (n.stepNumber != null ? 'Step ' + n.stepNumber + ' · ' : '') + (n.stepName || 'A step') + ' is blocked'),
+      n.waitsFor ? el('p', null, n.waitsFor) : null,
+      n.command ? el('pre', { class: 'df' }, n.command) : null,
+      el('p', null, el('small', null, 'Do this, then press Continue.' + (n.since ? ' Blocked since ' + hhmm(n.since) + ' (' + ago(n.since) + ').' : ''))));
     var rk = 'reason:' + f.id + ':' + n.stepId, aargs = { flowId: f.id, stepId: n.stepId }, why = n.stepId ? cantAct(f.id) : 'The step is not known yet.', open = S.reasonOpen === rk;
     return el('section', { class: 'need-card k-waiting', 'aria-label': 'Needs you' },
       el('b', null, LOOK.waiting[0] + ' ' + (n.stepNumber != null ? 'Step ' + n.stepNumber + ' · ' : '') + (n.stepName || 'A step') + ' waits for you'),

@@ -200,3 +200,17 @@ test('resume adds one extra line for the agent', async () => {
   const started = await resumeFlow(w.ports, `${ACTIVE}/r`, 'The user pressed Retry on step 0.')
   expect('text' in started && started.text).toContain('The user pressed Retry on step 0.')
 })
+
+test('resume runs a blocked step again before it hands the flow over', async () => {
+  const w = world({ [`${ACTIVE}/b/flow.json`]: flowFile({ name: 'B' }, [step({ id: 'a', number: 0, status: 'blocked', blocked: { reason: 'The az login expired.', since: 'then' } })]) })
+  const started = await resumeFlow(w.ports, `${ACTIVE}/b`)
+  expect(w.scripts.at(-1)).toEqual({ sub: 'update-step-status', input: { flowDir: `${ACTIVE}/b`, stepId: 'a', status: 'in_progress' } })
+  expect('text' in started && started.text).toContain('(in_progress)')
+})
+test('a flow with a blocked step is blocked, and needs the user', async () => {
+  const w = world({ [`${ACTIVE}/b/flow.json`]: flowFile({ name: 'B' }, [step({ id: 'a', number: 0, status: 'blocked', blocked: { reason: 'No access.', since: 'then' } })]) })
+  const [info] = await listFlows(w.ports.files)
+  expect(info.kind).toBe('blocked')
+  expect(waitingCount([info])).toBe(1)
+  expect((await boundView(w.ports.files, `${ACTIVE}/b`))?.attention?.reason).toBe('No access.')
+})

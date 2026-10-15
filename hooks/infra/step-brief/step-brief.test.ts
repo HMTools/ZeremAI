@@ -54,3 +54,10 @@ test('the message to the subagent lists only the failed checks', () => {
   expect(text).toContain('- a: fix a\n- c\n')
   expect(text).not.toContain('- b')
 })
+
+test('a blocked note keeps the reason and the command', () => {
+  expect(readResultBlock(block({ summary: 'x', blocked: { reason: ' The az login expired. ', command: 'az login' } }))?.blocked).toEqual({ reason: 'The az login expired.', command: 'az login' })
+  expect(readResultBlock(block({ summary: 'x', blocked: { reason: 'No access.', command: ' ' } }))?.blocked).toEqual({ reason: 'No access.' })
+  expect(readResultBlock(block({ summary: 'x' }))?.blocked).toBeUndefined()
+})
+for (const blocked of [{}, { reason: ' ' }, { reason: 'r', command: 1 }, 'text']) test(`a wrong blocked note (${JSON.stringify(blocked)}) is no result`, () => expect(readResultBlock(block({ summary: 'x', blocked }))).toBeUndefined())

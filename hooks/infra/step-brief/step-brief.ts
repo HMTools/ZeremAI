@@ -23,6 +23,7 @@ export type StepResult = {
   summary: string
   memory: { topic: string; info?: Record<string, unknown>; decisions?: string[]; files?: string[] }[]
   log: Record<string, string[]>
+  blocked?: { reason: string; command?: string } // a retry cannot help: the user must act
 }
 const LOG_KEYS = ['actions', 'reasoning', 'filesModified', 'problems', 'decisions', 'performanceNotes']
 const isList = (v: unknown): v is string[] => Array.isArray(v) && v.every(x => typeof x === 'string')
@@ -53,12 +54,19 @@ export function readResultBlock(text: string): StepResult | undefined {
       log[key] = value
     }
   }
-  return { summary: raw.summary.trim(), memory: entries, log }
+  let blocked: StepResult['blocked']
+  if (raw.blocked !== undefined) {
+    const b = raw.blocked
+    if (!isObject(b) || typeof b.reason !== 'string' || !b.reason.trim() || (b.command !== undefined && typeof b.command !== 'string')) return
+    blocked = { reason: b.reason.trim(), ...(typeof b.command === 'string' && b.command.trim() ? { command: b.command.trim() } : {}) }
+  }
+  return { summary: raw.summary.trim(), memory: entries, log, ...(blocked ? { blocked } : {}) }
 }
 
 export const FIX_MESSAGE =
   'Your result block is missing or wrong. End your answer again with one ```json block with "summary" (text), ' +
-  '"memory" (a list of {topic, info, decisions, files}) and "log" (lists: actions, reasoning, filesModified, problems, decisions, performanceNotes).'
+  '"memory" (a list of {topic, info, decisions, files}) and "log" (lists: actions, reasoning, filesModified, problems, decisions, performanceNotes). ' +
+  'If you added "blocked", it is {reason (text), command (text, optional)}.'
 
 export type Check = { name: string; passed: boolean; message?: string }
 // The answer of the run-verifiers command: the script never fails it, so anything else is a fault of the script itself.

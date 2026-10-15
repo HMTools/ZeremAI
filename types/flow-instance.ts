@@ -199,6 +199,9 @@ export interface FlowStep {
   /** Whether user approval has been granted (only relevant if approvalRequired is true) */
   approved?: boolean;
 
+  /** Only while status is blocked: what the user must do. Any other status clears it. */
+  blocked?: { reason: string; command?: string; since: ISOTimestamp };
+
   /** Embedded step definition with full execution guidance */
   stepDefinition: EmbeddedStepDefinition;
 }

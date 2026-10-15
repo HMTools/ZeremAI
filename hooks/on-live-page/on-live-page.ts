@@ -221,6 +221,11 @@ async function fillFields($: any, args: Record<string, string>): Promise<string>
   return JSON.stringify(parsed.answer)
 }
 
+// Continue: a blocked step runs again, and the flow goes back to the agent. The page and the button above the prompt both call this.
+export async function continueFlow($: any, dir: string, note?: string): Promise<void> {
+  await handOff($, await resumeFlow(managerPorts($), dir, note))
+}
+
 // One checked command → what it did, in a line the page shows. The existing calls are the ones the old pane buttons made.
 async function execute($: any, { action, args }: { action: string; args: Record<string, string> }, dir?: string): Promise<string> {
   const files = filesOf($)
@@ -235,7 +240,7 @@ async function execute($: any, { action, args }: { action: string; args: Record<
       submit($, { text: answer.text }) // the answer reaches the agent as a prompt, like the dialog's answer
       return action === 'approve' ? 'Approved. Claude carries on.' : 'Sent. Claude changes the step.'
     }
-    case 'continue': await handOff($, await resumeFlow(managerPorts($), dir!, args.note?.trim() || undefined)); return 'Resumed. Claude carries on.'
+    case 'continue': await continueFlow($, dir!, args.note?.trim() || undefined); return 'Resumed. Claude carries on.'
     case 'close': await closeFlow($, dir!); return 'Closed. This session no longer works on that flow.'
     case 'new-flow': {
       const template = (await listTemplates(files)).find(t => `${t.category}/${t.name}` === args.template)

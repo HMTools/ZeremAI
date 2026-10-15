@@ -26,6 +26,7 @@ For each step in order, check its type:
 1. Call the tool `update_step_status` with `flowDir`, `stepId` and `status: in_progress`. Do this BEFORE delegating. It tells the Stop hook a subagent works the step, so the hook does not block every turn.
 2. Start the step with the Agent tool: `subagent_type` `zeremai:step-executor`, `description` the step name, `prompt` exactly `Run the step.` Nothing else: the plugin finds the step that is `in_progress`, builds the subagent's prompt (step, parameters, memory) and saves its memory and log when it ends. Never put step details in the prompt. If the Agent call is refused, read the reason and fix it (usually the step is not `in_progress`).
    - The subagent's report is a short summary. If it says the result is missing and the subagent is asked to fix it, do nothing: end your turn. The plugin starts a new turn when the result is saved.
+   - If the report says the step is **blocked**, a retry cannot help and the user must act. Tell the user in plain words what to do (the reason and the command), and end your turn. Never complete the step, and never start the next one. The user presses Continue (on the ZeremAI page, or next to the ZeremAI button above the prompt) and the step runs again.
 3. If the step has `approvalRequired: true`, follow Approval Checkpoints below.
 4. Advance to the next step.
 

@@ -45,6 +45,7 @@ export function world(initial: Record<string, unknown> = {}, { failMove = false 
         return { status: 'ok', files_written: ['flow.json'] }
       }
       if (sub === 'approve-step') { const flow = JSON.parse(disk[`${input.flowDir}/flow.json`]); flow.steps.find((s: any) => s.id === input.stepId).approved = true; disk[`${input.flowDir}/flow.json`] = JSON.stringify(flow); return { status: 'ok', files_written: ['flow.json'] } }
+      if (sub === 'update-step-status') { const flow = JSON.parse(disk[`${input.flowDir}/flow.json`]); flow.steps.find((s: any) => s.id === input.stepId).status = input.status; disk[`${input.flowDir}/flow.json`] = JSON.stringify(flow); return { status: 'ok', files_written: ['flow.json'] } }
       return { status: 'error', message: `fake script: ${sub}` }
     },
   }

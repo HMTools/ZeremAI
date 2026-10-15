@@ -110,3 +110,8 @@ test('approval step with an open gate: no re-prompt', async ($, on) => {
   await end($)
   expect(sent).toEqual([])
 })
+test('a step is blocked: no re-prompt, even with a step pending', async ($, on) => {
+  const sent = world(on, { [json]: proc('running', [step(1, 'blocked'), step(2, 'pending')]) })
+  await end($)
+  expect(sent).toEqual([])
+})

@@ -73,8 +73,9 @@ export const register: Register = on => {
     }
 
     const script = scriptOf($)
-    const out = await script('run-verifiers', { flowDir: ref.flowDir, stepId: ref.stepId })
-    const run = readVerifierRun(out)
+    // A blocked step has no result to check: the checks would only fail.
+    const out: Record<string, unknown> = result.blocked ? { status: 'ok' } : await script('run-verifiers', { flowDir: ref.flowDir, stepId: ref.stepId })
+    const run = result.blocked ? undefined : readVerifierRun(out)
     if (run?.result === 'fail') {
       const asked = await askFix(failedChecksMessage(run.checks), 'The result of the step failed its checks.')
       if (asked) return asked
@@ -88,8 +89,12 @@ export const register: Register = on => {
     ]
     const failed: string[] = []
     for (const save of await Promise.all(saves)) if (save.status !== 'ok') failed.push(String(save.message))
+    if (result.blocked) { // retry cannot help: the step shows as blocked, and the guard lets Claude stop
+      const marked = await script('update-step-status', { flowDir: ref.flowDir, stepId: ref.stepId, status: 'blocked', reason: result.blocked.reason, ...(result.blocked.command ? { command: result.blocked.command } : {}) })
+      if (marked.status !== 'ok') failed.push(String(marked.message))
+    }
     const notes = [
-      ...(run ? [] : [`Verifiers did not run: ${String(out.message ?? 'bad answer')}`]),
+      ...(run || result.blocked ? [] : [`Verifiers did not run: ${String(out.message ?? 'bad answer')}`]),
       ...(run?.result === 'fail' ? [`Checks still fail after ${fixes} fix tries (the result is saved anyway):\n${failedLines(run.checks)}`] : []),
       ...(failed.length ? [`Not saved: ${failed.join(' | ')}`] : []),
     ]
