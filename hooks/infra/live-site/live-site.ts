@@ -55,6 +55,9 @@ const SPEC: Record<string, Spec> = {
   'install-template': { need: ['marketplace', 'category', 'name'], plain: ['marketplace', 'category', 'name'] },
   'remove-template': { need: ['category', 'name'], plain: ['category', 'name'] },
   'refresh-marketplaces': { need: [] },
+  'view-template': { need: ['category', 'name'], plain: ['category', 'name'] },
+  'edit-template': { need: ['category', 'name', 'request'], plain: ['category', 'name'] },
+  'send-template': { need: ['marketplace', 'category', 'name'], plain: ['marketplace', 'category', 'name'] },
 }
 const TEMPLATE = /^[\w.-]+\/[\w.-]+$/
 const KEY = /^[\w.-]{1,100}$/
@@ -116,7 +119,7 @@ export function templateDocs(entries: CatalogEntry[], templates: TemplateInfo[],
   const installed = (category: string, name: string) => templates.find(t => t.category === category && t.name === name)
   for (const e of entries) {
     const t = installed(e.category, e.name)
-    rows.set(`${e.category}~${e.name}`, { name: e.name, category: e.category, title: e.title, description: e.description, installed: e.state !== 'available', state: e.state, marketplace: e.marketplace, ...(t ? { steps: t.stepCount } : {}), fields: e.state === 'available' ? [] : fieldsOf(t) })
+    rows.set(`${e.category}~${e.name}`, { name: e.name, category: e.category, title: e.title, description: e.description, installed: e.state !== 'available', state: e.state, ...(e.edited ? { edited: true } : {}), marketplace: e.marketplace, ...(t ? { steps: t.stepCount } : {}), fields: e.state === 'available' ? [] : fieldsOf(t) })
   }
   for (const t of templates) {
     const id = `${t.category}~${t.name}`

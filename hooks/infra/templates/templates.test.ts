@@ -1,6 +1,6 @@
 import { test, expect } from 'claude-code/testing'
 import { world } from '../flow-manager/fake-world'
-import { addMarketplace, catalog, installTemplate, listMarketplaces, refreshMarketplaces, removeMarketplace, removeTemplate, toggleMarketplace, updateMarketplace } from './templates'
+import { addMarketplace, catalog, fingerprintOf, installTemplate, listMarketplaces, refreshMarketplaces, removeMarketplace, removeTemplate, toggleMarketplace, updateMarketplace } from './templates'
 import type { TemplatePorts } from './templates'
 
 const ROOT = '/h/.claude/zeremai'
@@ -119,4 +119,21 @@ test('update: a new name moves the cache; a new address drops it', async () => {
   expect(moved.calls).toEqual([['rm', '-rf', CACHE]])
   expect(configOf(moved.w)[0]).toMatchObject({ url: 'https://x/other.git', branch: 'dev' })
   await expect(updateMarketplace(setup().ports, 'official', { ...FIELDS, name: 'official', branch: '-x' })).rejects.toThrow('Not a branch name')
+})
+
+test('edited: install saves a base code; a changed file shows as edited; a manifest with no code is filled in, not edited', async () => {
+  const fixed = { [`${CACHE}/templates/flows/dev/fix/fix.json`]: { metadata: { title: 'Fix' } }, [`${CACHE}/templates/flows/dev/fix/step/step.json`]: { a: 1 } }
+  const { ports, w } = setup(fixed)
+  await installTemplate(ports, { marketplace: 'official', category: 'dev', name: 'fix' })
+  const base = w.json(`${ROOT}/config/installed-templates.json`).templates[0].baseHash
+  expect(base).toBe(await fingerprintOf(ports, `${CACHE}/templates/flows/dev/fix`))
+  const mine = `${ROOT}/templates/flows/dev/fix`
+  await w.ports.write(`${mine}/fix.json`, JSON.stringify({ metadata: { title: 'Fix' } })) // the copy the user has (the fake shell does not copy)
+  await w.ports.write(`${mine}/step/step.json`, JSON.stringify({ a: 1 }))
+  expect((await catalog(ports))[0].edited).toBeUndefined()
+  await w.ports.write(`${mine}/step/step.json`, JSON.stringify({ a: 2 }))
+  expect((await catalog(ports))[0]).toMatchObject({ edited: true })
+  const old = setup({ ...fixed, [`${ROOT}/config/installed-templates.json`]: { templates: [{ name: 'fix', category: 'dev', type: 'flow', marketplace: 'official', installedAt: 't', version: 'abc123' }] }, [`${mine}/fix.json`]: {} })
+  expect((await catalog(old.ports))[0].edited).toBeUndefined()
+  expect(old.w.json(`${ROOT}/config/installed-templates.json`).templates[0].baseHash).toBeTruthy()
 })

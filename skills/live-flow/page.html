@@ -181,7 +181,7 @@
   if (HASH && !PREVIEW) store('zf-session', HASH, 's');
   var S = { flows: {}, details: {}, sessions: {}, templates: [], markets: {}, cmds: [], sent: {}, beat: null, ready: false, offline: !navigator.onLine, owner: false, ownerKnown: false, noDb: false,
     bad: {}, session: PREVIEW ? 'demo' : (HASH || store('zf-session', undefined, 's') || ''), route: store('zf-route', undefined, 's') || 'flows', sel: store('zf-flow'), stepSel: {}, view: store('zf-view') || (window.innerWidth < 720 ? 'runbook' : 'lanes'),
-    tab: 'step', flash: {}, draft: {}, errs: {}, confirm: '', reasonOpen: '', pick: store('zf-tpl'), dismiss: {}, applied: {}, seen: {}, awaitNew: null, focusMain: false, tq: '', nq: '' };
+    tab: 'step', flash: {}, draft: {}, errs: {}, confirm: '', editOpen: '', reasonOpen: '', pick: store('zf-tpl'), dismiss: {}, applied: {}, seen: {}, awaitNew: null, focusMain: false, tq: '', nq: '' };
   var DB = null;
   var say = function (t) { $('say').textContent = ''; setTimeout(function () { $('say').textContent = t; }, 30); };
   var pending = 0;
@@ -217,7 +217,7 @@
   }
   function sessDoc(id, d) { return { id: id, folder: str(d.folder), name: str(d.name), title: str(d.title), beat: ms(d.beat), opened: ms(d.openedAt), flows: arr(d.flows).map(str) }; }
   function tplDoc(id, d) {
-    return { id: id, name: str(d.name) || id, category: str(d.category), description: str(d.description), installed: !!d.installed, marketplace: str(d.marketplace), steps: arr(d.steps),
+    return { id: id, name: str(d.name) || id, category: str(d.category), description: str(d.description), installed: !!d.installed, edited: !!d.edited, state: str(d.state), marketplace: str(d.marketplace), steps: arr(d.steps),
       fields: arr(d.fields).map(function (f) { f = f || {}; return { name: str(f.name), required: !!f.required, type: str(f.type) || 'text', description: str(f.description), example: str(f.example) }; }).filter(function (f) { return f.name; }) };
   }
   function cmdDoc(id, d) {
@@ -292,10 +292,10 @@
     if (action === 'approve' || action === 'request-changes') return action + ':' + a.flowId + ':' + a.stepId;
     if (action === 'continue' || action === 'close') return action + ':' + a.flowId;
     if (action === 'new-flow' || action === 'fill-fields') return action + ':' + a.template;
-    if (action === 'install-template' || action === 'remove-template') return action + ':' + a.category + '/' + a.name;
+    if (/^(install|remove|view|edit|send)-template$/.test(action)) return action + ':' + a.category + '/' + a.name;
     return action;
   }
-  var VERB = { approve: 'Approve', 'request-changes': 'Request changes', continue: 'Continue', close: 'Close flow', 'new-flow': 'Create flow', 'fill-fields': 'Fill fields', 'install-template': 'Install', 'remove-template': 'Remove', 'refresh-marketplaces': 'Refresh marketplaces' };
+  var VERB = { approve: 'Approve', 'request-changes': 'Request changes', continue: 'Continue', close: 'Close flow', 'new-flow': 'Create flow', 'fill-fields': 'Fill fields', 'install-template': 'Install', 'remove-template': 'Remove', 'view-template': 'View', 'edit-template': 'Edit', 'send-template': 'Send as PR', 'refresh-marketplaces': 'Refresh marketplaces' };
   function label(c) { return (VERB[c.action] || c.action) + (c.args.name && c.action.indexOf('template') > 0 ? ' ' + c.args.name : ''); }
   function resultText(c) {
     if (c.action === 'fill-fields' && c.status === 'done') { try { var n = Object.keys(JSON.parse(c.result)).length; return n ? 'Filled ' + words(n, 'field', 'fields') + '. Check them before you create the flow.' : 'Nothing to fill from that text.'; } catch (e) { return 'Done.'; } }
@@ -654,12 +654,25 @@
     main.append(el('div', { style: 'display:grid;gap:16px' }, box));
   }
   function tplRow(t) {
-    var cat = t.category, a = { marketplace: t.marketplace, category: cat, name: t.name }, rk = 'remove-template:' + cat + '/' + t.name, rem = S.confirm === rk, ia = { category: cat, name: t.name, marketplace: t.marketplace };
-    var acts = t.installed ? (rem ? [el('span', { class: 'sub' }, 'Remove “' + t.name + '”?'), actBtn('Yes, remove', 'remove-template', { category: cat, name: t.name }, { scope: 'session', danger: true, small: true }), el('button', { class: 'btn small', type: 'button', onclick: function () { S.confirm = ''; S.focusKey = 'x:' + rk; render(); } }, 'Keep it')]
-        : [el('button', { class: 'btn small', type: 'button', 'data-key': 'x:' + rk, 'aria-disabled': cantAct(null, 'session') ? 'true' : null, onclick: function () { if (!cantAct(null, 'session')) { S.confirm = rk; render(); } } }, 'Remove')])
-      : [t.marketplace ? actBtn('Install', 'install-template', ia, { scope: 'session', small: true, primary: true }) : el('span', { class: 'sub' }, 'No marketplace')];
-    return el('div', { class: 'trw' }, el('div', { class: 'nm' }, el('b', null, t.name), el('span', { class: 'sub' }, [t.category, t.installed ? 'installed' : 'not installed', words(t.fields.length, 'field', 'fields')].filter(Boolean).join(' · ')), t.description ? el('span', null, t.description) : null),
-      el('div', { class: 'ac' }, el('div', { class: 'row' }, acts)), el('div', { class: 'full' }, statusLine('install-template', ia), statusLine('remove-template', ia))); // both: a result stays when the row moves between the lists
+    var cat = t.category, id = cat + '/' + t.name, a = { marketplace: t.marketplace, category: cat, name: t.name }, ta = { category: cat, name: t.name };
+    var rk = 'remove-template:' + id, uk = 'update:' + id, ek = 'edit:' + id, rem = S.confirm === rk, upd = S.confirm === uk, open = S.editOpen === id, S_ = { scope: 'session', small: true };
+    var keep = function (k) { return el('button', { class: 'btn small', type: 'button', onclick: function () { S.confirm = ''; S.focusKey = 'x:' + k; render(); } }, 'Keep it'); };
+    var ask = function (k, label) { return el('button', { class: 'btn small', type: 'button', 'data-key': 'x:' + k, 'aria-disabled': cantAct(null, 'session') ? 'true' : null, onclick: function () { if (!cantAct(null, 'session')) { S.confirm = k; render(); } } }, label); };
+    var acts;
+    if (!t.installed) acts = [t.marketplace ? actBtn('Install', 'install-template', a, { scope: 'session', small: true, primary: true }) : el('span', { class: 'sub' }, 'No marketplace')];
+    else if (rem) acts = [el('span', { class: 'sub' }, 'Remove “' + t.name + '”?'), actBtn('Yes, remove', 'remove-template', ta, { scope: 'session', danger: true, small: true }), keep(rk)];
+    else if (upd) acts = [el('span', { class: 'sub' }, 'This erases your change.'), actBtn('Yes, update', 'install-template', a, { scope: 'session', danger: true, small: true }), keep(uk)];
+    else {
+      acts = [actBtn('View', 'view-template', ta, S_), el('button', { class: 'btn small', type: 'button', 'aria-expanded': open ? 'true' : 'false', onclick: function () { S.editOpen = open ? '' : id; render(); } }, 'Edit')];
+      if (t.state === 'update' && t.marketplace) acts.push(t.edited ? ask(uk, 'Update…') : actBtn('Update', 'install-template', a, S_));
+      if (t.edited && t.marketplace) acts.push(actBtn('Send as PR', 'send-template', a, S_));
+      acts.push(ask(rk, 'Remove'));
+    }
+    var sub = [cat, t.marketplace, t.installed ? 'installed' : 'not installed', t.edited ? 'edited by you' : '', t.installed && t.state === 'update' ? 'update ready' : '', words(t.fields.length, 'field', 'fields')].filter(Boolean).join(' · ');
+    var box = open && t.installed ? el('div', { class: 'full fld' }, el('label', { for: ek }, 'What should change?'), input(ek, { area: true, placeholder: 'Add a step that runs the linter before the pull request' }),
+      el('div', { class: 'row' }, actBtn('Ask Claude', 'edit-template', function () { return { category: cat, name: t.name, request: S.draft[ek] || '' }; }, { scope: 'session', small: true, primary: true, errKey: ek, validate: function () { return (S.draft[ek] || '').trim() ? '' : 'Write a few words first.'; } }), el('span', { class: 'sub' }, 'Claude drafts it. You approve before it saves.')), statusLine('edit-template', ta)) : null;
+    return el('div', { class: 'trw' }, el('div', { class: 'nm' }, el('b', null, t.name), el('span', { class: 'sub' }, sub), t.description ? el('span', null, t.description) : null),
+      el('div', { class: 'ac' }, el('div', { class: 'row' }, acts)), box, el('div', { class: 'full' }, statusLine('install-template', a), statusLine('remove-template', ta), statusLine('view-template', ta), statusLine('send-template', a))); // a result stays when the row moves between the lists
   }
 
   /* ---- preview: an in-page database with a pretend mod, only with #preview and no real database ---- */
@@ -679,7 +692,7 @@
     data.meta.mod = { beat: live ? iso(0.1) : iso(9) };
     var fields = function (a) { return a.map(function (f) { return { name: f[0], required: f[1], type: f[2] || 'text', description: f[3] || '', example: f[4] || '' }; }); };
     data.templates['dev~bug-fix'] = { name: 'bug-fix', category: 'dev', description: 'Find the cause of a bug, fix it, and open a pull request.', installed: true, marketplace: 'payo-flows', fields: fields([['workItemId', true, 'number', 'The Azure DevOps work item.', '7421'], ['summary', true, 'text', 'What goes wrong, in one or two sentences.', 'Refund fails when the amount is 0'], ['branch', false, 'text', '', 'fix/refund-zero']]) };
-    data.templates['dev~payoflows-e2e'] = { name: 'payoflows-e2e', category: 'dev', description: 'One PBI from first read to production release.', installed: true, marketplace: 'payo-flows', fields: fields([['pbi', true, 'number', '', '4821']]) };
+    data.templates['dev~payoflows-e2e'] = { name: 'payoflows-e2e', category: 'dev', description: 'One PBI from first read to production release.', installed: true, edited: true, state: 'update', marketplace: 'payo-flows', fields: fields([['pbi', true, 'number', '', '4821']]) };
     data.templates['ops~docs-sync'] = { name: 'docs-sync', category: 'ops', description: 'Keep the docs site in step with the code.', installed: true, marketplace: 'team-ops', fields: [] };
     data.templates['dev~perf-audit'] = { name: 'perf-audit', category: 'dev', description: 'Measure, find the slowest path, report.', installed: false, marketplace: 'payo-flows', fields: fields([['service', true, 'text', '', 'payouts-api']]) };
     data.templates['ops~flaky-template'] = { name: 'flaky-template', category: 'ops', description: 'A template whose install fails, to show an error.', installed: false, marketplace: 'team-ops', fields: [] };
@@ -708,6 +721,7 @@
           else if (c.action === 'close') { c.result = 'Flow closed.'; delete data.flows[a.flowId]; notify('flows'); }
           else if (c.action === 'fill-fields') c.result = JSON.stringify({ summary: 'Refund fails when the amount is 0', workItemId: '7421' });
           else if (c.action === 'install-template') { c.result = 'Installed ' + a.name + '.'; var t = data.templates[a.category + '~' + a.name]; if (t) { t.installed = true; notify('templates'); } }
+          else if (/^(view|edit|send)-template$/.test(c.action)) c.result = 'Sent. Claude carries on in the session.';
           else if (c.action === 'remove-template') { c.result = 'Removed ' + a.name + '.'; var r = data.templates[a.category + '~' + a.name]; if (r) { r.installed = false; notify('templates'); } }
           else if (c.action === 'refresh-marketplaces') { c.result = 'Refreshed 2 marketplaces.'; Object.keys(data.marketplaces).forEach(function (k) { data.marketplaces[k].refreshedAt = new Date().toISOString(); }); notify('marketplaces'); }
           else if (c.action === 'new-flow') { c.result = 'Started a flow from ' + a.template + '.'; data.flows['new' + id.slice(0, 4)] = { name: a.name || a.template.split('/').pop(), template: a.template, status: 'running', activeStepId: 'n1', updatedAt: new Date().toISOString(), counts: {}, steps: [{ id: 'n1', number: 1, name: 'Read the request', status: 'running' }, { id: 'n2', number: 2, name: 'Do the work', status: 'pending' }] }; data.sessions.demo.flows.push('new' + id.slice(0, 4)); notify('flows'); notify('sessions'); }

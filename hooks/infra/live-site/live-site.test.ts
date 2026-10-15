@@ -16,6 +16,11 @@ test('every action passes with its arguments, and the flow actions come back wit
   expect(checkCommand(row('install-template', { marketplace: 'm1', category: 'dev', name: 'bug' }), world)).toMatchObject({ cmd: { action: 'install-template' } })
   expect(checkCommand(row('remove-template', { category: 'dev', name: 'bug' }), world)).toMatchObject({ cmd: { action: 'remove-template' } })
   expect(checkCommand(row('refresh-marketplaces', {}), world)).toMatchObject({ cmd: { action: 'refresh-marketplaces' } })
+  expect(checkCommand(row('view-template', { category: 'dev', name: 'bug' }), world)).toMatchObject({ cmd: { action: 'view-template' } })
+  expect(checkCommand(row('edit-template', { category: 'dev', name: 'bug', request: 'add a step' }), world)).toMatchObject({ cmd: { action: 'edit-template' } })
+  expect(checkCommand(row('send-template', { marketplace: 'm1', category: 'dev', name: 'bug' }), world)).toMatchObject({ cmd: { action: 'send-template' } })
+  expect(checkCommand(row('edit-template', { category: '../x', name: 'bug', request: 'x' }), world)).toEqual({ error: 'Not a plain name: category' })
+  expect(checkCommand(row('edit-template', { category: 'dev', name: 'bug' }), world)).toEqual({ error: 'Missing: request' })
 })
 
 test('a row that is not a known, complete, plain command is refused with a reason', () => {

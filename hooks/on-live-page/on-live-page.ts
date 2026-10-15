@@ -226,6 +226,15 @@ export async function continueFlow($: any, dir: string, note?: string): Promise<
   await handOff($, await resumeFlow(managerPorts($), dir, note))
 }
 
+// View, edit and send-as-PR of a template are skills, so the session gets a prompt that names the skill and the folder. Same hand-off as New flow.
+async function handTemplate($: any, action: string, args: Record<string, string>): Promise<string> {
+  const folder = `${slash((await filesOf($).home()) ?? '')}/.claude/zeremai/templates/flows/${args.category}/${args.name}`
+  if (action === 'view-template') submit($, { text: `Use the zeremai:view-template skill on the template folder ${folder}`, asUser: true })
+  else if (action === 'edit-template') submit($, { text: `Use the zeremai:edit-template skill on the template folder ${folder}. The change I want: ${args.request}`, asUser: true })
+  else submit($, { text: `Use the zeremai:edit-template skill in send mode on the template folder ${folder}. Send my changes to the marketplace ${args.marketplace} as a pull request.`, asUser: true })
+  return 'Sent. Claude carries on in the session.'
+}
+
 // One checked command → what it did, in a line the page shows. The existing calls are the ones the old pane buttons made.
 async function execute($: any, { action, args }: { action: string; args: Record<string, string> }, dir?: string): Promise<string> {
   const files = filesOf($)
@@ -252,6 +261,9 @@ async function execute($: any, { action, args }: { action: string; args: Record<
     case 'fill-fields': return fillFields($, args)
     case 'install-template': await installTemplate(await templatePortsOf($), { marketplace: args.marketplace, category: args.category, name: args.name }); await pushTemplates($); return 'Installed.'
     case 'remove-template': await removeTemplate(await templatePortsOf($), { category: args.category, name: args.name }); await pushTemplates($); return 'Removed.'
+    case 'view-template':
+    case 'edit-template':
+    case 'send-template': return handTemplate($, action, args)
     case 'refresh-marketplaces': { const lines = await refreshMarketplaces(await templatePortsOf($)); await pushTemplates($); return lines.join('\n') || 'Refreshed.' }
   }
   throw new Error('Unknown action.') // checkCommand lets only the actions above through

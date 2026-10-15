@@ -1,5 +1,6 @@
 import type { FileSystem, FileWriter } from '../ports/ports'
 import { slash } from '../flow-manager/move'
+import { hashOf } from '../live-site/live-site'
 
 // Template marketplaces: git repositories cached under `cache/sources/<name>`. The user installs templates from
 // a cache into `templates/flows/<category>/<name>`. The files and their shapes are the ones the Python manager wrote.
@@ -15,17 +16,33 @@ export type TemplatePorts = {
 export type CatalogEntry = {
   marketplace: string; category: string; name: string; title: string; description: string
   state: 'installed' | 'update' | 'available'
+  edited?: true // the installed folder differs from the copy that was installed
 }
 
 type Marketplace = { name: string; url: string; branch: string; enabled: boolean; priority: number; lastSynced?: string }
 type Config = { marketplaces: Marketplace[]; settings?: Record<string, unknown> }
-type Manifest = { templates: { name: string; category: string; type: string; marketplace: string; installedAt: string; version: string }[]; lastUpdated?: string }
+type Manifest = { templates: { name: string; category: string; type: string; marketplace: string; installedAt: string; version: string; baseHash?: string }[]; lastUpdated?: string }
 
 const rootOf = async (ports: TemplatePorts) => {
   const home = await ports.files.home()
   if (!home) throw new Error('No home folder found')
   return `${slash(home)}/.claude/zeremai`
 }
+// A short code of every file in a folder: it changes when a file is added, removed or edited.
+export async function fingerprintOf(ports: TemplatePorts, dir: string): Promise<string> {
+  const parts: string[] = []
+  const walk = async (path: string, rel: string): Promise<void> => {
+    for (const e of (await ports.files.list(path).catch(() => [])).sort((a, b) => a.name.localeCompare(b.name))) {
+      if (e.name === '__pycache__' || e.name === '.git') continue
+      const at = rel ? `${rel}/${e.name}` : e.name
+      if (e.kind === 'dir') await walk(`${path}/${e.name}`, at)
+      else parts.push(`${at}\0${await ports.files.read(`${path}/${e.name}`).catch(() => '')}`)
+    }
+  }
+  await walk(dir, '')
+  return hashOf(parts.join('\0'))
+}
+
 const readJson = async <T>(ports: TemplatePorts, path: string, fallback: T): Promise<T> => {
   try { return JSON.parse(await ports.files.read(path)) } catch { return fallback }
 }
@@ -77,6 +94,7 @@ export async function catalog(ports: TemplatePorts): Promise<CatalogEntry[]> {
   const config = await loadConfig(ports, root)
   const manifest = await loadManifest(ports, root)
   const entries: CatalogEntry[] = []
+  let backfilled = false
   for (const m of config.marketplaces.filter(m => m.enabled).sort((a, b) => a.priority - b.priority)) {
     const cache = `${root}/cache/sources/${m.name}`
     if (!(await ports.files.exists(cache))) continue
@@ -86,13 +104,21 @@ export async function catalog(ports: TemplatePorts): Promise<CatalogEntry[]> {
       for (const dir of (await list(ports, `${base}/${category.name}`)).filter(e => e.kind === 'dir')) {
         const meta = (await readJson<any>(ports, `${base}/${category.name}/${dir.name}/${dir.name}.json`, {})).metadata ?? {}
         const installed = manifest.templates.find(t => t.name === dir.name && t.category === category.name && t.marketplace === m.name)
+        // ponytail: a template installed before baseHash existed counts as unchanged; its folder becomes the base now.
+        let edited = false
+        if (installed) {
+          const now = await fingerprintOf(ports, `${root}/templates/flows/${category.name}/${dir.name}`)
+          if (!installed.baseHash) { installed.baseHash = now; backfilled = true } else edited = installed.baseHash !== now
+        }
         entries.push({
           marketplace: m.name, category: category.name, name: dir.name, title: meta.title ?? dir.name, description: meta.purposeAndUsage ?? '',
           state: !installed ? 'available' : installed.version !== head && head !== 'unknown' ? 'update' : 'installed',
+          ...(edited ? { edited: true as const } : {}),
         })
       }
     }
   }
+  if (backfilled) await saveManifest(ports, root, manifest)
   return entries
 }
 
@@ -124,11 +150,12 @@ export async function installTemplate(ports: TemplatePorts, entry: { marketplace
   const from = `${cache}/templates/flows/${category}/${name}`
   if (!(await ports.files.exists(from))) throw new Error(`Template ${category}/${name} is not in the cache of ${entry.marketplace}. Refresh first.`)
   const to = `${root}/templates/flows/${category}/${name}`
+  const baseHash = await fingerprintOf(ports, from) // the folder as it is copied: a later difference is the user's edit
   await runAll(ports, [...removeArgv(ports.windows, to), ...copyArgv(ports.windows, from, to)])
   const manifest = await loadManifest(ports, root)
   manifest.templates = [
     ...manifest.templates.filter(t => !(t.name === name && t.category === category)),
-    { name, category, type: 'flow', marketplace: entry.marketplace, installedAt: ports.now(), version: await headOf(ports, cache) },
+    { name, category, type: 'flow', marketplace: entry.marketplace, installedAt: ports.now(), version: await headOf(ports, cache), baseHash },
   ]
   await saveManifest(ports, root, manifest)
 }
