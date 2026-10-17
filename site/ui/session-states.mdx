@@ -1,0 +1,48 @@
+---
+title: "Session states"
+description: "What the site shows when the session is closed, missing, or not yours, and what to do."
+---
+
+The site sends every action to **one** session of Claude Code. When it cannot, it turns the actions off and says why.
+
+## Which session runs an action
+
+| Situation | What the site does |
+|---|---|
+| You opened it with the button in session A | Actions run in A. The header names the session. |
+| A flow belongs to session B | Flow actions run in B. A new flow runs in A. |
+| The session is closed | The site says **Session closed. Press ZeremAI in a live session.** and turns the actions off. |
+| You opened the pinned link with no session | The site only shows. It says **This page has no session. Press ZeremAI in the session you want.** |
+| Another person opens the page | The site only shows. It says **Only the owner of this page can use actions.** |
+
+A session counts as closed when its heartbeat is older than 3 minutes.
+
+## No session
+
+<Frame caption="The page opened with no session. Demo data.">
+  <img className="dark:hidden" src="/images/ui/session-none-light.png" alt="The Flows screen with the header badge No session and a banner that says Actions are off. This page has no session. Approve and Request changes are greyed out." />
+  <img className="hidden dark:block" src="/images/ui/session-none-dark.png" alt="The Flows screen with the header badge No session and a banner that says Actions are off. This page has no session. Approve and Request changes are greyed out." />
+</Frame>
+
+The header badge reads **No session**, and a banner says **Actions are off**. The flows and their steps still show, but **Approve**, **Request changes**, **Close flow** and **Delete flow** are greyed out.
+
+To fix it, go to the Claude Code session you want and press **ZeremAI ↗**. The link that opens names that session.
+
+## Closed session
+
+<Frame caption="The session has stopped sending its heartbeat. Demo data.">
+  <img className="dark:hidden" src="/images/ui/session-closed-light.png" alt="The Flows screen of a closed session: the header says Paused, the session may be closed, and the buttons are greyed out with the note Session closed. Press ZeremAI in a live session." />
+  <img className="hidden dark:block" src="/images/ui/session-closed-dark.png" alt="The Flows screen of a closed session: the header says Paused, the session may be closed, and the buttons are greyed out with the note Session closed. Press ZeremAI in a live session." />
+</Frame>
+
+The header reads **Paused. The session may be closed.** with the time of the last change. Each disabled button says **Session closed. Press ZeremAI in a live session.**
+
+Go to a live Claude Code session and press **ZeremAI ↗** (or run [`/zeremai:init`](/commands/init)). The site then works with that session. The site shows the last data it has, with its age.
+
+## Offline
+
+The site cannot work offline. When it loses the connection it says **Offline** and shows the last data it got.
+
+## Related
+
+[The ZeremAI site](/guide/live-site), [Troubleshooting](/guide/troubleshooting).

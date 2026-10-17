@@ -12,30 +12,41 @@ import type { Ask, FileSystem, Gate, GateStore, SessionLinks } from '../infra/po
 // Only this mod makes the script write `approved` (approve-step). The agent cannot run that subcommand, and cannot edit the file by hand.
 // A fault in the hand-edit check refuses the call. A fault elsewhere approves nothing.
 
-const filesOf = ($: any): FileSystem => ({
-  home: async () => (await $.env.get('HOME')) ?? (await $.env.get('USERPROFILE')), // Windows has no HOME in every shell
-  list: path => $.fs.list(path),
-  exists: path => $.fs.exists(path),
-  read: path => $.fs.read(path),
-})
-const linksOf = ($: any): SessionLinks => ({
-  get: async sessionId => ((await $.store.get(sessionKey(sessionId))) as string[] | undefined) ?? [],
-})
+function filesOf($: any): FileSystem {
+  return {
+    home: async () => (await $.env.get('HOME')) ?? (await $.env.get('USERPROFILE')), // Windows has no HOME in every shell
+    list: path => $.fs.list(path),
+    exists: path => $.fs.exists(path),
+    read: path => $.fs.read(path),
+  }
+}
+function linksOf($: any): SessionLinks {
+  return {
+    get: async sessionId => ((await $.store.get(sessionKey(sessionId))) as string[] | undefined) ?? [],
+  }
+}
 // The script writes `approved` (approve-step).
-const approverOf = ($: any): Approver => async (dir, stepId) => approveStep(argv => $.process.run(argv, { timeoutMs: 60_000 }), (await $.env.get('OS')) === 'Windows_NT' ? 'python' : 'python3', slash($.plugin.root), dir, stepId)
-const logDepsOf = ($: any): LogDeps => ({
-  files: filesOf($), links: linksOf($),
-  complete: request => $.model.complete(request),
-  script: async (sub, input) => runScript(argv => $.process.run(argv, { timeoutMs: 60_000 }), (await $.env.get('OS')) === 'Windows_NT' ? 'python' : 'python3', slash($.plugin.root), sub, input),
-})
-const askOf = ($: any): Ask => (question, options) => $.ui.ask(question, options)
-const gatesOf = ($: any): GateStore => ({
-  get: async sessionId => ((await $.store.get(`gate:${sessionId}`)) as Gate | undefined) ?? undefined,
-  set: (sessionId, gate) => $.store.set(`gate:${sessionId}`, gate),
-  clear: sessionId => $.store.delete(`gate:${sessionId}`),
-})
-
-
+function approverOf($: any): Approver {
+  return async (dir, stepId) => approveStep(argv => $.process.run(argv, { timeoutMs: 60_000 }), (await $.env.get('OS')) === 'Windows_NT' ? 'python' : 'python3', slash($.plugin.root), dir, stepId)
+}
+function logDepsOf($: any): LogDeps {
+  return {
+    files: filesOf($),
+    links: linksOf($),
+    complete: request => $.model.complete(request),
+    script: async (sub, input) => runScript(argv => $.process.run(argv, { timeoutMs: 60_000 }), (await $.env.get('OS')) === 'Windows_NT' ? 'python' : 'python3', slash($.plugin.root), sub, input),
+  }
+}
+function askOf($: any): Ask {
+  return (question, options) => $.ui.ask(question, options)
+}
+function gatesOf($: any): GateStore {
+  return {
+    get: async sessionId => ((await $.store.get(`gate:${sessionId}`)) as Gate | undefined) ?? undefined,
+    set: (sessionId, gate) => $.store.set(`gate:${sessionId}`, gate),
+    clear: sessionId => $.store.delete(`gate:${sessionId}`),
+  }
+}
 
 // A guard that blocks or re-prompts the agent says so in a toast: the user then knows why Claude changed course. One toast in 30 seconds for the same text.
 let lastToast = ''
@@ -45,7 +56,11 @@ async function say($: any, text: string): Promise<void> {
   if (text === lastToast && now - lastToastMs < 30_000) return
   lastToast = text
   lastToastMs = now
-  try { await $.ui.toast(text) } catch { /* a surface that cannot show a toast */ }
+  try {
+    await $.ui.toast(text)
+  } catch {
+    /* a surface that cannot show a toast */
+  }
 }
 
 // Ask the user to approve the step that waits. The answer is the text for the agent.
@@ -65,7 +80,8 @@ async function requestApproval($: any): Promise<string> {
 export const register: Register = on => {
   on('tool.call', { tool: ['Write', 'Edit', 'MultiEdit', 'Bash'] }, async ($, e, next) => {
     const command = (e as any).command as string | undefined
-    if (runsScript(command)) { // a script command: request-approval is answered here, every other one goes to the gate of on-flow-tools
+    if (runsScript(command)) {
+      // a script command: request-approval is answered here, every other one goes to the gate of on-flow-tools
       const parsed = parseCommand(command ?? '', slash($.plugin.root))
       if (!('error' in parsed) && parsed.sub === REQUEST_APPROVAL) return bashAnswer(await requestApproval($))
       return next(e)

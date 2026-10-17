@@ -5,7 +5,11 @@ const HOME = '/h/.claude/zeremai'
 const URL = 'https://claude.ai/artifact/AbC123'
 const flow = { name: 'Old fix', metadata: { lastUpdated: '2026-01-01T10:00:00Z', projectPaths: ['/work'] }, parameters: {}, steps: [{ id: 'a', number: 0, name: 'Design', status: 'pending' }] }
 const BAND = {
-  plugin: 'zeremai', component: 'AbovePrompt', requestId: 'band', surface: 'terminal', viewport: { columns: 100, rows: 30 },
+  plugin: 'zeremai',
+  component: 'AbovePrompt',
+  requestId: 'band',
+  surface: 'terminal',
+  viewport: { columns: 100, rows: 30 },
   props: { hasSurvey: false, isWorking: false, maxRows: 3, bodyColumns: 60, scroll: { offset: 0, bodyRows: 3 }, view: {} },
 } as const
 
@@ -17,26 +21,66 @@ function world(on: On, disk: Record<string, unknown>, { url = '', noOpen = false
   const clock = mock.clock(on)
   const store: Record<string, unknown> = {}
   if (url) store['livePageUrl:S1'] = url
-  const toasts: string[] = [], opened: string[] = [], ran: string[][] = []
+  const toasts: string[] = [],
+    opened: string[] = [],
+    ran: string[][] = []
   let code = opener
   on('store.get', async (_$, e: any) => ({ value: store[e.key] }))
-  on('store.set', async (_$, e: any) => { store[e.key] = e.value; return { value: undefined } })
+  on('store.set', async (_$, e: any) => {
+    store[e.key] = e.value
+    return { value: undefined }
+  })
   on('session.id', async () => ({ value: 'S1' }))
   on('session.cwd', async () => ({ value: '/work' }))
-  on('fs.list', async (_$, e) => ({ value: [...new Set(under(e.path).map(p => p.slice(e.path.length + 1).split('/')[0]))].map(name => ({ name, kind: under(`${e.path}/${name}`).length ? 'dir' : 'file', size: 0, mtimeMs: 0, isLink: false })) }))
+  on('fs.list', async (_$, e) => ({
+    value: [...new Set(under(e.path).map(p => p.slice(e.path.length + 1).split('/')[0]))].map(name => ({
+      name,
+      kind: under(`${e.path}/${name}`).length ? 'dir' : 'file',
+      size: 0,
+      mtimeMs: 0,
+      isLink: false,
+    })),
+  }))
   on('fs.exists', async (_$, e) => ({ value: e.path in files || under(e.path).length > 0 }))
   on('fs.read', async (_$, e) => ({ value: files[e.path] }))
-  on('ui.toast', async (_$, e: any) => { toasts.push(e.text); return { value: undefined } })
-  on('process.run', async (_$, e: any) => { ran.push(e.argv); return { value: { exitCode: code, stdout: '', stderr: '', timedOut: false } } as never })
-  on('command.run', async (_$, e: any) => { if (cmdFail) throw new Error('command failed'); if (e.command === 'zeremai') store['livePageUrl:S1'] = URL; return { value: undefined } as never })
+  on('ui.toast', async (_$, e: any) => {
+    toasts.push(e.text)
+    return { value: undefined }
+  })
+  on('process.run', async (_$, e: any) => {
+    ran.push(e.argv)
+    return { value: { exitCode: code, stdout: '', stderr: '', timedOut: false } } as never
+  })
+  on('command.run', async (_$, e: any) => {
+    if (cmdFail) throw new Error('command failed')
+    if (e.command === 'zeremai:init') store['livePageUrl:S1'] = URL
+    return { value: undefined } as never
+  })
   on('tool.call', async (_$, e: any) => {
-    if (e.tool === 'Artifact' && e.action === 'open') { if (noOpen) return { result: {}, isError: true, text: 'no browser' } as never; opened.push(e.url); return { result: {}, text: 'shown' } as never }
+    if (e.tool === 'Artifact' && e.action === 'open') {
+      if (noOpen) return { result: {}, isError: true, text: 'no browser' } as never
+      opened.push(e.url)
+      return { result: {}, text: 'shown' } as never
+    }
     return { result: {}, text: '' } as never
   })
-  return { files, store, toasts, opened, ran, clock, fail: () => { code = 1 } }
+  return {
+    files,
+    store,
+    toasts,
+    opened,
+    ran,
+    clock,
+    fail: () => {
+      code = 1
+    },
+  }
 }
 
-const press = async (band: any) => { await band.press({ key: 'band-open' }); await new Promise(r => setTimeout(r, 30)) } // the press starts the open and does not wait for it
+const press = async (band: any) => {
+  await band.press({ key: 'band-open' })
+  await new Promise(r => setTimeout(r, 30))
+} // the press starts the open and does not wait for it
 
 test('the band names the bound flow and its state, and ends with the ZeremAI link', async ($, on) => {
   const dir = `${HOME}/active/p1`
@@ -93,7 +137,7 @@ test('a press that nothing can open shows the link in a toast', async ($, on) =>
   expect(w.toasts).toEqual([`ZeremAI: ${URL}?s=S1#S1`])
 })
 
-test('a press with no site set up auto-runs /zeremai, which opens the site itself', async ($, on) => {
+test('a press with no site set up auto-runs /zeremai:init, which opens the site itself', async ($, on) => {
   const w = world(on, {})
   await press(await $.ui.mount(BAND))
   expect(w.store['livePageUrl:S1']).toBe(URL) // the command ran
@@ -103,6 +147,6 @@ test('a press with no site set up auto-runs /zeremai, which opens the site itsel
 test('a press with no site set up and command fails shows error', async ($, on) => {
   const w = world(on, {}, { cmdFail: true })
   await press(await $.ui.mount(BAND))
-  expect(w.toasts).toEqual(['Could not set up ZeremAI. Run /zeremai to try again.'])
+  expect(w.toasts).toEqual(['Could not set up ZeremAI. Run /zeremai:init to try again.'])
   expect(w.opened).toEqual([])
 })

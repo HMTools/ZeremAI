@@ -1,12 +1,12 @@
 import type { Register } from 'claude-code'
 import { approveStep, runScript, runsScript, scriptNote } from '../infra/flow-manager/script'
-import { slash } from '../infra/flow-manager/move'
+import { removeCommands, slash } from '../infra/flow-manager/move'
 import { findFlowDir, sessionKey } from '../infra/flow-repository/flow-repository'
 import { approveFromPane, requestChangesFromPane } from '../infra/approval-gate/approval-gate'
 import type { AnswerLog, Approver } from '../infra/approval-gate/approval-gate'
 import { logInteraction } from '../infra/log-first/log-first'
 import { fillQuestion, parseAnswer } from '../infra/flow-pane/fill-fields'
-import { listFlows, listTemplates, resumeFlow, startFlow } from '../infra/flow-pane/flow-pane'
+import { listFlows, listTemplates, purgeFlow, resumeFlow, startFlow } from '../infra/flow-pane/flow-pane'
 import type { Started } from '../infra/flow-pane/flow-pane'
 import { stepLine } from '../infra/flow-pane/step-line'
 import { catalog, installTemplate, listMarketplaces, refreshMarketplaces, removeTemplate } from '../infra/templates/templates'
@@ -18,20 +18,22 @@ import type { Row } from '../infra/live-site/live-site'
 import type { FileSystem, Gate, GateStore, ManagerPorts } from '../infra/ports/ports'
 import { startCountingAgain } from '../on-agent-stopping/on-agent-stopping'
 
-// /zeremai opens the ZeremAI site: one page, published once, that shows every flow and does what the old pane did. The mod writes the state of every
+// /zeremai:init opens the ZeremAI site: one page, published once, that shows every flow and does what the old pane did. The mod writes the state of every
 // active flow to the page's database (after each flow script command, every 5 seconds, and a heartbeat every 30 seconds) and reads the actions the
 // user presses on the page back from the `commands` collection on the same timer. A row is data, never an order: see checkCommand.
 // With no link stored, nothing here does anything. A failed write never touches a flow: the reason is kept in the store as `livePageError`.
 
-const COMMANDS = ['zeremai', 'zeremai:zeremai']
+const COMMANDS = ['zeremai:init']
 // The page of this session: its link is kept by session id.
-const urlOf = async ($: any) => (await $.store.get(urlKey(await $.session.id()))) as string | undefined
+async function urlOf($: any) {
+  return (await $.store.get(urlKey(await $.session.id()))) as string | undefined
+}
 const ERR_KEY = 'livePageError'
 const TIP_KEY = 'livePageTipped'
 const PUSH_MS = 5000
 const BEAT_EVERY = 6 // pushes: 6 × 5 s = 30 s
 const DAY_MS = 86_400_000
-const HELP = ['/zeremai       open the ZeremAI site (it is published the first time)', '/zeremai help  this text'].join('\n')
+const HELP = ['/zeremai:init       start the session and open the ZeremAI site (it is published the first time)', '/zeremai:init help  this text'].join('\n')
 
 const last = new Map<string, string>() // the text of each document at the last push
 let timer: { cancel(): void } | undefined
@@ -85,55 +87,83 @@ async function writeBatch($: any, url: string, writes: Write[]): Promise<void> {
 
 // ── what the mod builds from `$` (a mod cannot share a function that takes `$` across files) ─────────────────────────
 
-const filesOf = ($: any): FileSystem => ({
-  home: async () => (await $.env.get('HOME')) ?? (await $.env.get('USERPROFILE')), // Windows has no HOME in every shell
-  list: path => $.fs.list(path),
-  exists: path => $.fs.exists(path),
-  read: path => $.fs.read(path),
-})
-const linksOf = ($: any): ManagerPorts['links'] => ({
-  get: async sessionId => ((await $.store.get(sessionKey(sessionId))) as string[] | undefined) ?? [],
-  add: async (sessionId, dir) => {
-    const dirs = ((await $.store.get(sessionKey(sessionId))) as string[] | undefined) ?? []
-    await $.store.set(sessionKey(sessionId), [...dirs.filter(d => d !== dir), dir]) // the newest goes last, and answers first
-  },
-})
-async function pythonOf($: any): Promise<string> { return (await $.env.get('OS')) === 'Windows_NT' ? 'python' : 'python3' } // Windows has no python3 command
-const managerPorts = ($: any): ManagerPorts => ({
-  files: filesOf($),
-  write: (path, text) => $.fs.write(path, text),
-  move: async () => { throw new Error('The site does not move folders.') }, // only the old pane deleted a flow
-  now: () => new Date().toISOString(),
-  uuid: () => crypto.randomUUID(),
-  pluginRoot: slash($.plugin.root),
-  cwd: () => $.session.cwd(),
-  sessionId: () => $.session.id(),
-  links: linksOf($),
-  script: async (sub, input) => runScript(argv => $.process.run(argv, { timeoutMs: 60_000 }), await pythonOf($), slash($.plugin.root), sub, input),
-})
-const templatePortsOf = async ($: any): Promise<TemplatePorts> => ({
-  files: filesOf($),
-  write: (path, text) => $.fs.write(path, text),
-  now: () => new Date().toISOString(),
-  pluginRoot: slash($.plugin.root),
-  windows: (await $.env.get('OS')) === 'Windows_NT',
-  run: argv => $.process.run(argv, { timeoutMs: 120_000 }), // a clone can take a while
-})
-const gatesOf = ($: any): GateStore => ({
-  get: async sessionId => ((await $.store.get(`gate:${sessionId}`)) as Gate | undefined) ?? undefined,
-  set: (sessionId, gate) => $.store.set(`gate:${sessionId}`, gate),
-  clear: sessionId => $.store.delete(`gate:${sessionId}`),
-})
+function filesOf($: any): FileSystem {
+  return {
+    home: async () => (await $.env.get('HOME')) ?? (await $.env.get('USERPROFILE')), // Windows has no HOME in every shell
+    list: path => $.fs.list(path),
+    exists: path => $.fs.exists(path),
+    read: path => $.fs.read(path),
+  }
+}
+function linksOf($: any): ManagerPorts['links'] {
+  return {
+    get: async sessionId => ((await $.store.get(sessionKey(sessionId))) as string[] | undefined) ?? [],
+    add: async (sessionId, dir) => {
+      const dirs = ((await $.store.get(sessionKey(sessionId))) as string[] | undefined) ?? []
+      await $.store.set(sessionKey(sessionId), [...dirs.filter(d => d !== dir), dir]) // the newest goes last, and answers first
+    },
+  }
+}
+async function pythonOf($: any): Promise<string> {
+  return (await $.env.get('OS')) === 'Windows_NT' ? 'python' : 'python3'
+} // Windows has no python3 command
+function managerPorts($: any): ManagerPorts {
+  return {
+    files: filesOf($),
+    write: (path, text) => $.fs.write(path, text),
+    move: async () => {
+      throw new Error('The site does not move folders.')
+    }, // only the old pane moved a flow
+    remove: async path => {
+      // The mods file API cannot remove a folder: run the platform's own command. Windows sets OS=Windows_NT in every shell.
+      const windows = (await $.env.get('OS')) === 'Windows_NT'
+      for (const argv of removeCommands(windows, path)) {
+        const run = await $.process.run(argv)
+        if (run.exitCode !== 0) throw new Error(`${argv[0]} failed: ${(run.stderr || run.stdout).trim()}`)
+      }
+    },
+    now: () => new Date().toISOString(),
+    uuid: () => crypto.randomUUID(),
+    pluginRoot: slash($.plugin.root),
+    cwd: () => $.session.cwd(),
+    sessionId: () => $.session.id(),
+    links: linksOf($),
+    script: async (sub, input) => runScript(argv => $.process.run(argv, { timeoutMs: 60_000 }), await pythonOf($), slash($.plugin.root), sub, input),
+  }
+}
+async function templatePortsOf($: any): Promise<TemplatePorts> {
+  return {
+    files: filesOf($),
+    write: (path, text) => $.fs.write(path, text),
+    now: () => new Date().toISOString(),
+    pluginRoot: slash($.plugin.root),
+    windows: (await $.env.get('OS')) === 'Windows_NT',
+    run: argv => $.process.run(argv, { timeoutMs: 120_000 }), // a clone can take a while
+  }
+}
+function gatesOf($: any): GateStore {
+  return {
+    get: async sessionId => ((await $.store.get(`gate:${sessionId}`)) as Gate | undefined) ?? undefined,
+    set: (sessionId, gate) => $.store.set(`gate:${sessionId}`, gate),
+    clear: sessionId => $.store.delete(`gate:${sessionId}`),
+  }
+}
 // The answer of the user on the site is logged by the mod, like a prompt (a model writes the details).
-const answerLog = ($: any): AnswerLog => (dir, request) => logInteraction({ files: filesOf($), links: linksOf($), complete: r => $.model.complete(r), script: managerPorts($).script }, dir, request)
+function answerLog($: any): AnswerLog {
+  return (dir, request) => logInteraction({ files: filesOf($), links: linksOf($), complete: r => $.model.complete(r), script: managerPorts($).script }, dir, request)
+}
 // The script writes `approved` (approve-step).
-const approverOf = ($: any): Approver => async (dir, stepId) => approveStep(argv => $.process.run(argv, { timeoutMs: 60_000 }), await pythonOf($), slash($.plugin.root), dir, stepId)
+function approverOf($: any): Approver {
+  return async (dir, stepId) => approveStep(argv => $.process.run(argv, { timeoutMs: 60_000 }), await pythonOf($), slash($.plugin.root), dir, stepId)
+}
 
-const portsOf = ($: any, url: string): LivePorts => ({
-  files: filesOf($),
-  batch: writes => writeBatch($, url, writes as Write[]),
-  now: () => new Date().toISOString(),
-})
+function portsOf($: any, url: string): LivePorts {
+  return {
+    files: filesOf($),
+    batch: writes => writeBatch($, url, writes as Write[]),
+    now: () => new Date().toISOString(),
+  }
+}
 
 // ── the push ───────────────────────────────────────────────────────────────────────────────────────────────────────
 
@@ -150,7 +180,10 @@ async function push($: any, beat = false): Promise<void> {
     if (beat || !lastBeat) lastBeat = ports.now()
     const session = await $.session.id()
     const cwd = await $.session.cwd()
-    if (Date.now() - titleAt > 300_000) { title = await sessionTitle(ports.files, session, cwd); titleAt = Date.now() } // the title changes rarely
+    if (Date.now() - titleAt > 300_000) {
+      title = await sessionTitle(ports.files, session, cwd)
+      titleAt = Date.now()
+    } // the title changes rarely
     await pushDocs(ports, last, [await sessionDoc(ports.files, session, await linksOf($).get(session), cwd, lastBeat, (await $.store.get(`openedAt:${session}`)) as string | undefined, title)])
     if (beat) await heartbeat(ports)
     if ((await $.store.get(ERR_KEY)) !== undefined) await $.store.delete(ERR_KEY) // also an error that an older copy of this module stored, before a reload
@@ -168,7 +201,9 @@ async function pushTemplates($: any): Promise<void> {
     const ports = await templatePortsOf($)
     const [entries, templates, markets] = await Promise.all([catalog(ports), listTemplates(filesOf($)), listMarketplaces(ports)])
     await pushDocs(portsOf($, url), last, templateDocs(entries, templates, markets))
-  } catch (error) { await $.store.set(ERR_KEY, message(error)).catch(() => {}) }
+  } catch (error) {
+    await $.store.set(ERR_KEY, message(error)).catch(() => {})
+  }
 }
 
 // ── the commands from the site ─────────────────────────────────────────────────────────────────────────────────────
@@ -188,21 +223,34 @@ async function handOff($: any, started: Started): Promise<void> {
     startCountingAgain()
     if (!ruleShown) {
       ruleShown = true
-      try { await $.ui.toast(`Claude runs the flow script with Bash. To skip the prompts, allow Bash(${await pythonOf($)} ${slash($.plugin.root)}/scripts/flow_manager.py *) in your settings.`) } catch { /* a surface that cannot show a toast */ }
+      try {
+        await $.ui.toast(`Claude runs the flow script with Bash. To skip the prompts, allow Bash(${await pythonOf($)} ${slash($.plugin.root)}/scripts/flow_manager.py *) in your settings.`)
+      } catch {
+        /* a surface that cannot show a toast */
+      }
     }
-  } catch (error) { throw new Error(`The flow started, but setup failed: ${message(error)}. Press Continue to try again.`) }
+  } catch (error) {
+    throw new Error(`The flow started, but setup failed: ${message(error)}. Press Continue to try again.`)
+  }
   submit($, { text, asUser: true })
 }
 
 // The line under the prompt. A surface that cannot draw it (VS Code, print mode) throws or ignores: the flow goes on without it.
 async function showStepLine($: any, dir: string | undefined): Promise<void> {
-  try { await $.ui.status(dir ? await stepLine(filesOf($), dir) : undefined) } catch { /* no line */ }
+  try {
+    await $.ui.status(dir ? await stepLine(filesOf($), dir) : undefined)
+  } catch {
+    /* no line */
+  }
 }
 
 // The session lets go of the flow. The files stay; the guards and the line under the prompt stop. A parent flow, if there is one, answers again.
 async function closeFlow($: any, dir: string): Promise<void> {
   const id = await $.session.id()
-  await $.store.set(sessionKey(id), (await linksOf($).get(id)).filter(d => d !== dir))
+  await $.store.set(
+    sessionKey(id),
+    (await linksOf($).get(id)).filter(d => d !== dir),
+  )
   await showStepLine($, await findFlowDir(filesOf($), linksOf($), id))
 }
 
@@ -211,7 +259,11 @@ async function fillFields($: any, args: Record<string, string>): Promise<string>
   const template = (await listTemplates(filesOf($))).find(t => `${t.category}/${t.name}` === args.template)
   if (!template) throw new Error('That template is not installed.')
   let typed: Record<string, string> = {}
-  try { typed = Object.fromEntries(Object.entries(JSON.parse(args.values || '{}')).filter(([k, v]) => typeof v === 'string' && template.fields.some(f => f.name === k))) as Record<string, string> } catch { /* no typed values */ }
+  try {
+    typed = Object.fromEntries(Object.entries(JSON.parse(args.values || '{}')).filter(([k, v]) => typeof v === 'string' && template.fields.some(f => f.name === k))) as Record<string, string>
+  } catch {
+    /* no typed values */
+  }
   const question = fillQuestion(template, template.purpose, typed, args.text)
   let reply: any = await $.model.fork({ prompt: question })
   if (!reply.isAnswered && reply.reason === 'nothing-to-fork') reply = await $.model.complete({ model: 'sonnet', prompt: question, timeoutMs: 30_000 })
@@ -222,7 +274,7 @@ async function fillFields($: any, args: Record<string, string>): Promise<string>
 }
 
 // Continue: a blocked step runs again, and the flow goes back to the agent. The page and the button above the prompt both call this.
-export async function continueFlow($: any, dir: string, note?: string): Promise<void> {
+async function continueFlow($: any, dir: string, note?: string): Promise<void> {
   await handOff($, await resumeFlow(managerPorts($), dir, note))
 }
 
@@ -242,15 +294,24 @@ async function execute($: any, { action, args }: { action: string; args: Record<
   switch (action) {
     case 'approve':
     case 'request-changes': {
-      const answer = action === 'approve'
-        ? await approveFromPane(files, approverOf($), gatesOf($), session, dir!, args.stepId, answerLog($))
-        : await requestChangesFromPane(files, approverOf($), gatesOf($), session, dir!, args.stepId, args.reason, answerLog($))
+      const answer =
+        action === 'approve'
+          ? await approveFromPane(files, approverOf($), gatesOf($), session, dir!, args.stepId, answerLog($))
+          : await requestChangesFromPane(files, approverOf($), gatesOf($), session, dir!, args.stepId, args.reason, answerLog($))
       if ('error' in answer) throw new Error(answer.error)
       submit($, { text: answer.text }) // the answer reaches the agent as a prompt, like the dialog's answer
       return action === 'approve' ? 'Approved. Claude carries on.' : 'Sent. Claude changes the step.'
     }
-    case 'continue': await continueFlow($, dir!, args.note?.trim() || undefined); return 'Resumed. Claude carries on.'
-    case 'close': await closeFlow($, dir!); return 'Closed. This session no longer works on that flow.'
+    case 'continue':
+      await continueFlow($, dir!, args.note?.trim() || undefined)
+      return 'Resumed. Claude carries on.'
+    case 'close':
+      await closeFlow($, dir!)
+      return 'Closed. This session no longer works on that flow.'
+    case 'delete':
+      await purgeFlow(managerPorts($), dir!) // the folder of any running flow; the next push removes its rows from the page
+      await showStepLine($, await findFlowDir(filesOf($), linksOf($), session))
+      return 'Deleted. The flow folder is gone.'
     case 'new-flow': {
       const template = (await listTemplates(files)).find(t => `${t.category}/${t.name}` === args.template)
       if (!template) throw new Error('That template is not installed.')
@@ -258,19 +319,32 @@ async function execute($: any, { action, args }: { action: string; args: Record<
       await handOff($, await startFlow(managerPorts($), template, values))
       return 'Started. Claude carries on.'
     }
-    case 'fill-fields': return fillFields($, args)
-    case 'install-template': await installTemplate(await templatePortsOf($), { marketplace: args.marketplace, category: args.category, name: args.name }); await pushTemplates($); return 'Installed.'
-    case 'remove-template': await removeTemplate(await templatePortsOf($), { category: args.category, name: args.name }); await pushTemplates($); return 'Removed.'
+    case 'fill-fields':
+      return fillFields($, args)
+    case 'install-template':
+      await installTemplate(await templatePortsOf($), { marketplace: args.marketplace, category: args.category, name: args.name })
+      await pushTemplates($)
+      return 'Installed.'
+    case 'remove-template':
+      await removeTemplate(await templatePortsOf($), { category: args.category, name: args.name })
+      await pushTemplates($)
+      return 'Removed.'
     case 'view-template':
     case 'edit-template':
-    case 'send-template': return handTemplate($, action, args)
-    case 'refresh-marketplaces': { const lines = await refreshMarketplaces(await templatePortsOf($)); await pushTemplates($); return lines.join('\n') || 'Refreshed.' }
+    case 'send-template':
+      return handTemplate($, action, args)
+    case 'refresh-marketplaces': {
+      const lines = await refreshMarketplaces(await templatePortsOf($))
+      await pushTemplates($)
+      return lines.join('\n') || 'Refreshed.'
+    }
   }
   throw new Error('Unknown action.') // checkCommand lets only the actions above through
 }
 
-const setStatus = ($: any, url: string, id: string, data: Record<string, unknown>) =>
-  writeBatch($, url, [{ op: 'update', collection: 'commands', doc_id: id, data }])
+function setStatus($: any, url: string, id: string, data: Record<string, unknown>) {
+  return writeBatch($, url, [{ op: 'update', collection: 'commands', doc_id: id, data }])
+}
 
 // The new commands of this session, one at a time, oldest first. Each row goes 'running', then 'done' or 'error' with a short result.
 async function drain($: any): Promise<void> {
@@ -280,21 +354,54 @@ async function drain($: any): Promise<void> {
   let ran = false
   try {
     const session = await $.session.id()
-    const rows = parseDocs(String((await call($, { tool: 'ArtifactData', action: 'query', url, collection: 'commands', query: { where: [['status', 'eq', 'new'], ['session', 'eq', session]], limit: 20 } })).text ?? ''))
-      .sort((a, b) => String(a.data.at).localeCompare(String(b.data.at)))
+    const rows = parseDocs(
+      String(
+        (
+          await call($, {
+            tool: 'ArtifactData',
+            action: 'query',
+            url,
+            collection: 'commands',
+            query: {
+              where: [
+                ['status', 'eq', 'new'],
+                ['session', 'eq', session],
+              ],
+              limit: 20,
+            },
+          })
+        ).text ?? '',
+      ),
+    ).sort((a, b) => String(a.data.at).localeCompare(String(b.data.at)))
     const files = filesOf($)
     for (const row of rows) {
       ran = true
       seed(url, 'commands', [row])
-      const world = await commandWorld(files, session, await linksOf($).get(session), (await listFlows(files)).map(f => f.dir)) // read again: the command before may have changed the flows
+      const world = await commandWorld(
+        files,
+        session,
+        await linksOf($).get(session),
+        (await listFlows(files)).map(f => f.dir),
+      ) // read again: the command before may have changed the flows
       const checked = checkCommand(row.data, world)
-      if ('error' in checked) { await setStatus($, url, row.id, { status: 'error', result: checked.error }); continue }
+      if ('error' in checked) {
+        await setStatus($, url, row.id, { status: 'error', result: checked.error })
+        continue
+      }
       await setStatus($, url, row.id, { status: 'running' })
-      let status = 'done', result: string
-      try { result = await execute($, checked.cmd, checked.dir) } catch (error) { status = 'error'; result = message(error) }
+      let status = 'done',
+        result: string
+      try {
+        result = await execute($, checked.cmd, checked.dir)
+      } catch (error) {
+        status = 'error'
+        result = message(error)
+      }
       await setStatus($, url, row.id, { status, result: result.slice(0, 2000) })
     }
-  } catch (error) { await $.store.set(ERR_KEY, message(error)).catch(() => {}) }
+  } catch (error) {
+    await $.store.set(ERR_KEY, message(error)).catch(() => {})
+  }
   draining = false
   if (ran) await push($)
 }
@@ -308,8 +415,14 @@ async function prune($: any): Promise<void> {
     const rows = parseDocs(String((await call($, { tool: 'ArtifactData', action: 'query', url, collection: 'commands', query: { where: [['at', 'lt', cutoff]], limit: 50 } })).text ?? ''))
     if (!rows.length) return
     seed(url, 'commands', rows)
-    await writeBatch($, url, rows.map(r => ({ op: 'delete', collection: 'commands', doc_id: r.id })))
-  } catch { /* the rows stay until the next beat */ }
+    await writeBatch(
+      $,
+      url,
+      rows.map(r => ({ op: 'delete', collection: 'commands', doc_id: r.id })),
+    )
+  } catch {
+    /* the rows stay until the next beat */
+  }
 }
 
 // One timer for the mod. A mod has no file watcher. `session.start` is the hook that fires at the start of the session and again after each reload of the
@@ -328,24 +441,31 @@ async function ensureTimer($: any): Promise<void> {
         await drain($)
         if (beat) await prune($)
       })
-    } catch { return /* no timer: flow commands still push */ }
+    } catch {
+      return /* no timer: flow commands still push */
+    }
     await push($, true)
     await pushTemplates($)
-  } finally { starting = false }
+  } finally {
+    starting = false
+  }
 }
 
 // ── the page ───────────────────────────────────────────────────────────────────────────────────────────────────────
 
-const pagePath = ($: any) => `${slash($.plugin.root)}/skills/live-flow/page.html`
+function pagePath($: any) {
+  return `${slash($.plugin.root)}/skills/live-flow/page.html`
+}
 
 // The page file ships in skills/live-flow. If the Artifact tool refuses a path outside the project, a copy in the project folder goes instead.
 // With `existing`, the same artifact gets the new page and the new rules. The tool wants a read before it changes a page this session did not publish.
 async function publish($: any, existing?: string): Promise<string> {
   const page = pagePath($)
   if (!(await $.fs.exists(page))) throw new Error('skills/live-flow/page.html is missing from the plugin')
-  const input = (file_path: string) => existing
-    ? { tool: 'Artifact', url: existing, file_path, capabilities: PAGE_CAPABILITIES }
-    : { tool: 'Artifact', file_path, icon: 'flow', description: 'Every flow and its steps, live.', capabilities: PAGE_CAPABILITIES, pin: true }
+  const input = (file_path: string) =>
+    existing
+      ? { tool: 'Artifact', url: existing, file_path, capabilities: PAGE_CAPABILITIES }
+      : { tool: 'Artifact', file_path, icon: 'flow', description: 'Every flow and its steps, live.', capabilities: PAGE_CAPABILITIES, pin: true }
   if (existing) await call($, { tool: 'Artifact', action: 'read', url: existing }).catch(() => {})
   const result = await call($, input(page)).catch(async () => {
     const copy = `${slash(await $.session.cwd())}/.claude/zeremai-live-page.html`
@@ -357,7 +477,9 @@ async function publish($: any, existing?: string): Promise<string> {
   return link
 }
 
-const hashOfPage = async ($: any) => hashOf(`${await $.fs.read(pagePath($))}${JSON.stringify(PAGE_CAPABILITIES)}`)
+async function hashOfPage($: any) {
+  return hashOf(`${await $.fs.read(pagePath($))}${JSON.stringify(PAGE_CAPABILITIES)}`)
+}
 
 // The page and its rules change between versions of the plugin: when they differ from what was published, publish again to the same link.
 async function ensureCurrent($: any): Promise<void> {
@@ -369,28 +491,54 @@ async function ensureCurrent($: any): Promise<void> {
     await publish($, url)
     await $.store.set(hashKey(await $.session.id()), hash)
     last.clear()
-  } catch (error) { await $.store.set(ERR_KEY, `The page was not updated: ${message(error)}`).catch(() => {}) }
+  } catch (error) {
+    await $.store.set(ERR_KEY, `The page was not updated: ${message(error)}`).catch(() => {})
+  }
 }
 
 // The link that names this session: the site sends its actions to the session that opened it. A bare token after #: a #key=value never reaches the page.
 // It also rides after ?, in case the host passes the query and not the fragment.
-const siteUrl = async ($: any, url: string) => { const id = await $.session.id(); return `${url}?s=${id}#${id}` }
+async function siteUrl($: any, url: string) {
+  const id = await $.session.id()
+  return `${url}?s=${id}#${id}`
+}
 
 // The Artifact tool shows the page in the surface the user works in. A surface that cannot (print mode, no tool) refuses: the link is in the answer anyway.
 async function openPage($: any, url: string): Promise<boolean> {
-  try { await call($, { tool: 'Artifact', action: 'open', url }); return true } catch { return false }
+  try {
+    await call($, { tool: 'Artifact', action: 'open', url })
+    return true
+  } catch {
+    return false
+  }
 }
 
 // One message, once, when the first flow starts and the page does not exist yet.
 async function tip($: any): Promise<void> {
   if ((await urlOf($)) || (await $.store.get(TIP_KEY))) return
   await $.store.set(TIP_KEY, true)
-  try { await $.ui.toast('ZeremAI opens a live site for all your flows. Run /zeremai.') } catch { /* a surface with no toast */ }
+  try {
+    await $.ui.toast('ZeremAI opens a live site for all your flows. Run /zeremai.')
+  } catch {
+    /* a surface with no toast */
+  }
 }
 
 const createdFlow = (command: string, result: any): boolean => {
   if (!/\bcreate-flow\b/.test(command)) return false
-  try { return JSON.parse(String(result?.result?.stdout ?? '').trim().split('\n').filter(Boolean).pop() ?? '').status === 'ok' } catch { return false }
+  try {
+    return (
+      JSON.parse(
+        String(result?.result?.stdout ?? '')
+          .trim()
+          .split('\n')
+          .filter(Boolean)
+          .pop() ?? '',
+      ).status === 'ok'
+    )
+  } catch {
+    return false
+  }
 }
 
 export const register: Register = on => {
@@ -401,7 +549,12 @@ export const register: Register = on => {
     const action = (e as any).action as string
     const collections: unknown[] = action === 'batch' ? ((e as any).writes ?? []).map((w: any) => w?.collection) : [(e as any).collection]
     const writes = !['get', 'list', 'query', 'profiles'].includes(action)
-    if (writes && next.origin.plugin !== $.plugin.name && urls.has(String((e as any).url).split(/[?#]/)[0]) && collections.some(c => typeof c !== 'string' || c === 'commands' || c.startsWith('commands/'))) {
+    if (
+      writes &&
+      next.origin.plugin !== $.plugin.name &&
+      urls.has(String((e as any).url).split(/[?#]/)[0]) &&
+      collections.some(c => typeof c !== 'string' || c === 'commands' || c.startsWith('commands/'))
+    ) {
       return { deny: 'The commands of the ZeremAI site are written by the site only. Only the user presses its buttons.' } as never
     }
     return next(e)
@@ -411,7 +564,8 @@ export const register: Register = on => {
   on('tool.call', { tool: 'Bash' }, async ($, e, next) => {
     const result = await next(e)
     if (runsScript((e as any).command)) {
-      await ensureTimer($); await push($)
+      await ensureTimer($)
+      await push($)
       if (createdFlow((e as any).command, result)) await tip($)
     }
     return result
@@ -431,9 +585,15 @@ export const register: Register = on => {
     return next(e)
   })
 
-  // Every word of /zeremai opens the site. It is published the first time.
+  // Every word of /zeremai:init opens the site. It is published the first time.
   on('command.run', { command: COMMANDS }, async ($, e) => {
-    if (String(e.args ?? '').trim().split(/\s+/)[0]?.toLowerCase() === 'help') return { text: HELP } as never
+    if (
+      String(e.args ?? '')
+        .trim()
+        .split(/\s+/)[0]
+        ?.toLowerCase() === 'help'
+    )
+      return { text: HELP } as never
     try {
       let url = await urlOf($)
       if (!url) {

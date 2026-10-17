@@ -24,7 +24,7 @@ The page never touches a flow file. The flow script stays the only writer.
 | `marketplaces/<name>` | Each marketplace: `{ name, templates, enabled, cached, refreshedAt }` | the mod | the owner |
 | `commands/<id>` | Each action you press | the page (create), the mod (update) | the owner |
 
-A flow document holds `name`, `template`, `status`, `activeStepId`, `needsYou` (the step that waits, with its name and the time), `updatedAt`, `counts` and a list of `steps`. Each step has `id`, `number`, `name`, `status`, `approval`, and when they apply `phase`, `loopBackTo`, `childFlowId` and `summary`. The status words are the six of the old pane: `waiting`, `running`, `done`, `failed`, `paused` and `pending`.
+A flow document holds `name`, `template`, `status`, `activeStepId`, `needsYou` (the step that waits, with its name and the time), `updatedAt`, `counts` and a list of `steps`. Each step has `id`, `number`, `name`, `status`, `approval`, and when they apply `phase`, `loopBackTo`, `childFlowId` and `summary`. The status words are `waiting`, `blocked`, `running`, `done`, `failed`, `paused` and `pending`.
 
 The mod cuts every long text and list before it writes, so each document stays far below the limit of 256 KiB.
 
@@ -46,8 +46,9 @@ A command is one document in `commands/<id>`:
 ```ts
 {
   id: string; session: string; at: string        // the session that must run it
-  action: 'approve' | 'request-changes' | 'continue' | 'close' | 'new-flow'
+  action: 'approve' | 'request-changes' | 'continue' | 'close' | 'delete' | 'new-flow'
         | 'fill-fields' | 'install-template' | 'remove-template' | 'refresh-marketplaces'
+        | 'view-template' | 'edit-template' | 'send-template'
   args: Record<string, string>
   status: 'new' | 'running' | 'done' | 'error'
   result?: string                                  // plain words, or the answer of fill-fields
@@ -62,9 +63,13 @@ The status moves one way: `new` → `running` → `done` or `error`.
 | `request-changes` | `flowId`, `stepId`, `reason` | `requestChangesFromPane`: your reason goes to the agent. |
 | `continue` | `flowId`, `note?` | `resumeFlow`: binds the flow to the session and sends the agent the hand-off message. |
 | `close` | `flowId` | Removes the flow from the list of flows bound to this session. The flow files do not change. |
+| `delete` | `flowId` | Removes the folder of any active flow for good, also one that another session runs. The next push removes its rows from the page. |
 | `new-flow` | `template` (`category/name`), `name?`, one key for each field | Creates the flow with the script, binds it, and sends the agent the hand-off message. |
 | `fill-fields` | `template`, `text`, `values?` | One model call that suggests field values. The answer is in `result` as JSON. |
 | `install-template`, `remove-template` | `marketplace?`, `category`, `name` | The template jobs of `infra/templates`. |
+| `view-template` | `category`, `name` | Sends the session a prompt that names the `zeremai:view-template` skill and the template folder. |
+| `edit-template` | `category`, `name`, `request` | Sends a prompt that names the `zeremai:edit-template` skill, the folder and your change. |
+| `send-template` | `marketplace`, `category`, `name` | Sends a prompt that names `zeremai:edit-template` in send mode, so it opens a pull request against that marketplace. |
 | `refresh-marketplaces` | none | `git clone` or `git pull` of every enabled marketplace, then the catalog is written again. |
 
 ### The 5-second poll
@@ -91,7 +96,7 @@ Only a row that passes every check reaches a call.
 
 The database refuses a write to a document that exists unless the write names the **version** it last saw (`if_version`). The mod is the only writer of most documents, so it keeps the version of each document it wrote. It learns the versions it does not know with one `list` of the collection. If a write says the version is wrong, the mod learns them again and tries once more.
 
-The mod writes only the documents whose text changed since the last push, in batches of 50. A batch that fails leaves its documents marked as not written, so the next tick sends them again. A failed write never touches the flow. The reason is kept in the store (`livePageError`) and `/zeremai` shows it. The next good push clears it.
+The mod writes only the documents whose text changed since the last push, in batches of 50. A batch that fails leaves its documents marked as not written, so the next tick sends them again. A failed write never touches the flow. The reason is kept in the store (`livePageError`) and `/zeremai:init` shows it. The next good push clears it.
 
 ## The heartbeat
 
@@ -103,9 +108,9 @@ On each heartbeat the mod also deletes the commands that are older than one day.
 
 ## The link and the republish
 
-Each session has its own page and database. The mod stores the link in its store by session id (`livePageUrl:<sessionId>`, and the page hash as `livePageHash:<sessionId>`). `livePageUrls` lists every page of the mod, and the lock on `commands` covers all of them. The old shared link (`livePageUrl`) is no longer used. The button and `/zeremai` open `<link>?s=<sessionId>#<sessionId>`. The page reads the id after `#`, or `?s=` to know where to send the actions that have no flow, such as a new flow. If the host passes neither, the page uses the live session that opened it in the last 10 minutes (the mod stores `openedAt:<sessionId>` when the button or `/zeremai` opens the page, and writes it to the session row). The timer starts at `session.start`, which fires again after each reload of the plugin.
+Each session has its own page and database. The mod stores the link in its store by session id (`livePageUrl:<sessionId>`, and the page hash as `livePageHash:<sessionId>`). `livePageUrls` lists every page of the mod, and the lock on `commands` covers all of them. The old shared link (`livePageUrl`) is no longer used. The button and `/zeremai:init` open `<link>?s=<sessionId>#<sessionId>`. The page reads the id after `#`, or `?s=` to know where to send the actions that have no flow, such as a new flow. If the host passes neither, the page uses the live session that opened it in the last 10 minutes (the mod stores `openedAt:<sessionId>` when the button or `/zeremai:init` opens the page, and writes it to the session row). The timer starts at `session.start`, which fires again after each reload of the plugin.
 
-When the mod starts its timer, and on each `/zeremai`, it makes a short hash of `skills/live-flow/page.html` and of the rules above. If the hash is not the one in the store (`livePageHash:<sessionId>`), it publishes the page again to the **same** link, with the same rules, and stores the new hash. A new version of the plugin therefore updates the page, and the pinned link stays the same.
+When the mod starts its timer, and on each `/zeremai:init`, it makes a short hash of `skills/live-flow/page.html` and of the rules above. If the hash is not the one in the store (`livePageHash:<sessionId>`), it publishes the page again to the **same** link, with the same rules, and stores the new hash. A new version of the plugin therefore updates the page, and the pinned link stays the same.
 
 ## Source
 

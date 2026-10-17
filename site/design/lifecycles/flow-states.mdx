@@ -37,7 +37,9 @@ The mod then binds the folder to the session. The first step starts as `pending`
   <img className="hidden dark:block" src="/images/diagrams/step-status-dark.svg" alt="Diagram: States of a step" />
 </Frame>
 
-This is the normal path. The script accepts any of the five statuses (`pending`, `in_progress`, `completed`, `skipped`, `awaiting_approval`) and sets `startedAt` and `completedAt` for you. It has one rule of its own. A step with `approvalRequired: true` adds a check on the `in_progress → completed` arrow: the script refuses it until `approved` is `true`. Only your click sets `approved`. See [The approval gate](/design/guards/approval-gate).
+This is the normal path. The script accepts any of the six statuses (`pending`, `in_progress`, `completed`, `skipped`, `awaiting_approval`, `blocked`) and sets `startedAt` and `completedAt` for you.
+
+A step is `blocked` when a retry cannot help and you must act first. The agent must give a `reason`, and may give a `command`. The script refuses `completed` on a blocked step, and refuses to start a later step while an earlier one is blocked. You press **Continue** and the step runs again. Any other status clears the block. The diagram above shows the normal path only. See [Blocked steps](/guide/blocked-steps). It has one rule of its own. A step with `approvalRequired: true` adds a check on the `in_progress → completed` arrow: the script refuses it until `approved` is `true`. Only your click sets `approved`. See [The approval gate](/design/guards/approval-gate).
 
 `approved` is a flag on the step, not a status. A step waiting for you is `in_progress`, with `approvalRequired` and no `approved`. The status `awaiting_approval` is allowed, and the site shows it as "waits for you", but the gate does not depend on it.
 

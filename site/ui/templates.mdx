@@ -1,0 +1,35 @@
+---
+title: "Templates screen"
+description: "Install, update, view, edit, send and remove templates, and refresh the marketplace catalogs."
+---
+
+The **Templates** screen lists your installed templates and the templates of each marketplace.
+
+<Frame caption="The Templates screen. Demo data.">
+  <img className="dark:hidden" src="/images/ui/templates-light.png" alt="The Templates screen: an Installed group with View, Edit and Remove buttons on each template, and the marketplaces below with Install buttons." />
+  <img className="hidden dark:block" src="/images/ui/templates-dark.png" alt="The Templates screen: an Installed group with View, Edit and Remove buttons on each template, and the marketplaces below with Install buttons." />
+</Frame>
+
+## What is on the screen
+
+1. **Refresh marketplaces** fetches the latest catalog of every enabled marketplace.
+2. **Search templates** filters the list.
+3. **Installed** lists what you have. Each row shows the category, the marketplace, the number of fields, and notes such as `edited by you` or `update ready`.
+4. **One group for each marketplace**, with the time of its last refresh. Templates you have not installed have an **Install** button.
+
+## The buttons
+
+| Button | What it does |
+|---|---|
+| **Install** | Copies the template from the marketplace cache. |
+| **Update…** | Shown when the marketplace has a newer commit. It asks first, because it erases an edit you made. |
+| **View** | Opens the template on one page. Runs [`/zeremai:view-template`](/commands/view-template). |
+| **Edit** | Changes the template from your description. Runs [`/zeremai:edit-template`](/commands/edit-template). |
+| **Send as PR** | Shown on a template you edited. Sends the change to its marketplace as a pull request. See [Edit and send a template](/authoring/edit-and-send). |
+| **Remove** | Deletes the installed copy. It asks first. |
+
+The site does not add, edit, switch off or remove a marketplace itself. For that, edit `marketplaces.json`. See [Marketplaces](/guide/marketplaces#config-file).
+
+## Related
+
+[Marketplaces](/guide/marketplaces), [Plan pages](/ui/plan-pages).

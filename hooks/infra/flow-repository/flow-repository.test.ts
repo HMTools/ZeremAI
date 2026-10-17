@@ -9,12 +9,17 @@ function disk(files: Record<string, string>): FileSystem {
   return {
     home: async () => '/h',
     list: async path => {
-      const names = Object.keys(files).filter(f => f.startsWith(`${path}/`)).map(f => f.slice(path.length + 1).split('/')[0])
+      const names = Object.keys(files)
+        .filter(f => f.startsWith(`${path}/`))
+        .map(f => f.slice(path.length + 1).split('/')[0])
       if (!names.length) throw new Error('no such folder')
       return [...new Set(names)].map(name => ({ name, kind: 'dir' }))
     },
     exists: async path => path in files,
-    read: async path => { if (!(path in files)) throw new Error('missing'); return files[path] },
+    read: async path => {
+      if (!(path in files)) throw new Error('missing')
+      return files[path]
+    },
   }
 }
 

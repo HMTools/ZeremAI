@@ -1,7 +1,10 @@
 import { test, expect } from 'claude-code/testing'
 import { isStepExecutorRunning } from './step-executors'
 
-const agents = (...list: { type: string; status: string }[]) => async () => list
+const agents =
+  (...list: { type: string; status: string }[]) =>
+  async () =>
+    list
 const executor = (status: string) => ({ type: 'zeremai:step-executor', status })
 
 test('a step-executor that is running, pending or waiting counts as running', async () => {

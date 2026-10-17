@@ -14,7 +14,11 @@ export type TemplatePorts = {
   run(argv: string[]): Promise<{ exitCode: number; stdout: string; stderr: string }>
 }
 export type CatalogEntry = {
-  marketplace: string; category: string; name: string; title: string; description: string
+  marketplace: string
+  category: string
+  name: string
+  title: string
+  description: string
   state: 'installed' | 'update' | 'available'
   edited?: true // the installed folder differs from the copy that was installed
 }
@@ -44,7 +48,11 @@ export async function fingerprintOf(ports: TemplatePorts, dir: string): Promise<
 }
 
 const readJson = async <T>(ports: TemplatePorts, path: string, fallback: T): Promise<T> => {
-  try { return JSON.parse(await ports.files.read(path)) } catch { return fallback }
+  try {
+    return JSON.parse(await ports.files.read(path))
+  } catch {
+    return fallback
+  }
 }
 const writeJson = (ports: TemplatePorts, path: string, data: unknown) => ports.write(path, JSON.stringify(data, null, 2) + '\n')
 const list = (ports: TemplatePorts, path: string) => ports.files.list(path).catch(() => [])
@@ -65,8 +73,7 @@ async function loadConfig(ports: TemplatePorts, root: string): Promise<Config> {
   return config
 }
 const loadManifest = (ports: TemplatePorts, root: string) => readJson<Manifest>(ports, `${root}/config/installed-templates.json`, { templates: [] })
-const saveManifest = (ports: TemplatePorts, root: string, manifest: Manifest) =>
-  writeJson(ports, `${root}/config/installed-templates.json`, { ...manifest, lastUpdated: ports.now() })
+const saveManifest = (ports: TemplatePorts, root: string, manifest: Manifest) => writeJson(ports, `${root}/config/installed-templates.json`, { ...manifest, lastUpdated: ports.now() })
 
 // Clone or pull every enabled marketplace. A failed pull keeps the old cache. Returns one line for each marketplace.
 export async function refreshMarketplaces(ports: TemplatePorts): Promise<string[]> {
@@ -108,10 +115,17 @@ export async function catalog(ports: TemplatePorts): Promise<CatalogEntry[]> {
         let edited = false
         if (installed) {
           const now = await fingerprintOf(ports, `${root}/templates/flows/${category.name}/${dir.name}`)
-          if (!installed.baseHash) { installed.baseHash = now; backfilled = true } else edited = installed.baseHash !== now
+          if (!installed.baseHash) {
+            installed.baseHash = now
+            backfilled = true
+          } else edited = installed.baseHash !== now
         }
         entries.push({
-          marketplace: m.name, category: category.name, name: dir.name, title: meta.title ?? dir.name, description: meta.purposeAndUsage ?? '',
+          marketplace: m.name,
+          category: category.name,
+          name: dir.name,
+          title: meta.title ?? dir.name,
+          description: meta.purposeAndUsage ?? '',
           state: !installed ? 'available' : installed.version !== head && head !== 'unknown' ? 'update' : 'installed',
           ...(edited ? { edited: true as const } : {}),
         })
@@ -123,19 +137,34 @@ export async function catalog(ports: TemplatePorts): Promise<CatalogEntry[]> {
 }
 
 // A name from the pane or the catalog becomes part of a path that is deleted: only plain names pass.
-const plain = (part: string) => { if (!/^[\w.-]+$/.test(part) || part === '..' || part === '.') throw new Error(`Not a plain name: ${part}`); return part }
+const plain = (part: string) => {
+  if (!/^[\w.-]+$/.test(part) || part === '..' || part === '.') throw new Error(`Not a plain name: ${part}`)
+  return part
+}
 
 const quote = (path: string) => `'${path.replace(/'/g, "''")}'`
 const parentOf = (path: string) => path.slice(0, path.lastIndexOf('/'))
-const copyArgv = (windows: boolean, from: string, to: string): string[][] => windows
-  ? [['powershell', '-NoProfile', '-NonInteractive', '-Command', `$ErrorActionPreference = 'Stop'; New-Item -ItemType Directory -Force -Path ${quote(parentOf(to))} | Out-Null; Copy-Item -LiteralPath ${quote(from)} -Destination ${quote(to)} -Recurse -Force`]]
-  : [['mkdir', '-p', parentOf(to)], ['cp', '-R', from, to]]
-const removeArgv = (windows: boolean, path: string): string[][] => windows
-  ? [['powershell', '-NoProfile', '-NonInteractive', '-Command', `$ErrorActionPreference = 'Stop'; Remove-Item -LiteralPath ${quote(path)} -Recurse -Force -ErrorAction SilentlyContinue`]]
-  : [['rm', '-rf', path]]
-const renameArgv = (windows: boolean, from: string, to: string): string[][] => windows
-  ? [['powershell', '-NoProfile', '-NonInteractive', '-Command', `$ErrorActionPreference = 'Stop'; Move-Item -LiteralPath ${quote(from)} -Destination ${quote(to)}`]]
-  : [['mv', from, to]]
+const copyArgv = (windows: boolean, from: string, to: string): string[][] =>
+  windows
+    ? [
+        [
+          'powershell',
+          '-NoProfile',
+          '-NonInteractive',
+          '-Command',
+          `$ErrorActionPreference = 'Stop'; New-Item -ItemType Directory -Force -Path ${quote(parentOf(to))} | Out-Null; Copy-Item -LiteralPath ${quote(from)} -Destination ${quote(to)} -Recurse -Force`,
+        ],
+      ]
+    : [
+        ['mkdir', '-p', parentOf(to)],
+        ['cp', '-R', from, to],
+      ]
+const removeArgv = (windows: boolean, path: string): string[][] =>
+  windows
+    ? [['powershell', '-NoProfile', '-NonInteractive', '-Command', `$ErrorActionPreference = 'Stop'; Remove-Item -LiteralPath ${quote(path)} -Recurse -Force -ErrorAction SilentlyContinue`]]
+    : [['rm', '-rf', path]]
+const renameArgv = (windows: boolean, from: string, to: string): string[][] =>
+  windows ? [['powershell', '-NoProfile', '-NonInteractive', '-Command', `$ErrorActionPreference = 'Stop'; Move-Item -LiteralPath ${quote(from)} -Destination ${quote(to)}`]] : [['mv', from, to]]
 async function runAll(ports: TemplatePorts, argvs: string[][]) {
   for (const argv of argvs) {
     const run = await ports.run(argv)
@@ -145,7 +174,8 @@ async function runAll(ports: TemplatePorts, argvs: string[][]) {
 
 export async function installTemplate(ports: TemplatePorts, entry: { marketplace: string; category: string; name: string }): Promise<void> {
   const root = await rootOf(ports)
-  const category = plain(entry.category), name = plain(entry.name)
+  const category = plain(entry.category),
+    name = plain(entry.name)
   const cache = `${root}/cache/sources/${plain(entry.marketplace)}`
   const from = `${cache}/templates/flows/${category}/${name}`
   if (!(await ports.files.exists(from))) throw new Error(`Template ${category}/${name} is not in the cache of ${entry.marketplace}. Refresh first.`)
@@ -163,7 +193,8 @@ export async function installTemplate(ports: TemplatePorts, entry: { marketplace
 // Match on category and name: two templates with one name in two categories no longer clash.
 export async function removeTemplate(ports: TemplatePorts, entry: { category: string; name: string }): Promise<void> {
   const root = await rootOf(ports)
-  const category = plain(entry.category), name = plain(entry.name)
+  const category = plain(entry.category),
+    name = plain(entry.name)
   await runAll(ports, removeArgv(ports.windows, `${root}/templates/flows/${category}/${name}`))
   const manifest = await loadManifest(ports, root)
   manifest.templates = manifest.templates.filter(t => !(t.name === name && t.category === category))
@@ -206,32 +237,39 @@ const find = (config: Config, name: string) => {
   if (!m) throw new Error(`Marketplace ${name} not found`)
   return m
 }
-const dropCache = (ports: TemplatePorts, root: string, name: string) =>
-  runAll(ports, removeArgv(ports.windows, `${root}/cache/sources/${plain(name)}`))
+const dropCache = (ports: TemplatePorts, root: string, name: string) => runAll(ports, removeArgv(ports.windows, `${root}/cache/sources/${plain(name)}`))
 
-export const addMarketplace = (ports: TemplatePorts, f: MarketplaceFields) => changeConfig(ports, config => {
-  checked(f)
-  if (config.marketplaces.some(m => m.name === f.name)) throw new Error(`Marketplace ${f.name} exists already`)
-  config.marketplaces.push({ name: f.name, url: f.url.trim(), branch: f.branch || 'main', enabled: true, priority: f.priority ? Number(f.priority) : 100 })
-})
+export const addMarketplace = (ports: TemplatePorts, f: MarketplaceFields) =>
+  changeConfig(ports, config => {
+    checked(f)
+    if (config.marketplaces.some(m => m.name === f.name)) throw new Error(`Marketplace ${f.name} exists already`)
+    config.marketplaces.push({ name: f.name, url: f.url.trim(), branch: f.branch || 'main', enabled: true, priority: f.priority ? Number(f.priority) : 100 })
+  })
 
-export const toggleMarketplace = (ports: TemplatePorts, name: string) => changeConfig(ports, config => { const m = find(config, name); m.enabled = !m.enabled })
+export const toggleMarketplace = (ports: TemplatePorts, name: string) =>
+  changeConfig(ports, config => {
+    const m = find(config, name)
+    m.enabled = !m.enabled
+  })
 
 // The cache goes too. Installed templates are copies, so they stay.
-export const removeMarketplace = (ports: TemplatePorts, name: string) => changeConfig(ports, async (config, root) => {
-  find(config, name)
-  await dropCache(ports, root, name)
-  config.marketplaces = config.marketplaces.filter(m => m.name !== name)
-})
+export const removeMarketplace = (ports: TemplatePorts, name: string) =>
+  changeConfig(ports, async (config, root) => {
+    find(config, name)
+    await dropCache(ports, root, name)
+    config.marketplaces = config.marketplaces.filter(m => m.name !== name)
+  })
 
 // A new name moves the cache folder. A new address or branch drops the cache: a pull would still read the old remote, so Refresh clones again.
-export const updateMarketplace = (ports: TemplatePorts, name: string, f: MarketplaceFields) => changeConfig(ports, async (config, root) => {
-  checked(f)
-  const m = find(config, name)
-  if (f.name !== name && config.marketplaces.some(o => o.name === f.name)) throw new Error(`Marketplace ${f.name} exists already`)
-  const remoteChanged = f.url.trim() !== m.url || (f.branch || 'main') !== m.branch
-  if (remoteChanged) await dropCache(ports, root, name)
-  else if (f.name !== name && await ports.files.exists(`${root}/cache/sources/${name}`)) await runAll(ports, renameArgv(ports.windows, `${root}/cache/sources/${name}`, `${root}/cache/sources/${f.name}`))
-  Object.assign(m, { name: f.name, url: f.url.trim(), branch: f.branch || 'main', priority: f.priority ? Number(f.priority) : 100 })
-  if (remoteChanged) delete m.lastSynced
-})
+export const updateMarketplace = (ports: TemplatePorts, name: string, f: MarketplaceFields) =>
+  changeConfig(ports, async (config, root) => {
+    checked(f)
+    const m = find(config, name)
+    if (f.name !== name && config.marketplaces.some(o => o.name === f.name)) throw new Error(`Marketplace ${f.name} exists already`)
+    const remoteChanged = f.url.trim() !== m.url || (f.branch || 'main') !== m.branch
+    if (remoteChanged) await dropCache(ports, root, name)
+    else if (f.name !== name && (await ports.files.exists(`${root}/cache/sources/${name}`)))
+      await runAll(ports, renameArgv(ports.windows, `${root}/cache/sources/${name}`, `${root}/cache/sources/${f.name}`))
+    Object.assign(m, { name: f.name, url: f.url.trim(), branch: f.branch || 'main', priority: f.priority ? Number(f.priority) : 100 })
+    if (remoteChanged) delete m.lastSynced
+  })

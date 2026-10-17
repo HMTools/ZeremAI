@@ -51,6 +51,7 @@
   /* buttons, fields, cards */
   .btn { border: 1px solid var(--line2); background: var(--surface); border-radius: 10px; padding: 7px 14px; font-weight: 600; font-size: 14px; min-height: 38px; display: inline-flex; gap: 6px; align-items: center; justify-content: center; }
   .btn:hover:not([aria-disabled="true"]) { background: var(--hover); } .btn.pri { background: var(--ink); color: var(--on-ink); border-color: var(--ink); } .btn.pri:hover:not([aria-disabled="true"]) { background: var(--ink); opacity: .9; }
+  .btn.quiet-danger { color: var(--k-failed); border-color: transparent; background: transparent; } .cf { display: inline-flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; }
   .btn.danger { color: var(--k-failed); border-color: var(--k-failed); background: transparent; } .btn.small { min-height: 32px; padding: 4px 11px; font-size: 13px; }
   .btn[aria-disabled="true"] { opacity: .55; cursor: default; } .btn[aria-busy="true"] { cursor: progress; }
   .row { display: flex; flex-wrap: wrap; gap: 8px 10px; align-items: center; } .row > * { min-width: 0; }
@@ -62,6 +63,11 @@
   .ban { border: 1px solid var(--line2); background: var(--hover); border-radius: 12px; padding: 10px 14px; font-size: 14px; display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; }
   .cmd { display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: baseline; font-size: 13.5px; margin: 0; color: var(--muted); } .cmd.done { color: var(--k-running); } .cmd.error { color: var(--k-failed); font-weight: 550; } .cmd.busy { color: var(--fg); }
   .spin { width: 11px; height: 11px; border-radius: 50%; border: 2px solid var(--line2); border-top-color: var(--accent); display: inline-block; animation: turn .8s linear infinite; align-self: center; } @keyframes turn { to { transform: rotate(360deg); } }
+  .chip .age { color: var(--muted); font-size: 12px; } .chip .age.old { color: var(--accent-text); font-weight: 550; }
+  .boot { display: grid; justify-items: center; gap: 6px; text-align: center; padding: 64px 16px; } .boot h2 { margin: 14px 0 0; font-size: 18px; } .boot p { margin: 0; }
+  .orbit { width: 72px; height: 72px; position: relative; } .orbit svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+  .orbit .o1 { transform-origin: 50% 50%; animation: turn 1.1s cubic-bezier(.5, .1, .5, .9) infinite; } .orbit .o2 { transform-origin: 50% 50%; animation: turn 2.4s linear infinite reverse; } .orbit .core { transform-origin: 50% 50%; animation: pulse 1.4s ease-in-out infinite; }
+  @keyframes pulse { 50% { transform: scale(.55); opacity: .5; } }
   .skel { background: linear-gradient(90deg, var(--hover), var(--line), var(--hover)); background-size: 200% 100%; animation: shim 1.4s ease-in-out infinite; border-radius: 12px; } @keyframes shim { to { background-position: -200% 0; } }
 
   /* chips */
@@ -169,6 +175,8 @@
   }
   function store(k, v, area) { try { var s = area === 's' ? sessionStorage : localStorage; if (v === undefined) return s.getItem(k); s.setItem(k, v); } catch (e) { return null; } }
   function ms(iso) { var t = Date.parse(iso); return isNaN(t) ? null : t; }
+  function old(t) { return !!t && Date.now() - t > 86400000; } // a flow nobody touched for a day
+  function when(t) { return new Date(t).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }); }
   function hhmm(t) { return new Date(t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); }
   function ago(t) { var s = Math.max(0, Math.round((Date.now() - t) / 1000)); return s < 60 ? s + ' s ago' : s < 3600 ? Math.round(s / 60) + ' min ago' : s < 86400 ? Math.round(s / 3600) + ' h ago' : Math.round(s / 86400) + ' d ago'; }
   function pill(k) { k = kind(k); return el('span', { class: 'pill k-' + k }, LOOK[k][0], ' ', LOOK[k][1]); }
@@ -181,18 +189,21 @@
   if (HASH && !PREVIEW) store('zf-session', HASH, 's');
   var S = { flows: {}, details: {}, sessions: {}, templates: [], markets: {}, cmds: [], sent: {}, beat: null, ready: false, offline: !navigator.onLine, owner: false, ownerKnown: false, noDb: false,
     bad: {}, session: PREVIEW ? 'demo' : (HASH || store('zf-session', undefined, 's') || ''), route: store('zf-route', undefined, 's') || 'flows', sel: store('zf-flow'), stepSel: {}, view: store('zf-view') || (window.innerWidth < 720 ? 'runbook' : 'lanes'),
-    tab: 'step', flash: {}, draft: {}, errs: {}, confirm: '', editOpen: '', reasonOpen: '', pick: store('zf-tpl'), dismiss: {}, applied: {}, seen: {}, awaitNew: null, focusMain: false, tq: '', nq: '' };
+    tab: 'step', flash: {}, draft: {}, errs: {}, confirm: '', editOpen: '', reasonOpen: '', pick: store('zf-tpl'), dismiss: {}, applied: {}, seen: {}, awaitNew: null, focusMain: false, tq: '', nq: '', born: Date.now() };
+  var WAIT = 45000; // the first run opens the page before the session writes its row: show a loader this long, then say what is missing
   var DB = null;
   var say = function (t) { $('say').textContent = ''; setTimeout(function () { $('say').textContent = t; }, 30); };
   var pending = 0;
   function render() { if (pending) return; pending = setTimeout(function () { pending = 0; draw(); }, 16); } // one redraw for a burst of changes; a timer, because a hidden tab never gets animation frames
 
   /* ---- data in: one subscription each, never from render ---- */
+  // Steps are numbered from 1 by their place in the flow, on every screen. The data may count from 0.
+  function stepPos(steps, id, fallback) { for (var i = 0; i < steps.length; i++) if (steps[i].id === id) return i + 1; return fallback == null ? null : Number(fallback) + 1; }
   function flowDoc(id, d) {
-    var steps = arr(d.steps).map(function (s) { s = s || {}; return { id: str(s.id), number: s.number, name: str(s.name), phase: str(s.phase), status: kind(s.status), approval: !!s.approval, loopBackTo: s.loopBackTo == null ? '' : str(s.loopBackTo), childFlowId: str(s.childFlowId), summary: str(s.summary) }; });
+    var steps = arr(d.steps).map(function (s, i) { s = s || {}; return { id: str(s.id), number: i + 1, name: str(s.name), phase: str(s.phase), status: kind(s.status), approval: !!s.approval, loopBackTo: s.loopBackTo == null ? '' : str(s.loopBackTo), childFlowId: str(s.childFlowId), summary: str(s.summary) }; });
     var n = d.needsYou && typeof d.needsYou === 'object' ? d.needsYou : null;
     return { id: id, name: str(d.name) || id, template: str(d.template), status: kind(d.status), activeStepId: str(d.activeStepId), updatedAt: ms(d.updatedAt), parentFlowId: str(d.parentFlowId), counts: d.counts || {}, steps: steps,
-      needsYou: n ? { stepId: str(n.stepId), stepNumber: n.stepNumber, stepName: str(n.stepName), waitsFor: str(n.waitsFor), command: str(n.command), blocked: !!n.blocked, since: ms(n.since) } : null };
+      needsYou: n ? { stepId: str(n.stepId), stepNumber: stepPos(steps, n.stepId, n.stepNumber), stepName: str(n.stepName), waitsFor: str(n.waitsFor), command: str(n.command), blocked: !!n.blocked, since: ms(n.since) } : null };
   }
   function takeFlows(docs) {
     var next = {}, before = S.flows;
@@ -259,6 +270,8 @@
     Object.keys(S.sessions).forEach(function (id) { var s = S.sessions[id]; if (isOpen(s) && s.opened && Date.now() - s.opened < 600000 && (!best || s.opened > best.opened)) best = s; });
     return best ? best.id : '';
   }
+  // True in the first seconds after the page opens, while no session is known: the page is still loading, not broken.
+  function starting() { return !S.noDb && !S.offline && !sid() && !S.beat && !Object.keys(S.sessions).length && Date.now() - S.born < WAIT; }
   function holderOf(flowId) {
     var holder = null;
     Object.keys(S.sessions).forEach(function (id) { var s = S.sessions[id]; if (s.flows.indexOf(flowId) >= 0 && (!holder || (isOpen(s) && !isOpen(holder)))) holder = s; });
@@ -281,7 +294,7 @@
   }
   function sessText() {
     var me = sid(), s = me && (S.sessions[me] || { id: me });
-    if (!s) return ['No session', 'pending'];
+    if (!s) return starting() ? ['Starting…', 'pending'] : ['No session', 'pending'];
     var name = sessName(s) + ' · ' + s.id.slice(0, 8);
     return isOpen(s) ? [name + ' · live', 'running'] : [name + ' · closed', 'paused'];
   }
@@ -290,12 +303,12 @@
   function ck(action, a) {
     a = a || {};
     if (action === 'approve' || action === 'request-changes') return action + ':' + a.flowId + ':' + a.stepId;
-    if (action === 'continue' || action === 'close') return action + ':' + a.flowId;
+    if (action === 'continue' || action === 'close' || action === 'delete') return action + ':' + a.flowId;
     if (action === 'new-flow' || action === 'fill-fields') return action + ':' + a.template;
     if (/^(install|remove|view|edit|send)-template$/.test(action)) return action + ':' + a.category + '/' + a.name;
     return action;
   }
-  var VERB = { approve: 'Approve', 'request-changes': 'Request changes', continue: 'Continue', close: 'Close flow', 'new-flow': 'Create flow', 'fill-fields': 'Fill fields', 'install-template': 'Install', 'remove-template': 'Remove', 'view-template': 'View', 'edit-template': 'Edit', 'send-template': 'Send as PR', 'refresh-marketplaces': 'Refresh marketplaces' };
+  var VERB = { approve: 'Approve', 'request-changes': 'Request changes', continue: 'Continue', close: 'Close flow', delete: 'Delete flow', 'new-flow': 'Create flow', 'fill-fields': 'Fill fields', 'install-template': 'Install', 'remove-template': 'Remove', 'view-template': 'View', 'edit-template': 'Edit', 'send-template': 'Send as PR', 'refresh-marketplaces': 'Refresh marketplaces' };
   function label(c) { return (VERB[c.action] || c.action) + (c.args.name && c.action.indexOf('template') > 0 ? ' ' + c.args.name : ''); }
   function resultText(c) {
     if (c.action === 'fill-fields' && c.status === 'done') { try { var n = Object.keys(JSON.parse(c.result)).length; return n ? 'Filled ' + words(n, 'field', 'fields') + '. Check them before you create the flow.' : 'Nothing to fill from that text.'; } catch (e) { return 'Done.'; } }
@@ -383,6 +396,7 @@
     se.className = 'sess k-' + st[1]; se.textContent = st[0]; se.title = sid() ? 'The session that runs your actions. Session id: ' + sid() : 'Press ZeremAI in a session to link this page to it';
     if (S.noDb) { box.className = 'fresh off'; tx.textContent = 'No page database'; return; }
     if (S.offline) { cls = 'off'; text = 'Offline. This is the last data it got.'; }
+    else if (starting()) text = 'Starting…';
     else if (!S.ready) text = 'Connecting…';
     else if (!ref) text = 'Waiting for ZeremAI';
     else {
@@ -393,7 +407,9 @@
     }
     box.className = 'fresh ' + cls; tx.textContent = text;
   }
+  setTimeout(function () { render(); renderFresh(); }, WAIT + 100); // the loader gives way to the real message
   setInterval(function () { renderFresh(); if (hasPending()) render(); }, 5000);
+  setInterval(function () { if (Object.keys(S.flows).length) render(); }, 30000); // the ages must not freeze
 
   /* ---- draw ---- */
   var SVGNS = 'http://www.w3.org/2000/svg';
@@ -413,6 +429,17 @@
       nav.append(el('button', { type: 'button', 'aria-current': S.route === r[0] ? 'page' : null, onclick: function () { go(r[0]); } }, r[1], r[2] ? el('span', { class: 'badge', 'aria-label': r[2] + ' need you' }, String(r[2])) : null));
     });
     if (S.noDb) { main.append(el('div', { class: 'empty' }, el('h2', null, 'The page database is not available'), el('p', { class: 'muted' }, 'Sign in to Claude and open this page again.'))); return; }
+    if (starting()) {
+      main.append(el('div', { class: 'boot', role: 'status', 'aria-busy': 'true' },
+        el('div', { class: 'orbit', 'aria-hidden': 'true' }, sv('svg', { viewBox: '0 0 72 72' },
+          sv('defs', null, sv('linearGradient', { id: 'og', x1: '0', y1: '0', x2: '1', y2: '1' }, sv('stop', { offset: '0', 'stop-color': 'var(--accent)' }), sv('stop', { offset: '1', 'stop-color': 'var(--accent)', 'stop-opacity': '0' }))),
+          sv('circle', { cx: 36, cy: 36, r: 32, fill: 'none', stroke: 'var(--line)', 'stroke-width': 3 }),
+          sv('circle', { class: 'o1', cx: 36, cy: 36, r: 32, fill: 'none', stroke: 'url(#og)', 'stroke-width': 3, 'stroke-linecap': 'round', 'stroke-dasharray': '70 132' }),
+          sv('circle', { class: 'o2', cx: 36, cy: 36, r: 22, fill: 'none', stroke: 'var(--muted)', 'stroke-width': 2, 'stroke-linecap': 'round', 'stroke-dasharray': '3 11', opacity: '.6' }),
+          sv('circle', { class: 'core', cx: 36, cy: 36, r: 7, fill: 'var(--accent)' }))),
+        el('h2', null, 'Starting your session'), el('p', { class: 'muted' }, 'Loading your flows. This takes a few seconds.')));
+      return;
+    }
     if (!S.ready) { main.append(el('div', { style: 'display:grid;gap:14px', 'aria-busy': 'true' }, el('div', { class: 'row' }, [0, 1, 2].map(function () { return el('div', { class: 'skel', style: 'height:42px;width:180px' }); })), el('div', { class: 'skel', style: 'height:30px;width:55%' }), el('div', { class: 'skel', style: 'height:260px' }))); return; }
     var pageWhy = cantAct(null, 'session'); S.bannerWhy = pageWhy;
     if (pageWhy) ban.append(el('div', { class: 'ban', role: 'note' }, el('b', null, 'Actions are off.'), el('span', null, pageWhy)));
@@ -428,12 +455,12 @@
   /* ---- flows ---- */
   function flowsView(main) {
     var list = ordered(), f = current(list);
-    if (!list.length) { main.append(el('div', { class: 'empty' }, el('h2', null, 'No flows yet'), el('p', { class: 'muted' }, 'Start one here, or run ', el('code', null, '/zeremai'), ' in Claude. It shows up as soon as it starts.'), el('button', { class: 'btn pri', type: 'button', onclick: function () { go('new'); } }, 'Start a flow'))); return; }
+    if (!list.length) { main.append(el('div', { class: 'empty' }, el('h2', null, 'No flows yet'), el('p', { class: 'muted' }, 'Start one here, or run ', el('code', null, '/zeremai:init'), ' in Claude. It shows up as soon as it starts.'), el('button', { class: 'btn pri', type: 'button', onclick: function () { go('new'); } }, 'Start a flow'))); return; }
     S.sel = f.id;
     main.append(el('div', { style: 'display:grid;gap:18px' },
       el('div', { class: 'chips', role: 'group', 'aria-label': 'Flows' }, list.map(function (x) { return el('button', { type: 'button', class: 'chip k-' + x.status + (NEEDS[x.status] ? ' need' : '') + (S.flash[x.id] ? ' flash' : ''), 'aria-pressed': String(x.id === f.id), 'data-key': 'c:' + x.id, onclick: function () { S.sel = x.id; store('zf-flow', x.id); render(); } },
-        el('span', { class: 'sy', 'aria-hidden': 'true' }, LOOK[x.status][0]), el('b', null, x.name), el('span', { class: 'w' }, LOOK[x.status][1]), here(x.id) ? el('span', { class: 'here', title: 'Runs in this session' }, 'here') : null); })),
-      head(f), needCard(f), el('div', { class: 'shell' }, el('div', { class: 'list', id: 'list', role: 'group', 'aria-label': 'Steps' }, S.view === 'lanes' ? lanes(f) : runbook(f)), side(f))));
+        el('span', { class: 'sy', 'aria-hidden': 'true' }, LOOK[x.status][0]), el('b', null, x.name), el('span', { class: 'w' }, LOOK[x.status][1]), x.updatedAt ? el('span', { class: 'age' + (old(x.updatedAt) ? ' old' : ''), title: 'Last updated ' + when(x.updatedAt) }, ago(x.updatedAt)) : null, here(x.id) ? el('span', { class: 'here', title: 'Runs in this session' }, 'here') : null); })),
+      head(f), needCard(f), flowActions(f), el('div', { class: 'shell' }, el('div', { class: 'list', id: 'list', role: 'group', 'aria-label': 'Steps' }, S.view === 'lanes' ? lanes(f) : runbook(f)), side(f))));
   }
   // Which session holds the flow: name, folder, short id (tap to copy the full id), live or closed, and a tag when it is the session of this page.
   function runsIn(f) {
@@ -442,27 +469,32 @@
     var folder = h.folder ? h.folder.split('/').filter(Boolean).pop() : '';
     return el('p', { class: 'facts' }, el('span', null, 'Runs in: ', el('b', null, sessName(h))), folder && folder !== sessName(h) ? el('span', null, folder) : null,
       el('button', { class: 'link', type: 'button', title: 'Copy the session id ' + h.id, onclick: function (e) { var b = e.currentTarget; try { navigator.clipboard.writeText(h.id).then(function () { b.textContent = 'copied'; }, function () { b.textContent = h.id; }); } catch (x) { b.textContent = h.id; } } }, h.id.slice(0, 8)),
-      el('span', null, isOpen(h) ? 'live' : 'closed'), here(f.id) ? el('span', { class: 'here' }, 'here') : null);
+      el('span', null, isOpen(h) ? 'live' : 'closed'));
   }
   function head(f) {
     var parent = f.parentFlowId && S.flows[f.parentFlowId];
     return el('div', { class: 'fhead' }, el('h2', null, f.name), runsIn(f),
-      el('p', { class: 'facts' }, pill(f.status), el('span', null, 'step ' + stepNo(f) + ' of ' + f.steps.length), f.template ? el('span', null, f.template) : null, f.updatedAt ? el('span', null, 'changed ' + ago(f.updatedAt)) : null,
+      el('p', { class: 'facts' }, pill(f.status), el('span', null, 'step ' + stepNo(f) + ' of ' + f.steps.length), f.template && f.template !== f.name ? el('span', null, f.template) : null, f.updatedAt ? el('span', { class: old(f.updatedAt) ? 'age old' : null }, 'Last updated ' + ago(f.updatedAt) + ' · ' + when(f.updatedAt)) : null,
         parent ? el('span', null, 'child of ', el('button', { class: 'link', type: 'button', onclick: function () { S.sel = parent.id; render(); } }, parent.name)) : null,
         el('span', { class: 'vt', role: 'group', 'aria-label': 'View' },
           el('button', { type: 'button', 'aria-pressed': String(S.view === 'runbook'), onclick: function () { S.view = 'runbook'; store('zf-view', 'runbook'); render(); } }, 'Runbook'),
           el('button', { type: 'button', 'aria-pressed': String(S.view === 'lanes'), onclick: function () { S.view = 'lanes'; store('zf-view', 'lanes'); render(); } }, 'Two lanes'))),
-      flowActions(f));
+      null);
   }
   function flowActions(f) {
-    var why = cantAct(f.id), cont = f.status === 'paused' || f.status === 'failed' || f.status === 'pending' || f.status === 'blocked', nk = 'note:' + f.id, closeKey = 'close:' + f.id, bits = [];
+    var why = cantAct(f.id), whyAny = cantAct(f.id, 'session'), delKey = 'delete:' + f.id, cont = f.status === 'paused' || f.status === 'failed' || f.status === 'pending' || f.status === 'blocked', nk = 'note:' + f.id, closeKey = 'close:' + f.id, btns = [], bits = [];
     if (cont) {
       var a = function () { return { flowId: f.id, note: S.draft[nk] || '' }; };
-      bits.push(el('div', { class: 'row' }, actBtn('Continue', 'continue', a, { flowId: f.id, primary: true }),
-        el('details', { open: S.draft[nk] ? true : null }, el('summary', { class: 'sub' }, 'Add a note for the agent'), el('div', { class: 'fld', style: 'margin-top:6px' }, el('label', { for: nk, class: 'sr' }, 'Note for the agent'), input(nk, { area: true, rows: 2, placeholder: 'What should it do next? (optional)' })))));
+      btns.push(actBtn('Continue', 'continue', a, { flowId: f.id, primary: true }));
     }
-    if (S.confirm === closeKey) bits.push(el('div', { class: 'row', role: 'group', 'aria-label': 'Confirm close' }, el('span', null, 'Close “' + f.name + '”? It leaves the list of running flows.'), actBtn('Yes, close it', 'close', { flowId: f.id }, { flowId: f.id, danger: true, small: true }), el('button', { class: 'btn small', type: 'button', 'data-key': 'keep:' + f.id, onclick: function () { S.confirm = ''; S.focusKey = 'x:' + closeKey; render(); } }, 'Keep it')));
-    else bits.push(el('div', { class: 'row' }, el('button', { class: 'btn small', type: 'button', 'data-key': 'x:' + closeKey, 'aria-disabled': why ? 'true' : null, title: why || null, onclick: function () { if (!why) { S.confirm = closeKey; S.focusKey = 'keep:' + f.id; render(); } } }, 'Close flow')));
+    // Continue, Close and Delete share one row. A confirm question takes the place of its own button.
+    if (S.confirm === closeKey) btns.push(el('span', { class: 'cf', role: 'group', 'aria-label': 'Confirm close' }, el('span', null, 'Close “' + f.name + '”? It leaves the list of running flows.'), actBtn('Yes, close it', 'close', { flowId: f.id }, { flowId: f.id, danger: true, small: true }), el('button', { class: 'btn small', type: 'button', 'data-key': 'keep:' + f.id, onclick: function () { S.confirm = ''; S.focusKey = 'x:' + closeKey; render(); } }, 'Keep it')));
+    else btns.push(el('button', { class: 'btn small', type: 'button', 'data-key': 'x:' + closeKey, 'aria-disabled': why ? 'true' : null, title: why || null, onclick: function () { if (!why) { S.confirm = closeKey; S.focusKey = 'keep:' + f.id; render(); } } }, 'Close flow'));
+    // Delete runs in the session of this page, so a flow of another (even closed) session can go too. The folder is removed for good.
+    if (S.confirm === delKey) btns.push(el('span', { class: 'cf', role: 'group', 'aria-label': 'Confirm delete' }, el('span', null, 'Delete “' + f.name + '”? Its folder is removed for good.'), actBtn('Yes, delete it', 'delete', { flowId: f.id }, { flowId: f.id, scope: 'session', danger: true, small: true }), el('button', { class: 'btn small', type: 'button', 'data-key': 'keepdel:' + f.id, onclick: function () { S.confirm = ''; S.focusKey = 'x:' + delKey; render(); } }, 'Keep it')));
+    else btns.push(el('button', { class: 'btn small quiet-danger', type: 'button', 'data-key': 'x:' + delKey, 'aria-disabled': whyAny ? 'true' : null, title: whyAny || null, onclick: function () { if (!whyAny) { S.confirm = delKey; S.focusKey = 'keepdel:' + f.id; render(); } } }, 'Delete flow'));
+    bits.push(el('div', { class: 'row' }, btns));
+    if (cont) bits.push(el('details', { open: S.draft[nk] ? true : null }, el('summary', { class: 'sub' }, 'Add a note for the agent'), el('div', { class: 'fld', style: 'margin-top:6px' }, el('label', { for: nk, class: 'sr' }, 'Note for the agent'), input(nk, { area: true, rows: 2, placeholder: 'What should it do next? (optional)' }))));
     return el('div', { class: 'fhead' }, bits, flowStatus(f), whyLine(why));
   }
   function needCard(f) {
@@ -533,7 +565,7 @@
     var tabs = [['step', 'Step']], logs = det(f, 'logs'), mem = det(f, 'memory'), files = det(f, 'files');
     if (showDetails()) tabs.push(['logs', 'Logs' + (logs ? ' ' + arr(logs.rows).length : '')], ['memory', 'Memory' + (f.counts.topics ? ' ' + f.counts.topics : mem ? ' ' + arr(mem.topics).length : '')], ['files', 'Files' + (f.counts.files ? ' ' + f.counts.files : files ? ' ' + arr(files.rows).length : '')]);
     if (!tabs.some(function (t) { return t[0] === S.tab; })) S.tab = 'step';
-    var body = S.tab === 'logs' ? logPane(logs) : S.tab === 'memory' ? memPane(mem) : S.tab === 'files' ? filePane(files) : stepPane(f, logs);
+    var body = S.tab === 'logs' ? logPane(logs, f) : S.tab === 'memory' ? memPane(mem) : S.tab === 'files' ? filePane(files) : stepPane(f, logs);
     return el('aside', { class: 'side', 'aria-label': 'Details' },
       el('div', { class: 'tabs', role: 'tablist' }, tabs.map(function (t) { return el('button', { type: 'button', role: 'tab', id: 'tab-' + t[0], 'aria-selected': String(S.tab === t[0]), 'aria-controls': 'pane', 'data-key': 't:' + t[0], onclick: function () { S.tab = t[0]; render(); } }, t[1]); })),
       el('div', { class: 'pane', id: 'pane', role: 'tabpanel', 'aria-labelledby': 'tab-' + S.tab }, body));
@@ -555,11 +587,11 @@
     ];
   }
   function list(items, none) { items = arr(items); return items.length ? el('ul', null, items.map(function (x) { return el('li', null, str(x)); })) : none ? el('p', { class: 'none' }, none) : null; }
-  function logPane(d) {
+  function logPane(d, f) {
     if (!d || !arr(d.rows).length) return [el('p', { class: 'none' }, 'No log entries yet.')];
     return arr(d.rows).map(function (r) {
       var k = kind(r.kind), t = r.started ? ms(r.started) : null, c = r.completed ? ms(r.completed) : null;
-      return el('details', { class: 'lg k-' + k }, el('summary', null, el('span', { class: 'k', 'aria-hidden': 'true' }, LOOK[k][0]), el('span', null, str(r.number) + '. ' + str(r.name)), el('span', { class: 'sub' }, LOOK[k][1] + (t ? ' · ' + hhmm(t) : '') + (c ? ' to ' + hhmm(c) : ''))),
+      return el('details', { class: 'lg k-' + k }, el('summary', null, el('span', { class: 'k', 'aria-hidden': 'true' }, LOOK[k][0]), el('span', null, (f ? stepPos(f.steps, r.id, r.number) : str(r.number)) + '. ' + str(r.name)), el('span', { class: 'sub' }, LOOK[k][1] + (t ? ' · ' + hhmm(t) : '') + (c ? ' to ' + hhmm(c) : ''))),
         el('div', { style: 'display:grid;gap:10px' }, arr(r.actions).length ? el('div', null, el('h4', null, 'Actions'), list(r.actions)) : null, arr(r.reasoning).length ? el('div', null, el('h4', null, 'Reasoning'), list(r.reasoning)) : null,
           arr(r.problems).length ? el('div', { class: 'note warn' }, el('b', null, 'Problems'), list(r.problems)) : null, !arr(r.actions).length && !arr(r.reasoning).length && !arr(r.problems).length ? el('p', { class: 'none' }, 'Nothing logged for this step.') : null));
     });
@@ -726,6 +758,7 @@
           else if (c.action === 'approve') { c.result = 'Approved. The flow goes on.'; if (fl) { fl.status = 'running'; fl.needsYou = null; fl.updatedAt = new Date().toISOString(); fl.steps.forEach(function (s) { if (s.id === a.stepId) s.status = 'done'; }); notify('flows'); } }
           else if (c.action === 'request-changes') { c.result = 'Sent to the agent. It will redo the step.'; if (fl) { fl.needsYou = null; fl.status = 'running'; fl.updatedAt = new Date().toISOString(); notify('flows'); } }
           else if (c.action === 'continue') { c.result = 'The agent continues.'; if (fl) { fl.status = 'running'; fl.updatedAt = new Date().toISOString(); fl.steps.forEach(function (s) { if (s.status === 'paused') s.status = 'running'; }); notify('flows'); } }
+          else if (c.action === 'delete') { c.result = 'Deleted. The flow folder is gone.'; delete data.flows[a.flowId]; notify('flows'); }
           else if (c.action === 'close') { c.result = 'Flow closed.'; delete data.flows[a.flowId]; notify('flows'); }
           else if (c.action === 'fill-fields') c.result = JSON.stringify({ summary: 'Refund fails when the amount is 0', workItemId: '7421' });
           else if (c.action === 'install-template') { c.result = 'Installed ' + a.name + '.'; var t = data.templates[a.category + '~' + a.name]; if (t) { t.installed = true; notify('templates'); } }

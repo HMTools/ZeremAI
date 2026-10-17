@@ -8,16 +8,19 @@ import type { FileSystem, SessionLinks } from '../infra/ports/ports'
 const TODO_TOOLS = ['TaskCreate', 'TaskUpdate', 'TaskGet', 'TaskList', 'TodoWrite']
 const TEXT = 'External todo tools are blocked during flow execution — flow steps are your task list'
 
-const filesOf = ($: any): FileSystem => ({
-  home: async () => (await $.env.get('HOME')) ?? (await $.env.get('USERPROFILE')), // Windows has no HOME in every shell
-  list: path => $.fs.list(path),
-  exists: path => $.fs.exists(path),
-  read: path => $.fs.read(path),
-})
-const linksOf = ($: any): SessionLinks => ({
-  get: async sessionId => ((await $.store.get(sessionKey(sessionId))) as string[] | undefined) ?? [],
-})
-
+function filesOf($: any): FileSystem {
+  return {
+    home: async () => (await $.env.get('HOME')) ?? (await $.env.get('USERPROFILE')), // Windows has no HOME in every shell
+    list: path => $.fs.list(path),
+    exists: path => $.fs.exists(path),
+    read: path => $.fs.read(path),
+  }
+}
+function linksOf($: any): SessionLinks {
+  return {
+    get: async sessionId => ((await $.store.get(sessionKey(sessionId))) as string[] | undefined) ?? [],
+  }
+}
 
 // A guard that blocks or re-prompts the agent says so in a toast: the user then knows why Claude changed course. One toast in 30 seconds for the same text.
 let lastToast = ''
@@ -27,7 +30,11 @@ async function say($: any, text: string): Promise<void> {
   if (text === lastToast && now - lastToastMs < 30_000) return
   lastToast = text
   lastToastMs = now
-  try { await $.ui.toast(text) } catch { /* a surface that cannot show a toast */ }
+  try {
+    await $.ui.toast(text)
+  } catch {
+    /* a surface that cannot show a toast */
+  }
 }
 
 export const register: Register = on => {

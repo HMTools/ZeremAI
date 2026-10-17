@@ -17,17 +17,22 @@ function world(on: On, files: Record<string, string>, agents: { type: string; st
   on('session.id', async () => ({ value: 'S1' }))
   on('fs.list', async ($, e) => ({ value: e.path === ACTIVE ? [{ name: 'p1', kind: 'dir', size: 0, mtimeMs: 0, isLink: false }] : [] }))
   on('fs.exists', async ($, e) => ({ value: e.path in all }))
-  on('fs.read', async ($, e) => { if (!(e.path in all)) throw new Error('missing'); return { value: all[e.path] } })
+  on('fs.read', async ($, e) => {
+    if (!(e.path in all)) throw new Error('missing')
+    return { value: all[e.path] }
+  })
   on('agent.list', async () => ({ value: agents as never }))
-  on('prompt.submit', async (_$, e) => { if (e.origin?.kind === 'plugin') submitted.push(e.text); return { drop: 'test' } })
+  on('prompt.submit', async (_$, e) => {
+    if (e.origin?.kind === 'plugin') submitted.push(e.text)
+    return { drop: 'test' }
+  })
   on('turn.complete', async () => ({ text: '' }))
   return submitted
 }
-const end = ($: any, extra = {}) =>
-  $.turn.complete({ answer: 'ok', durationMs: 1, isAborted: false, turnId: 't1', reason: 'answer', ...extra })
+const end = ($: any, extra = {}) => $.turn.complete({ answer: 'ok', durationMs: 1, isAborted: false, turnId: 't1', reason: 'answer', ...extra })
 
 test('no flow for this session: no re-prompt', async ($, on) => {
-  const sent = world(on, { [json]: proc('running', [step(1, 'pending')])}, [], false, 'other')
+  const sent = world(on, { [json]: proc('running', [step(1, 'pending')]) }, [], false, 'other')
   await end($)
   expect(sent).toEqual([])
 })
@@ -51,6 +56,12 @@ test('pending step: re-prompt names the step', async ($, on) => {
   await end($)
   expect(sent.length).toBe(1)
   expect(sent[0]).toContain('Step 2 — "Step 2 name" (ID: s2)')
+})
+test('step running with a step pending: re-prompt says wait, not start the next step', async ($, on) => {
+  const sent = world(on, { [json]: proc('running', [step(1, 'in_progress'), step(2, 'pending')]) }, [{ type: 'zeremai:step-executor', status: 'running' }])
+  await end($)
+  expect(sent[0]).toContain('still in progress')
+  expect(sent[0]).not.toContain('Next step to execute')
 })
 test('step running, no step-executor alive: re-prompt says lost', async ($, on) => {
   const sent = world(on, { [json]: proc('running', [step(1, 'in_progress')]) })

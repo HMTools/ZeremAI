@@ -7,19 +7,19 @@ ZeremAI has no terminal pane. You use it through **one live site**: a page on cl
 
 ## Open the site
 
-Run `/zeremai`, or press the button above the prompt. It ends with **ZeremAI ↗**:
+Run [`/zeremai:init`](/commands/init), or press the button above the prompt. It ends with **ZeremAI ↗**:
 
 ```
 ▲ Payoflows E2E · step 3/12 · approve step 3 · ZeremAI ↗
 ```
 
 - **The first time in a session**, ZeremAI publishes a page for that session and pins it to your claude.ai sidebar. It keeps the link by session id.
-- **Every other time**, it opens the page of that session. A resumed session gets its page back. Any word after `/zeremai` does the same (`/zeremai live` too).
+- **Every other time**, it opens the page of that session. A resumed session gets its page back. Any word after `/zeremai:init` does the same (`/zeremai:init live` too).
 - The link carries the id of your session (`#<session id>`). The site uses it to know which session runs your actions.
 
 If the Artifact tool cannot open the page, ZeremAI uses the system opener, and then shows the link in a message.
 
-When a new version of the plugin ships a new page, the next `/zeremai` publishes it to the same link. You do not install it.
+When a new version of the plugin ships a new page, the next `/zeremai:init` publishes it to the same link. You do not install it.
 
 <Warning>
   The site needs a **claude.ai sign-in** and a Claude Code surface with the **Artifact tool**. Without them you cannot start or resume a flow. This is the case in print mode and in the VS Code extension. See [Installation](/guide/installation).
@@ -27,32 +27,19 @@ When a new version of the plugin ships a new page, the next `/zeremai` publishes
 
 ## The screens
 
-| Screen | What you do |
-|---|---|
-| **Flows** | See every flow, with the flows that need you first. Pick one to see its steps. Approve a step, request changes, continue a paused flow, or close a flow. |
-| **New flow** | Pick a template, fill in its fields, and press **Create flow**. |
-| **Templates** | See the templates of each marketplace. **Install**, **Remove**, or **Refresh** the catalogs. |
+<CardGroup cols={3}>
+  <Card title="Flows" icon="list-check" href="/ui/flows">
+    See every flow. Approve a step, unblock a flow, close or delete it.
+  </Card>
+  <Card title="New flow" icon="play" href="/ui/new-flow">
+    Pick a template, fill in its fields and start.
+  </Card>
+  <Card title="Templates" icon="folder-open" href="/ui/templates">
+    Install, view, edit, send and remove templates.
+  </Card>
+</CardGroup>
 
-### Flows
-
-- The steps show as a **runbook** or as **two lanes** (Claude on the left, you on the right). Each step has a symbol and a word: `waits for you`, `running`, `done`, `failed`, `paused` or `pending`. Colour is never the only signal.
-- The tabs **Steps**, **Logs**, **Memory** and **Files** show what the flow did, what it remembers, and the files it changed. Only you, the owner, can read the last three.
-- A step that waits for you gets a card at the top. **Approve** is the same click as in the approval dialog. **Request changes** needs a reason, and the agent reads it before it redoes the step. See [Approvals](/guide/approvals).
-- **Continue** resumes a flow from its last incomplete step.
-- **Close flow** asks you to confirm. It makes your session stop working on that flow. The flow files stay where they are, and you can **Continue** the flow later.
-
-### New flow
-
-1. Pick a template. Search works, and your favourites stay at the top.
-2. Fill in the fields. Required ones have a star, and the examples show in the boxes.
-3. Optional: write what you want in the box **Describe it in your own words** and press **Fill the fields**. Claude suggests values for the fields. You can change them.
-4. Press **Create flow**. ZeremAI creates the flow, binds it to your session, and the agent starts the first step.
-
-### Templates
-
-The list is grouped by marketplace. **Install** copies a template (and updates it when the marketplace has a newer commit). **Remove** deletes an installed template and asks first. **Refresh** fetches the latest catalogs.
-
-To add, edit, switch off or remove a marketplace itself, edit `marketplaces.json`. See [Marketplaces](/guide/marketplaces#config-file).
+For what the site shows when the session is closed or missing, see [Session states](/ui/session-states). For the parts that stay in Claude Code, see [In the terminal](/ui/terminal).
 
 ## What happens when you press a button
 
@@ -66,23 +53,7 @@ Your session checks every command before it runs it. A wrong one gets an error m
 
 ## Which session runs an action
 
-| Situation | What the site does |
-|---|---|
-| You opened it with the button in session A | Actions run in A. The header names the session. |
-| A flow belongs to session B | Flow actions run in B. A new flow runs in A. |
-| The session is closed | The site says **Session closed. Press ZeremAI in a live session.** and turns the actions off. |
-| You opened the pinned link with no session | The site only shows. It says **This page has no session. Press ZeremAI in the session you want.** |
-| Another person opens the page | The site only shows. It says **Only the owner of this page can use actions.** |
-
-A session counts as closed when its heartbeat is older than 3 minutes. If you see "Session closed", go to a live Claude Code session and press **ZeremAI ↗** again. The site then works with that session.
-
-A new flow starts in the project folder of the session where you pressed ZeremAI, because the agent edits files there.
-
-## What stays in the terminal
-
-- The agent works in your session as before. The line under the prompt shows the step.
-- The approval dialog still opens in the terminal when the agent asks. You can answer there or on the site. See [The approval gate](/design/guards/approval-gate).
-- The button above the prompt shows the flow that is bound to the session and how many flows need you.
+The site sends each action to one session. A flow action goes to the session that holds the flow. A new flow goes to the session where you pressed ZeremAI, and starts in that session's project folder, because the agent edits files there. If that session is closed, or the page has no session, the site turns the actions off. See [Session states](/ui/session-states).
 
 ## Limits
 

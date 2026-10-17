@@ -13,7 +13,11 @@ export async function findFlowDir(files: FileSystem, links: SessionLinks, sessio
 }
 
 export async function readFlow(files: FileSystem, flowDir: string): Promise<Flow | undefined> {
-  try { return JSON.parse(await files.read(`${flowDir}/flow.json`)) } catch { /* unreadable: leave the agent alone */ }
+  try {
+    return JSON.parse(await files.read(`${flowDir}/flow.json`))
+  } catch {
+    /* unreadable: leave the agent alone */
+  }
 }
 
 export const hasFlowInstance = (flowDir: string | undefined): flowDir is string => flowDir !== undefined

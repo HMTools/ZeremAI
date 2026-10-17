@@ -12,8 +12,7 @@ export type Band = { parts: BandPart[]; text: string; hot: boolean }
 const TONE: Record<Kind, BandPart['tone']> = { waiting: 'warning', blocked: 'warning', failed: 'error', paused: 'permission', running: 'success', done: 'dim', pending: 'dim' }
 
 // What the bound flow is doing, in the words the user acts on.
-export const stateWord = (p: FlowInfo) =>
-  p.kind === 'waiting' ? (p.waitStep ? `approve step ${p.waitStep}` : 'waits for you') : p.kind === 'running' ? 'running' : LOOK[p.kind].word
+export const stateWord = (p: FlowInfo) => (p.kind === 'waiting' ? (p.waitStep ? `approve step ${p.waitStep}` : 'waits for you') : p.kind === 'running' ? 'running' : LOOK[p.kind].word)
 
 // "▲2 approve · ✕1 failed · ‖1 paused", without the kinds that have none.
 export function kindCounts(flows: FlowInfo[]): BandPart[] {
@@ -29,7 +28,10 @@ export function bandView(flows: FlowInfo[], boundDir: string | undefined, now: n
   const parts: BandPart[] = []
   if (bound) {
     const activity = activityOf(bound.kind, bound.lastLogMs, now)
-    parts.push({ text: `${symbolOf(bound.kind, false)} ${bound.name} · step ${bound.step}/${bound.total} · ${stateWord(bound)}${activity?.quiet ? ` · ${activity.text}` : ''}`, tone: TONE[bound.kind] })
+    parts.push({
+      text: `${symbolOf(bound.kind, false)} ${bound.name} · step ${bound.step}/${bound.total} · ${stateWord(bound)}${activity?.quiet ? ` · ${activity.text}` : ''}`,
+      tone: TONE[bound.kind],
+    })
   } else parts.push({ text: 'Flows', tone: undefined })
   const others = kindCounts(flows.filter(p => p !== bound))
   for (const part of others) parts.push({ text: ' · ', tone: 'dim' }, part)

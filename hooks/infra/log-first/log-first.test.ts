@@ -3,8 +3,18 @@ import { logInteraction, logPrompt, parseDetails } from './log-first'
 import type { Complete, LogDeps } from './log-first'
 
 const DIR = '/h/.claude/zeremai/active/p1'
-const flow = JSON.stringify({ name: 'Bug fix', status: 'running', currentState: { activeStep: { id: 's2' } }, steps: [{ id: 's1', name: 'Plan' }, { id: 's2', name: 'Code' }] })
-const reply = (text: string): Complete => async () => ({ isAnswered: true, text })
+const flow = JSON.stringify({
+  name: 'Bug fix',
+  status: 'running',
+  currentState: { activeStep: { id: 's2' } },
+  steps: [
+    { id: 's1', name: 'Plan' },
+    { id: 's2', name: 'Code' },
+  ],
+})
+const reply =
+  (text: string): Complete =>
+  async () => ({ isAnswered: true, text })
 
 function deps(complete: Complete, { bound = true, status = 'ok' as 'ok' | 'error' } = {}) {
   const calls: { sub: string; input: any }[] = []
@@ -12,15 +22,25 @@ function deps(complete: Complete, { bound = true, status = 'ok' as 'ok' | 'error
   const d: LogDeps = {
     files: { home: async () => '/h', list: async p => (p === '/h/.claude/zeremai/active' ? [{ name: 'p1', kind: 'dir' }] : []), exists: async p => p === `${DIR}/flow.json`, read: async () => flow },
     links: { get: async () => (bound ? [DIR] : []) },
-    complete: async r => { asked.push(r.prompt); return complete(r) },
-    script: async (sub, input) => { calls.push({ sub, input }); return status === 'ok' ? { status } : { status, message: 'disk full' } },
+    complete: async r => {
+      asked.push(r.prompt)
+      return complete(r)
+    },
+    script: async (sub, input) => {
+      calls.push({ sub, input })
+      return status === 'ok' ? { status } : { status, message: 'disk full' }
+    },
   }
   return { d, calls, asked }
 }
 
 test('parseDetails: reads the JSON object, also inside a fence; needs a reason and a response; a flag needs its idea', () => {
-  expect(parseDetails('```json\n{"reason":"r","response":"Action taken: x","forImprovement":true,"potentialImprovement":"ask first"}\n```'))
-    .toEqual({ reason: 'r', response: 'Action taken: x', forImprovement: true, potentialImprovement: 'ask first' })
+  expect(parseDetails('```json\n{"reason":"r","response":"Action taken: x","forImprovement":true,"potentialImprovement":"ask first"}\n```')).toEqual({
+    reason: 'r',
+    response: 'Action taken: x',
+    forImprovement: true,
+    potentialImprovement: 'ask first',
+  })
   expect(parseDetails('{"reason":"r","response":"a","forImprovement":true}')).toEqual({ reason: 'r', response: 'a' })
   expect(parseDetails('{"reason":"r"}')).toBeUndefined()
   expect(parseDetails('no json')).toBeUndefined()
@@ -31,7 +51,9 @@ test('a prompt in a flow: the model gets it and the step, the script gets the en
   expect(await logPrompt(d, 'S1', 'make the header blue')).toBeUndefined()
   expect(asked[0]).toContain('make the header blue')
   expect(asked[0]).toContain('Active step: Code')
-  expect(calls).toEqual([{ sub: 'log-interaction', input: { flowDir: DIR, stepId: 's2', request: 'User requested: make the header blue', reason: 'Wants blue', response: 'Action taken: change the header' } }])
+  expect(calls).toEqual([
+    { sub: 'log-interaction', input: { flowDir: DIR, stepId: 's2', request: 'User requested: make the header blue', reason: 'Wants blue', response: 'Action taken: change the header' } },
+  ])
 })
 
 test('no flow for the session: nothing is asked and nothing is logged', async () => {
@@ -46,7 +68,9 @@ test('a failure comes back as text and nothing is written: no answer, bad JSON, 
   expect(await logPrompt(none.d, 'S1', 'x')).toContain('api-error')
   const bad = deps(reply('sorry'))
   expect(await logPrompt(bad.d, 'S1', 'x')).toContain('JSON')
-  const thrown = deps(async () => { throw new Error('blocked model') })
+  const thrown = deps(async () => {
+    throw new Error('blocked model')
+  })
   expect(await logPrompt(thrown.d, 'S1', 'x')).toContain('blocked model')
   for (const w of [none, bad, thrown]) expect(w.calls).toEqual([])
   const refused = deps(reply('{"reason":"r","response":"a"}'), { status: 'error' })

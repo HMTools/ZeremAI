@@ -5,10 +5,31 @@ const ROOT = '/h/.claude/zeremai'
 const ACTIVE = `${ROOT}/active`
 const DIR = `${ACTIVE}/p1`
 const URL = 'https://claude.ai/artifact/AbC123'
-const flow = { id: 'f1', name: 'Fix', status: 'running', metadata: { template: 'bug', lastUpdated: 'then' }, currentState: { activeStep: { id: 's1' } }, steps: [{ id: 's1', number: 1, name: 'Design', status: 'pending' }] }
+const flow = {
+  id: 'f1',
+  name: 'Fix',
+  status: 'running',
+  metadata: { template: 'bug', lastUpdated: 'then' },
+  currentState: { activeStep: { id: 's1' } },
+  steps: [{ id: 's1', number: 1, name: 'Design', status: 'pending' }],
+}
 const waiting = { ...flow, steps: [{ id: 's1', number: 1, name: 'Design', status: 'in_progress', approvalRequired: true, stepDefinition: { output: { description: 'The design' } } }] }
-const other = { id: 'f2', name: 'Other', status: 'running', metadata: { template: 'bug', lastUpdated: 'then' }, currentState: { activeStep: { id: 'x1' } }, steps: [{ id: 'x1', number: 1, name: 'Plan', status: 'pending' }] }
-const template = { type: 'template', name: 'bug', category: 'dev', metadata: { title: 'Bug' }, parameters: { required: ['workItemId'], optional: [], definitions: { workItemId: { example: '7' } } }, steps: [{ name: 'Design', stepRef: 'r1' }] }
+const other = {
+  id: 'f2',
+  name: 'Other',
+  status: 'running',
+  metadata: { template: 'bug', lastUpdated: 'then' },
+  currentState: { activeStep: { id: 'x1' } },
+  steps: [{ id: 'x1', number: 1, name: 'Plan', status: 'pending' }],
+}
+const template = {
+  type: 'template',
+  name: 'bug',
+  category: 'dev',
+  metadata: { title: 'Bug' },
+  parameters: { required: ['workItemId'], optional: [], definitions: { workItemId: { example: '7' } } },
+  steps: [{ name: 'Design', stepRef: 'r1' }],
+}
 const remote = { type: 'template', name: 'deploy', category: 'ops', metadata: { title: 'Deploy' }, parameters: { required: [], optional: [] }, steps: [] }
 const OK = JSON.stringify({ status: 'ok', files_written: ['flow.json'] })
 const ok = { value: { exitCode: 0, stdout: '', stderr: '', timedOut: false } } as never
@@ -29,50 +50,104 @@ function world(on: On, { url = '', fail = false, page = true, noOpen = false, no
   if (gate) store['gate:S1'] = { dir: DIR, stepId: 's1' }
   const db = new Map<string, { data: any; version: number }>([['meta/mod', { data: {}, version: 7 }]])
   const fault = { run: '' }
-  const data: any[] = [], published: any[] = [], reads: string[] = [], opened: string[] = [], toasts: string[] = [], sent: { text: string; asUser?: boolean }[] = [], ran: string[][] = []
+  const data: any[] = [],
+    published: any[] = [],
+    reads: string[] = [],
+    opened: string[] = [],
+    toasts: string[] = [],
+    sent: { text: string; asUser?: boolean }[] = [],
+    ran: string[][] = []
   mock.env(on, { HOME: '/h' })
   const clock = mock.clock(on)
   on('store.get', async (_$, e: any) => ({ value: store[e.key] as never }))
-  on('store.set', async (_$, e: any) => { store[e.key] = e.value; return { value: undefined } as never })
-  on('store.delete', async (_$, e: any) => { delete store[e.key]; return { value: undefined } as never })
+  on('store.set', async (_$, e: any) => {
+    store[e.key] = e.value
+    return { value: undefined } as never
+  })
+  on('store.delete', async (_$, e: any) => {
+    delete store[e.key]
+    return { value: undefined } as never
+  })
   on('session.id', async () => ({ value: 'S1' }))
   on('session.cwd', async () => ({ value: '/work' }))
   on('fs.list', async (_$, e) => {
-    const names = [...new Set(Object.keys(all).filter(p => p.startsWith(`${e.path}/`)).map(p => p.slice(e.path.length + 1).split('/')[0]))]
+    const names = [
+      ...new Set(
+        Object.keys(all)
+          .filter(p => p.startsWith(`${e.path}/`))
+          .map(p => p.slice(e.path.length + 1).split('/')[0]),
+      ),
+    ]
     return { value: names.map(name => ({ name, kind: Object.keys(all).some(p => p.startsWith(`${e.path}/${name}/`)) ? 'dir' : 'file', size: 0, mtimeMs: 0, isLink: false })) }
   })
   on('fs.exists', async (_$, e) => ({ value: e.path in all || (page && e.path.endsWith('/skills/live-flow/page.html')) || Object.keys(all).some(p => p.startsWith(`${e.path}/`)) }))
   on('fs.read', async (_$, e) => ({ value: all[e.path] ?? '<html>' }))
-  on('fs.write', async (_$, e) => { all[e.path] = e.text; return { value: undefined } })
-  on('ui.toast', async (_$, e: any) => { toasts.push(e.text); return { value: undefined } })
+  on('fs.write', async (_$, e) => {
+    all[e.path] = e.text
+    return { value: undefined }
+  })
+  on('ui.toast', async (_$, e: any) => {
+    toasts.push(e.text)
+    return { value: undefined }
+  })
   on('ui.status', async () => ({ value: undefined }) as never)
-  on('prompt.submit', async (_$, e: any) => { sent.push({ text: e.text, asUser: e.origin?.asUser ?? e.asUser }); return { text: e.text } })
+  on('prompt.submit', async (_$, e: any) => {
+    sent.push({ text: e.text, asUser: e.origin?.asUser ?? e.asUser })
+    return { text: e.text }
+  })
   on('session.start', async () => ({ cwd: '/work' }) as never)
   on('model.fork', async () => ({ value: { isAnswered: false, reason: 'nothing-to-fork' } }) as never)
-  on('model.complete', async (_$, e: any) => ({ value: { isAnswered: true, text: /Fill the fields/.test(e.prompt) ? '{"workItemId":"7421","junk":"x"}' : '{"reason":"Wants it","response":"Done"}', usage: {} } }) as never)
+  on(
+    'model.complete',
+    async (_$, e: any) =>
+      ({ value: { isAnswered: true, text: /Fill the fields/.test(e.prompt) ? '{"workItemId":"7421","junk":"x"}' : '{"reason":"Wants it","response":"Done"}', usage: {} } }) as never,
+  )
   // The flow script, and the commands a template job runs.
   on('process.run', async (_$, e: any) => {
     const argv: string[] = e.argv
     ran.push(argv)
     if (argv[0] === 'git') return { value: { exitCode: 0, stdout: 'abc123\n', stderr: '', timedOut: false } } as never
     if (argv[0] === 'rm' && fault.run) return { value: { exitCode: 1, stdout: '', stderr: `${fault.run}\n    at run (stack.ts:1)`, timedOut: false } } as never
-    if (argv[0] === 'rm') { for (const k of Object.keys(all)) if (k.startsWith(argv[2])) delete all[k]; return ok }
-    if (argv[0] === 'cp') { for (const k of Object.keys(all)) if (k.startsWith(`${argv[2]}/`)) all[`${argv[3]}${k.slice(argv[2].length)}`] = all[k]; return ok }
+    if (argv[0] === 'rm') {
+      for (const k of Object.keys(all)) if (k.startsWith(argv[2])) delete all[k]
+      return ok
+    }
+    if (argv[0] === 'cp') {
+      for (const k of Object.keys(all)) if (k.startsWith(`${argv[2]}/`)) all[`${argv[3]}${k.slice(argv[2].length)}`] = all[k]
+      return ok
+    }
     if (argv[0] === 'mkdir') return ok
     const [, , sub, , json] = argv
     const input = JSON.parse(json)
     let result: Record<string, unknown> = { status: 'error', message: `fake script: ${sub}` }
     if (sub === 'log-interaction') result = { status: 'ok' }
-    else if (sub === 'approve-step') { const f = JSON.parse(all[`${input.flowDir}/flow.json`]); f.steps.find((s: any) => s.id === input.stepId).approved = true; all[`${input.flowDir}/flow.json`] = JSON.stringify(f); result = { status: 'ok' } }
-    else if (sub === 'create-flow') { all[`${input.flowDir}/flow.json`] = JSON.stringify({ id: 'new1', name: 'bug', status: 'running', parameters: input.params, metadata: { lastUpdated: 'now' }, steps: [{ id: 'n1', number: 1, name: 'Design', status: 'pending' }] }); result = { status: 'ok' } }
+    else if (sub === 'approve-step') {
+      const f = JSON.parse(all[`${input.flowDir}/flow.json`])
+      f.steps.find((s: any) => s.id === input.stepId).approved = true
+      all[`${input.flowDir}/flow.json`] = JSON.stringify(f)
+      result = { status: 'ok' }
+    } else if (sub === 'create-flow') {
+      all[`${input.flowDir}/flow.json`] = JSON.stringify({
+        id: 'new1',
+        name: 'bug',
+        status: 'running',
+        parameters: input.params,
+        metadata: { lastUpdated: 'now' },
+        steps: [{ id: 'n1', number: 1, name: 'Design', status: 'pending' }],
+      })
+      result = { status: 'ok' }
+    }
     return { value: { exitCode: result.status === 'ok' ? 0 : 1, stdout: JSON.stringify(result), stderr: '', timedOut: false } } as never
   })
   // The page database. A write to a document that exists must name its version, or the whole batch is refused.
-  const lines = (collection: string, keep: (d: any) => boolean = () => true) => [...db].filter(([k, v]) => k.startsWith(`${collection}/`) && keep(v.data))
-    .map(([k, v]) => JSON.stringify({ id: k.slice(collection.length + 1), data: v.data, version: v.version, updatedAt: 'x' }))
+  const lines = (collection: string, keep: (d: any) => boolean = () => true) =>
+    [...db].filter(([k, v]) => k.startsWith(`${collection}/`) && keep(v.data)).map(([k, v]) => JSON.stringify({ id: k.slice(collection.length + 1), data: v.data, version: v.version, updatedAt: 'x' }))
   const holds = (e: any, d: any) => (e.query?.where ?? []).every(([f, op, val]: any[]) => (op === 'eq' ? d[f] === val : op === 'lt' ? String(d[f]) < val : true))
   on('tool.call', async (_$, e: any) => {
-    if (e.tool === 'ArtifactData' && (e.action === 'list' || e.action === 'query')) { const l = lines(e.collection, d => holds(e, d)); return { result: {}, text: `${l.length} documents\n${l.join('\n')}` } as never }
+    if (e.tool === 'ArtifactData' && (e.action === 'list' || e.action === 'query')) {
+      const l = lines(e.collection, d => holds(e, d))
+      return { result: {}, text: `${l.length} documents\n${l.join('\n')}` } as never
+    }
     if (e.tool === 'ArtifactData') {
       data.push(e)
       if (fail) return { result: {}, isError: true, text: 'not allowed' } as never
@@ -81,8 +156,13 @@ function world(on: On, { url = '', fail = false, page = true, noOpen = false, no
       if (bad) return { result: {}, isError: true, text: `db batch write failed (version_mismatch): ${bad.collection}/${bad.doc_id} carried no matching if_version` } as never
       const out: string[] = []
       for (const x of e.writes) {
-        const key = `${x.collection}/${x.doc_id}`, had = db.get(key)
-        if (x.op === 'delete') { db.delete(key); out.push(`- delete "${x.collection}"/"${x.doc_id}"`); continue }
+        const key = `${x.collection}/${x.doc_id}`,
+          had = db.get(key)
+        if (x.op === 'delete') {
+          db.delete(key)
+          out.push(`- delete "${x.collection}"/"${x.doc_id}"`)
+          continue
+        }
         const version = (had?.version ?? 0) + 1
         db.set(key, { data: x.op === 'update' ? { ...had?.data, ...x.data } : x.data, version })
         out.push(`- ${x.op} "${x.collection}"/"${x.doc_id}" (version ${version})`)
@@ -91,10 +171,17 @@ function world(on: On, { url = '', fail = false, page = true, noOpen = false, no
     }
     if (e.tool === 'Artifact' && e.action === 'open') {
       if (noOpen || (noFragment && e.url.includes('#'))) throw new Error('no browser')
-      opened.push(e.url); return { result: {}, text: 'shown' } as never
+      opened.push(e.url)
+      return { result: {}, text: 'shown' } as never
     }
-    if (e.tool === 'Artifact' && e.action === 'read') { reads.push(e.url); return { result: {}, text: '<html>' } as never }
-    if (e.tool === 'Artifact') { published.push(e); return { result: {}, text: `Published ${e.file_path} at ${URL} (Version ${published.length})` } as never }
+    if (e.tool === 'Artifact' && e.action === 'read') {
+      reads.push(e.url)
+      return { result: {}, text: '<html>' } as never
+    }
+    if (e.tool === 'Artifact') {
+      published.push(e)
+      return { result: {}, text: `Published ${e.file_path} at ${URL} (Version ${published.length})` } as never
+    }
     return { result: { stdout: OK, stderr: '', interrupted: false } } as never
   })
   return { all, store, db, data, published, reads, opened, toasts, sent, ran, clock, fault }
@@ -105,7 +192,7 @@ async function rootOf($: any): Promise<string> {
   const r: any = await $.tool.call({ tool: 'Bash', command: "python3 /nowhere/scripts/flow_manager.py x --json '{}'" })
   return /script only: (.*)\/scripts\/flow_manager\.py/.exec(r.deny)![1]
 }
-const open = ($: any, args = '') => $.command.run({ command: 'zeremai', args }) as Promise<{ text: string }>
+const open = ($: any, args = '') => $.command.run({ command: 'zeremai:init', args }) as Promise<{ text: string }>
 const put = (w: W, id: string, action: string, args: Record<string, unknown>, extra: Record<string, unknown> = {}) =>
   w.db.set(`commands/${id}`, { data: { session: 'S1', at: new Date(Date.now() - 60_000 - id.length).toISOString(), action, args, status: 'new', ...extra }, version: 1 })
 const row = (w: W, id: string) => w.db.get(`commands/${id}`)?.data
@@ -115,7 +202,9 @@ const settle = async ($: any, w: W) => {
   await w.clock.advance(5000)
   await until(() => ![...w.db].some(([k, v]) => k.startsWith('commands/') && v.data.session === 'S1' && ['new', 'running'].includes(v.data.status)))
 }
-const until = async (cond: () => boolean) => { for (let i = 0; i < 200 && !cond(); i++) await new Promise(r => setTimeout(r, 5)) }
+const until = async (cond: () => boolean) => {
+  for (let i = 0; i < 200 && !cond(); i++) await new Promise(r => setTimeout(r, 5))
+}
 
 // ── the push ─────────────────────────────────────────────────────────────────────────────────────────────────────────
 
@@ -174,7 +263,7 @@ test('the session row names the folder, the flows it holds and a beat; the templ
 
 // ── the command word and the page ────────────────────────────────────────────────────────────────────────────────────
 
-test('/zeremai publishes the page once with its rules, keeps the link, opens it with the session after #, and writes the flows', async ($, on) => {
+test('/zeremai:init publishes the page once with its rules, keeps the link, opens it with the session after #, and writes the flows', async ($, on) => {
   const w = world(on)
   const first = await open($)
   expect(first.text).toBe(`ZeremAI opened: ${URL}?s=S1#S1`)
@@ -191,9 +280,9 @@ test('/zeremai publishes the page once with its rules, keeps the link, opens it 
   expect(w.opened).toEqual([`${URL}?s=S1#S1`, `${URL}?s=S1#S1`])
 })
 
-test('every word of /zeremai opens the site, and "help" says what it does without publishing', async ($, on) => {
+test('every word of /zeremai:init opens the site, and "help" says what it does without publishing', async ($, on) => {
   const w = world(on)
-  expect((await open($, 'help')).text).toContain('/zeremai')
+  expect((await open($, 'help')).text).toContain('/zeremai:init')
   expect(w.published).toHaveLength(0)
   expect((await open($, 'new bug 7')).text).toContain('ZeremAI opened')
   expect(w.published).toHaveLength(1)
@@ -206,14 +295,14 @@ test('when the Artifact tool refuses a link with #, the plain link opens the sit
   expect(w.opened).toEqual([URL])
 })
 
-test('/zeremai prints the link when the page cannot be opened', async ($, on) => {
+test('/zeremai:init prints the link when the page cannot be opened', async ($, on) => {
   const w = world(on, { url: URL, noOpen: true })
   const r = await open($)
   expect(r.text).toBe(`ZeremAI link: ${URL}?s=S1#S1`)
   expect(w.opened).toEqual([])
 })
 
-test('/zeremai says so when the page file is missing', async ($, on) => {
+test('/zeremai:init says so when the page file is missing', async ($, on) => {
   world(on, { page: false })
   expect((await open($)).text).toContain('Could not set up ZeremAI')
 })
@@ -250,8 +339,14 @@ test('the first flow start shows one message about the site, and only while no p
 
 test('the band above the prompt starts the timer: a session with a stored link writes its row without any command', async ($, on) => {
   const w = world(on, { url: URL })
-  const band = await $.ui.mount({ plugin: 'zeremai', component: 'AbovePrompt', requestId: 'band', surface: 'terminal', viewport: { columns: 100, rows: 30 },
-    props: { hasSurvey: false, isWorking: false, maxRows: 3, bodyColumns: 60, scroll: { offset: 0, bodyRows: 3 }, view: {} } } as any)
+  const band = await $.ui.mount({
+    plugin: 'zeremai',
+    component: 'AbovePrompt',
+    requestId: 'band',
+    surface: 'terminal',
+    viewport: { columns: 100, rows: 30 },
+    props: { hasSurvey: false, isWorking: false, maxRows: 3, bodyColumns: 60, scroll: { offset: 0, bodyRows: 3 }, view: {} },
+  } as any)
   await until(() => w.db.has('sessions/S1'))
   expect(w.db.get('sessions/S1')!.data.flows).toEqual(['f1'])
   await band.unmount()
@@ -278,7 +373,10 @@ test('approve: the same call the pane button made writes approved, the answer is
   await until(() => w.sent.length > 0) // the prompt is sent without waiting for the turn
   expect(w.sent[0].text).toContain('approved step 1')
   expect(w.store['gate:S1']).toBeUndefined()
-  const states = w.data.flatMap(d => d.writes).filter((x: any) => x.collection === 'commands').map((x: any) => x.data.status)
+  const states = w.data
+    .flatMap(d => d.writes)
+    .filter((x: any) => x.collection === 'commands')
+    .map((x: any) => x.data.status)
   expect(states).toEqual(['running', 'done']) // the page sees it run, then finish
 })
 
@@ -329,7 +427,10 @@ test('commands run one at a time, the oldest first', async ($, on) => {
   put(w, 'bb', 'refresh-marketplaces', {}, { at: '2026-10-13T10:00:02' })
   put(w, 'aa', 'refresh-marketplaces', {}, { at: '2026-10-13T10:00:01' })
   await settle($, w)
-  const order = w.data.flatMap(d => d.writes).filter((x: any) => x.collection === 'commands').map((x: any) => `${x.doc_id}:${x.data.status}`)
+  const order = w.data
+    .flatMap(d => d.writes)
+    .filter((x: any) => x.collection === 'commands')
+    .map((x: any) => `${x.doc_id}:${x.data.status}`)
   expect(order).toEqual(['aa:running', 'aa:done', 'bb:running', 'bb:done'])
   expect(row(w, 'aa').result).toBe('m1: updated')
 })
@@ -356,6 +457,30 @@ test('close lets this session go of the flow; the files stay', async ($, on) => 
   expect(w.store['session:S1']).toEqual([])
   expect(w.all[`${DIR}/flow.json`]).toBeDefined()
   expect(w.db.get('sessions/S1')!.data.flows).toEqual([])
+})
+
+test('delete removes the folder of a flow that another session holds, and every row of it leaves the page', async ($, on) => {
+  const w = world(on, { url: URL })
+  w.all[`${ACTIVE}/p9/flow.json`] = JSON.stringify({ ...flow, id: 'f9' })
+  w.all[`${ACTIVE}/p9/log.json`] = '{}'
+  await open($)
+  await w.clock.advance(5000)
+  await until(() => w.db.has('flows/f9'))
+  put(w, 'c1', 'delete', { flowId: 'f9' })
+  await settle($, w)
+  expect(row(w, 'c1')).toMatchObject({ status: 'done', result: 'Deleted. The flow folder is gone.' })
+  expect(w.ran).toContainEqual(['rm', '-rf', `${ACTIVE}/p9`])
+  expect(Object.keys(w.all).filter(p => p.startsWith(`${ACTIVE}/p9/`))).toEqual([])
+  await w.clock.advance(5000)
+  await until(() => !w.db.has('flows/f9'))
+  expect(w.db.has('flows/f1')).toBe(true) // the other flow stays
+})
+test('delete of a flow nobody runs, or of a made-up one, is refused', async ($, on) => {
+  const w = world(on, { url: URL })
+  put(w, 'c1', 'delete', { flowId: 'nope' })
+  await settle($, w)
+  expect(row(w, 'c1')).toMatchObject({ status: 'error' })
+  expect(w.ran.some(a => a[0] === 'rm')).toBe(false)
 })
 
 test('new-flow creates the flow from the template fields, binds it to this session and hands it to the agent', async ($, on) => {

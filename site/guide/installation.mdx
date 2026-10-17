@@ -1,6 +1,6 @@
 ---
 title: "Installation"
-description: "## Requirements"
+description: "What ZeremAI needs, how to install the plugin, and how to get templates."
 ---
 
 ## Requirements
@@ -59,8 +59,8 @@ Use the exact path from the message (on Windows the command is `python`).
 
 The plugin ships **no templates**. They come from git-backed [marketplaces](/guide/marketplaces).
 
-1. Run `/zeremai` to open the [ZeremAI site](/guide/live-site).
-2. Open the **Templates** screen.
+1. Run [`/zeremai:init`](/commands/init) to open the [ZeremAI site](/guide/live-site).
+2. Open the [**Templates**](/ui/templates) screen.
 3. Press **Refresh**, then **Install** the templates you need.
 
 Templates land in `~/.claude/zeremai/templates/flows/`.
@@ -73,4 +73,4 @@ Try `/reload-plugins`, trust the folder, or ask your admin.
 
 ## Verify
 
-Run `/zeremai`. A page opens on claude.ai with **Flows**, **New flow** and **Templates**, and the header names your session as live.
+Run `/zeremai:init`. A page opens on claude.ai with **Flows**, **New flow** and **Templates**, and the header names your session as live.

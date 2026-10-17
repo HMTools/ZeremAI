@@ -1,0 +1,35 @@
+---
+title: "/zeremai:create-marketplace"
+description: "Create a git repository that ZeremAI can use as a template marketplace."
+---
+
+## Run it
+
+```
+/zeremai:create-marketplace A shared library of review flows for the payments team
+```
+
+Give a name and a purpose. If one is missing, it asks. It also asks where to create the folder, and suggests `./<name>`. It stops if that folder exists and is not empty.
+
+## What it does
+
+1. Plans the folder: `README.md`, `templates/flows/` and a `.gitkeep`. It copies no templates in.
+2. Shows the plan on one page, with the tree and how the Templates screen will list it.
+3. After **Approve**, writes the files, runs `git init -b main` and makes the first commit.
+4. Runs `scripts/check_template.py --marketplace <folder>`.
+
+## What it asks first
+
+Each of these shows the exact command and waits for a yes. It never forces a push.
+
+- Creating a GitHub or Azure DevOps repository, or checking that an existing one is empty.
+- Pushing to it.
+- Adding the marketplace to `~/.claude/zeremai/config/marketplaces.json`. The site does not add marketplaces; only this file does.
+
+## Result
+
+A local git repository, and optionally a remote one and a config entry. Then run [`/zeremai:init`](/commands/init), open **Templates** and press **Refresh**. Add the first template with [`/zeremai:create-template`](/commands/create-template).
+
+## Related
+
+[Marketplaces](/guide/marketplaces).

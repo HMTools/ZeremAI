@@ -1,15 +1,15 @@
-import { ChildFlowRef } from "./child-flow-ref";
-import { FlowStatus, StepStatus } from "./flow-status";
-import { FlowId, StepId, StepRef, FlowPath, ISOTimestamp } from "./shared-types";
-import { EmbeddedStepDefinition } from "./step-definition";
+import { ChildFlowRef } from './child-flow-ref'
+import { FlowStatus, StepStatus } from './flow-status'
+import { FlowId, StepId, StepRef, FlowPath, ISOTimestamp } from './shared-types'
+import { EmbeddedStepDefinition } from './step-definition'
 
 /**
  * Complete flow instance as stored in flow.json.
- * 
+ *
  * This is the main type that represents a running, completed, or failed flow.
  * The flow.json file is generated when a flow is created and updated
  * whenever the flow state changes.
- * 
+ *
  * @example
  * ```json
  * {
@@ -48,31 +48,31 @@ import { EmbeddedStepDefinition } from "./step-definition";
  */
 export interface FlowInstance {
   /** Discriminator field - always "flow-instance" */
-  type: 'flow-instance';
-  
+  type: 'flow-instance'
+
   /** Unique identifier for this flow instance (UUID) */
-  id: FlowId;
-  
+  id: FlowId
+
   /** Human-readable name of the flow */
-  name: string;
-  
+  name: string
+
   /** Metadata about the flow (template, timestamps, paths) */
-  metadata: FlowMetadata;
-  
+  metadata: FlowMetadata
+
   /** Current overall status of the flow */
-  status: FlowStatus;
-  
+  status: FlowStatus
+
   /** Parameters that were provided when creating this flow from a template */
-  parameters: Record<string, string>;
-  
+  parameters: Record<string, string>
+
   /** Current execution state (active step, current action) */
-  currentState: FlowCurrentState;
-  
+  currentState: FlowCurrentState
+
   /** All steps in this flow with their current status */
-  steps: FlowStep[];
-  
+  steps: FlowStep[]
+
   /** Sub-flow relationship information (optional, only present if flow has parent or children) */
-  subFlowState?: SubFlowState;
+  subFlowState?: SubFlowState
 }
 
 /**
@@ -80,29 +80,29 @@ export interface FlowInstance {
  */
 export interface FlowMetadata {
   /** Name of the template used to create this flow (e.g., "develop-user-story") */
-  template: string;
-  
+  template: string
+
   /** Category of the template (e.g., "development", "testing", "infrastructure") - optional for backward compatibility */
-  templateCategory?: string;
-  
+  templateCategory?: string
+
   /** ISO 8601 timestamp when the flow was created */
-  created: ISOTimestamp;
-  
+  created: ISOTimestamp
+
   /** ISO 8601 timestamp when the flow was last updated */
-  lastUpdated: ISOTimestamp;
-  
+  lastUpdated: ISOTimestamp
+
   /** Absolute paths to the project root directories this flow operates on */
-  projectPaths?: string[];
+  projectPaths?: string[]
 
   /** Absolute path to the flow folder (e.g., ~/.claude/zeremai/active/flow-name-YYYYMMDD-shortid) */
-  flowPath?: FlowPath;
+  flowPath?: FlowPath
 
   /**
    * @deprecated Session binding moved to the mod store, key `session:<id>`: the folders the session bound,
    * oldest first. The tools `create_flow` and `bind_flow` write it, and the hooks read it
    * instead of grepping flow.json. This field is no longer used.
    */
-  sessionId?: string;
+  sessionId?: string
 }
 
 /**
@@ -111,9 +111,9 @@ export interface FlowMetadata {
  */
 export interface ActiveStepSubstep {
   /** 1-based substep number within the step */
-  number: number;
+  number: number
   /** Name of the substep (e.g., "Gather Flow Parameters") */
-  name: string;
+  name: string
 }
 
 /**
@@ -123,17 +123,17 @@ export interface ActiveStepSubstep {
  */
 export interface ActiveStep {
   /** UUID of the currently active step (was: activeStepId) */
-  id: StepId;
+  id: StepId
   /** Name of the current step (was: activeStepName) */
-  name: string;
+  name: string
   /** Brief summary of current action for UI status bars (was: actionSummary) */
-  actionSummary: string;
+  actionSummary: string
   /** Extended details about the current action for tooltips/logs (was: actionDetails) */
-  actionDetails?: string;
+  actionDetails?: string
   /** Total number of substeps in this step (derived from stepDefinition.substeps) */
-  totalSubsteps: number;
+  totalSubsteps: number
   /** Currently executing substep cursor (absent if step just started or has no substeps) */
-  currentSubstep?: ActiveStepSubstep;
+  currentSubstep?: ActiveStepSubstep
 }
 
 /**
@@ -141,7 +141,7 @@ export interface ActiveStep {
  */
 export interface FlowCurrentState {
   /** Structured active step with progress tracking */
-  activeStep: ActiveStep;
+  activeStep: ActiveStep
 }
 
 /**
@@ -149,61 +149,61 @@ export interface FlowCurrentState {
  */
 export interface FlowStep {
   /** Unique identifier for this step (UUID) */
-  id: StepId;
-  
+  id: StepId
+
   /** Step number (for ordering and display) */
-  number: number;
-  
+  number: number
+
   /** Human-readable name of the step */
-  name: string;
-  
+  name: string
+
   /** Current status of this step */
-  status: StepStatus;
-  
+  status: StepStatus
+
   /** Reference to the step definition UUID (provenance — stepDefinition is already embedded) */
-  stepRef: StepRef;
+  stepRef: StepRef
 
   /** Human-readable companion name for stepRef (display-only, never used for resolution) */
-  stepRefName?: string;
+  stepRefName?: string
 
   /** Sub-flow triggering configuration */
   subFlowTrigger?: {
-    condition?: string;
+    condition?: string
     /** Template UUID — primary cross-reference */
-    template: string;
+    template: string
     /** Human-readable companion name for template (display-only) */
-    templateName?: string;
-    parameters?: Record<string, string>;
-    forEach?: string;
-    syncPoint: string;
-  };
+    templateName?: string
+    parameters?: Record<string, string>
+    forEach?: string
+    syncPoint: string
+  }
 
   /** Step name to loop back to when loopCondition is met */
-  loopBackTo?: string;
+  loopBackTo?: string
 
   /** Condition expression for looping back */
-  loopCondition?: string;
+  loopCondition?: string
 
   /** Maximum number of loop iterations */
-  maxIterations?: number;
+  maxIterations?: number
 
   /** ISO 8601 timestamp when the step was started */
-  startedAt?: ISOTimestamp;
-  
+  startedAt?: ISOTimestamp
+
   /** ISO 8601 timestamp when the step was completed */
-  completedAt?: ISOTimestamp;
-  
+  completedAt?: ISOTimestamp
+
   /** Whether this step requires explicit user approval before proceeding */
-  approvalRequired?: boolean;
-  
+  approvalRequired?: boolean
+
   /** Whether user approval has been granted (only relevant if approvalRequired is true) */
-  approved?: boolean;
+  approved?: boolean
 
   /** Only while status is blocked: what the user must do. Any other status clears it. */
-  blocked?: { reason: string; command?: string; since: ISOTimestamp };
+  blocked?: { reason: string; command?: string; since: ISOTimestamp }
 
   /** Embedded step definition with full execution guidance */
-  stepDefinition: EmbeddedStepDefinition;
+  stepDefinition: EmbeddedStepDefinition
 }
 
 /**
@@ -211,16 +211,16 @@ export interface FlowStep {
  */
 export interface ParentFlowRef {
   /** Unique identifier of the parent flow (UUID) */
-  id: FlowId;
-  
+  id: FlowId
+
   /** Human-readable name of the parent flow */
-  name: string;
-  
+  name: string
+
   /** Absolute path to the parent flow folder */
-  flowPath: FlowPath;
-  
+  flowPath: FlowPath
+
   /** Step ID in the parent flow to return to after this sub-flow completes */
-  returnToStep: StepId;
+  returnToStep: StepId
 }
 
 /**
@@ -228,11 +228,11 @@ export interface ParentFlowRef {
  */
 export interface SubFlowState {
   /** Reference to the parent flow, or null if this is a root flow */
-  parentFlow: ParentFlowRef | null;
-  
+  parentFlow: ParentFlowRef | null
+
   /** List of child sub-flows spawned by this flow */
-  childFlows: ChildFlowRef[];
-  
+  childFlows: ChildFlowRef[]
+
   /** Next sync point where parent will wait for children (StepId) */
-  nextSyncPoint?: StepId;
+  nextSyncPoint?: StepId
 }

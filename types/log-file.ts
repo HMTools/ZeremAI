@@ -1,10 +1,10 @@
 /**
  * Schema for log.json files in flow instances (~/.claude/zeremai/active/[id]/log.json)
- * 
+ *
  * Captures detailed execution history, user interactions, and flow-wide observations.
  */
 
-import { ISOTimestamp, FlowPath, StepId } from "./shared-types";
+import { ISOTimestamp, FlowPath, StepId } from './shared-types'
 
 /**
  * Timestamp structure for step entries that track both start and update times.
@@ -12,11 +12,11 @@ import { ISOTimestamp, FlowPath, StepId } from "./shared-types";
  */
 export interface StepTimestamp {
   /** When the step started (ISO 8601) */
-  startedAt: ISOTimestamp;
+  startedAt: ISOTimestamp
   /** When the step was last updated (ISO 8601) */
-  updatedAt?: ISOTimestamp;
+  updatedAt?: ISOTimestamp
   /** When the step completed (ISO 8601) */
-  completedAt?: ISOTimestamp;
+  completedAt?: ISOTimestamp
 }
 
 /**
@@ -24,55 +24,55 @@ export interface StepTimestamp {
  */
 export interface UserInteraction {
   /** What the user requested */
-  request: string;
-  
+  request: string
+
   /** Why the user made this request */
-  reason: string;
-  
+  reason: string
+
   /** How the agent responded */
-  agentResponse: string;
-  
+  agentResponse: string
+
   /** When this interaction occurred (ISO 8601) */
-  timestamp: ISOTimestamp;
-  
+  timestamp: ISOTimestamp
+
   /** Flag indicating this should be reviewed in continuous improvement step */
-  forImprovementStep?: boolean;
-  
+  forImprovementStep?: boolean
+
   /** Potential improvement to consider based on this interaction */
-  potentialImprovement?: string;
+  potentialImprovement?: string
 }
 
 /**
  * Log entry for a single step
  */
 export interface LogStepEntry {
-  /** 
+  /**
    * Timestamp for this step entry.
-   * Can be either a simple ISO 8601 string (when step started) or 
+   * Can be either a simple ISO 8601 string (when step started) or
    * a StepTimestamp object for richer time tracking.
    */
-  timestamp: ISOTimestamp | StepTimestamp;
-  
+  timestamp: ISOTimestamp | StepTimestamp
+
   /** User interactions during this step */
-  userInteractions?: UserInteraction[];
-  
+  userInteractions?: UserInteraction[]
+
   /** Actions taken during this step */
-  actionsTaken?: string[];
-  
+  actionsTaken?: string[]
+
   /** Agent reasoning during this step */
-  agentReasoning?: string[];
-  
+  agentReasoning?: string[]
+
   /** Problems encountered during this step */
-  problemsEncountered?: string[];
-  
+  problemsEncountered?: string[]
+
   /** Files modified during this step */
-  filesModified?: string[];
-  
+  filesModified?: string[]
+
   /** Decisions made during this step */
-  decisionsMade?: string[];
-  
+  decisionsMade?: string[]
+
   /** Performance notes */
-  performanceNotes?: string[];
+  performanceNotes?: string[]
 }
 
 /**
@@ -80,49 +80,49 @@ export interface LogStepEntry {
  */
 export interface LogFile {
   /** Discriminator field - always "log-file" */
-  type: 'log-file';
-  
+  type: 'log-file'
+
   /** Flow metadata */
   metadata: {
     /** Flow instance ID */
-    flow: string;
+    flow: string
     /** Template used to create this flow */
-    template: string;
+    template: string
     /** When flow started (ISO 8601) */
-    started: ISOTimestamp;
+    started: ISOTimestamp
     /** When flow completed (ISO 8601, null if still running) */
-    completed: ISOTimestamp | null;
+    completed: ISOTimestamp | null
     /** Parent flow path (null if top-level flow) */
-    parentFlowPath: FlowPath | null;
+    parentFlowPath: FlowPath | null
     /** Paths to sub-flows spawned from this flow */
-    subFlowPaths: FlowPath[];
-  };
-  
+    subFlowPaths: FlowPath[]
+  }
+
   /** Execution metrics (optional) */
   executionMetrics?: {
     /** Total steps in flow */
-    totalSteps: number;
+    totalSteps: number
     /** Steps completed so far */
-    stepsCompleted: number;
+    stepsCompleted: number
     /** Current step ID */
-    currentStep: StepId;
-  };
-  
+    currentStep: StepId
+  }
+
   /** Step-by-step log entries (keyed by StepId) */
-  steps: Record<StepId, LogStepEntry>;
-  
+  steps: Record<StepId, LogStepEntry>
+
   /** User interactions at flow level (for interactions outside step context) */
-  userInteractions?: UserInteraction[];
-  
+  userInteractions?: UserInteraction[]
+
   /** Flow-wide observations for learning and improvement */
   flowWideObservations: {
     /** Patterns detected during execution */
-    patternsDetected: string[];
+    patternsDetected: string[]
     /** Summary of user feedback received */
-    userFeedbackSummary: string[];
+    userFeedbackSummary: string[]
     /** Efficiency metrics collected */
-    efficiencyMetrics: Record<string, unknown>;
+    efficiencyMetrics: Record<string, unknown>
     /** Recommendations for future flow executions */
-    recommendationsForFuture: string[];
-  };
+    recommendationsForFuture: string[]
+  }
 }

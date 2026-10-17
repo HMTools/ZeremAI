@@ -24,7 +24,7 @@ A marketplace is a git repository with `templates/flows/<category>/<template>/<t
 
 The skill plans the folder and shows it on one page: the file tree, how the Templates screen of the site will list it, each step, and where you want the repository to live. Nothing is written until you press **Approve**. It then creates the folder, runs `git init` on branch `main`, makes the first commit, and checks the result.
 
-Everything that leaves your machine or changes your config asks first and shows the exact command: adding the marketplace to `marketplaces.json` (with the local path, so you can install from it at once), creating a GitHub or Azure DevOps repository, and pushing to a new or an empty existing repository. It never forces a push. Then add templates with [`/zeremai:create-template`](/authoring/templates).
+Everything that leaves your machine or changes your config asks first and shows the exact command: adding the marketplace to `marketplaces.json` (with the local path, so you can install from it at once), creating a GitHub or Azure DevOps repository, and pushing to a new or an empty existing repository. It never forces a push. Details: [`/zeremai:create-marketplace`](/commands/create-marketplace). Then add templates with [`/zeremai:create-template`](/commands/create-template).
 
 To check a marketplace yourself, run the check script of the plugin:
 
@@ -36,7 +36,7 @@ It checks every template, that each folder name and category match the JSON, tha
 
 ## Manage from the site
 
-Open `/zeremai` → **Templates**. The list is grouped by marketplace.
+Open `/zeremai:init` → **Templates**. The list is grouped by marketplace.
 
 | Action | Effect |
 |---|---|

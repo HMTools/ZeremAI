@@ -16,24 +16,35 @@ import type { FileSystem, SessionLinks } from '../infra/ports/ports'
 
 const WAIT = (what: string) => `${what} The subagent is asked to fix it. Wait: the plugin tells you when it is saved.`
 
-const filesOf = ($: any): FileSystem => ({
-  home: async () => (await $.env.get('HOME')) ?? (await $.env.get('USERPROFILE')), // Windows has no HOME in every shell
-  list: path => $.fs.list(path),
-  exists: path => $.fs.exists(path),
-  read: path => $.fs.read(path),
-})
-const linksOf = ($: any): SessionLinks => ({
-  get: async sessionId => ((await $.store.get(sessionKey(sessionId))) as string[] | undefined) ?? [],
-})
-const scriptOf = ($: any) => async (sub: string, input: Record<string, unknown>) =>
-  runScript(argv => $.process.run(argv, { timeoutMs: 60_000 }), (await $.env.get('OS')) === 'Windows_NT' ? 'python' : 'python3', slash($.plugin.root), sub, input)
+function filesOf($: any): FileSystem {
+  return {
+    home: async () => (await $.env.get('HOME')) ?? (await $.env.get('USERPROFILE')), // Windows has no HOME in every shell
+    list: path => $.fs.list(path),
+    exists: path => $.fs.exists(path),
+    read: path => $.fs.read(path),
+  }
+}
+function linksOf($: any): SessionLinks {
+  return {
+    get: async sessionId => ((await $.store.get(sessionKey(sessionId))) as string[] | undefined) ?? [],
+  }
+}
+function scriptOf($: any) {
+  return async (sub: string, input: Record<string, unknown>) =>
+    runScript(argv => $.process.run(argv, { timeoutMs: 60_000 }), (await $.env.get('OS')) === 'Windows_NT' ? 'python' : 'python3', slash($.plugin.root), sub, input)
+}
 
-const forget = async ($: any, agentId: string) => { await $.store.delete(briefedKey(agentId)); await $.store.delete(fixesKey(agentId)) }
+async function forget($: any, agentId: string) {
+  await $.store.delete(briefedKey(agentId))
+  await $.store.delete(fixesKey(agentId))
+}
 // Not awaited: the new turn of the orchestrator starts once its current one has ended.
-const tellOrchestrator = ($: any, text: string) => { void $.prompt.submit({ text }) }
+function tellOrchestrator($: any, text: string) {
+  void $.prompt.submit({ text })
+}
 
 export const register: Register = on => {
-  on('agent.spawn', { subagentType: 'zeremai:step-executor' },async ($, e, next) => {
+  on('agent.spawn', { subagentType: 'zeremai:step-executor' }, async ($, e, next) => {
     const files = filesOf($)
     const flowDir = await findFlowDir(files, linksOf($), await $.session.id())
     const step = stepInProgress(flowDir ? await readFlow(files, flowDir) : undefined)
@@ -53,7 +64,7 @@ export const register: Register = on => {
     if (!ref) return next(e) // not a step subagent
     const done = await next(e)
     const fixes = ((await $.store.get(fixesKey(agentId))) as number | undefined) ?? 0 // fix rounds so far
-    const say = (text: string) => fixes ? (tellOrchestrator($, text), done) : { ...done, text } // in a fix round the orchestrator already waits
+    const say = (text: string) => (fixes ? (tellOrchestrator($, text), done) : { ...done, text }) // in a fix round the orchestrator already waits
 
     // The mod talks to the subagent itself. A hook has a short budget, so it does not wait: the next end of the subagent comes back here.
     // The answer is the reply to give, or undefined when no fix is left or the message did not arrive.
@@ -89,8 +100,15 @@ export const register: Register = on => {
     ]
     const failed: string[] = []
     for (const save of await Promise.all(saves)) if (save.status !== 'ok') failed.push(String(save.message))
-    if (result.blocked) { // retry cannot help: the step shows as blocked, and the guard lets Claude stop
-      const marked = await script('update-step-status', { flowDir: ref.flowDir, stepId: ref.stepId, status: 'blocked', reason: result.blocked.reason, ...(result.blocked.command ? { command: result.blocked.command } : {}) })
+    if (result.blocked) {
+      // retry cannot help: the step shows as blocked, and the guard lets Claude stop
+      const marked = await script('update-step-status', {
+        flowDir: ref.flowDir,
+        stepId: ref.stepId,
+        status: 'blocked',
+        reason: result.blocked.reason,
+        ...(result.blocked.command ? { command: result.blocked.command } : {}),
+      })
       if (marked.status !== 'ok') failed.push(String(marked.message))
     }
     const notes = [

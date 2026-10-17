@@ -7,5 +7,7 @@ export const STEP_STATUSES = ['pending', 'in_progress', 'completed', 'skipped', 
 export const FLOW_STATUSES = ['running', 'completed', 'failed', 'paused']
 
 export class ToolError extends Error {}
-export const fail = (message: string): never => { throw new ToolError(message) }
+export const fail = (message: string): never => {
+  throw new ToolError(message)
+}
 export const ok = (...files: string[]): Result => ({ status: 'ok', files_written: files })

@@ -2,9 +2,14 @@ import { test, expect } from 'claude-code/testing'
 import { fillFields, fillQuestion, parseAnswer } from './fill-fields'
 import type { TemplateInfo } from './flow-pane'
 
-const template = { name: 'tpl', fields: [
-  { name: 'a', required: true, example: '', description: 'first' }, { name: 'b', required: true, example: 'x', description: 'second' }, { name: 'c', required: false, example: '', description: 'third' },
-] } as TemplateInfo
+const template = {
+  name: 'tpl',
+  fields: [
+    { name: 'a', required: true, example: '', description: 'first' },
+    { name: 'b', required: true, example: 'x', description: 'second' },
+    { name: 'c', required: false, example: '', description: 'third' },
+  ],
+} as TemplateInfo
 
 test('the reply is read from inside words; unknown names and non-text values are dropped', () => {
   expect(parseAnswer(template, 'Here you go: {"a":" one ","zzz":"no","b":5,"c":""} done')).toEqual({ answer: { a: 'one' } })
@@ -30,10 +35,13 @@ test('the question names the fields and what was typed', () => {
 })
 
 test('a reply outside a fixed list is dropped, unless the field allows another value', () => {
-  const t = { name: 'tpl', fields: [
-    { name: 'env', required: true, example: '', description: 'where', options: ['staging', 'production'] },
-    { name: 'region', required: false, example: '', description: 'which', options: ['eu'], allowOther: true },
-  ] } as TemplateInfo
+  const t = {
+    name: 'tpl',
+    fields: [
+      { name: 'env', required: true, example: '', description: 'where', options: ['staging', 'production'] },
+      { name: 'region', required: false, example: '', description: 'which', options: ['eu'], allowOther: true },
+    ],
+  } as TemplateInfo
   expect(parseAnswer(t, '{"env":"prod","region":"us"}')).toEqual({ answer: { region: 'us' } })
   expect(parseAnswer(t, '{"env":"production"}')).toEqual({ answer: { env: 'production' } })
   expect(fillQuestion(t, '', {}, 'x')).toContain('env * : where (one of: staging, production)'.replace(' :', ':'))

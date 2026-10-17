@@ -33,7 +33,11 @@ const isObject = (v: unknown): v is Record<string, unknown> => typeof v === 'obj
 export function readResultBlock(text: string): StepResult | undefined {
   const fences = [...text.matchAll(/```json\s*\n([\s\S]*?)\n```/g)]
   let raw: unknown
-  try { raw = JSON.parse(fences.at(-1)?.[1] ?? '') } catch { return }
+  try {
+    raw = JSON.parse(fences.at(-1)?.[1] ?? '')
+  } catch {
+    return
+  }
   if (!isObject(raw) || typeof raw.summary !== 'string' || !raw.summary.trim()) return
   const memory = raw.memory === undefined ? [] : raw.memory
   if (!Array.isArray(memory)) return
@@ -75,6 +79,9 @@ export function readVerifierRun(out: Record<string, unknown>): { result: 'pass' 
   return { result: out.result, checks: out.checks as Check[] }
 }
 
-export const failedLines = (checks: Check[]) => checks.filter(c => !c.passed).map(c => `- ${c.name}${c.message ? `: ${c.message}` : ''}`).join('\n')
-export const failedChecksMessage = (checks: Check[]) =>
-  `Your work failed these checks:\n${failedLines(checks)}\nFix the work. Then end your answer again with the result block.`
+export const failedLines = (checks: Check[]) =>
+  checks
+    .filter(c => !c.passed)
+    .map(c => `- ${c.name}${c.message ? `: ${c.message}` : ''}`)
+    .join('\n')
+export const failedChecksMessage = (checks: Check[]) => `Your work failed these checks:\n${failedLines(checks)}\nFix the work. Then end your answer again with the result block.`

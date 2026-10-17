@@ -14,7 +14,8 @@ export type Approver = (dir: string, stepId: string) => Promise<void>
 // The tool the agent calls to ask the user. It is listed with the flow tools (see ensureFlowTools).
 export const REQUEST_APPROVAL_TOOL = {
   name: 'request_approval',
-  description: 'Ask the user to approve the step that waits for approval. Call it when the step is done. ' +
+  description:
+    'Ask the user to approve the step that waits for approval. Call it when the step is done. ' +
     'It shows the user a dialog and waits for the click. The answer is the result. Only the user can approve.',
   inputSchema: { type: 'object', properties: {} } as Record<string, any>,
   isDeferred: true,
@@ -26,8 +27,7 @@ export const CHANGES = 'Request changes'
 export const hasOpenGate = async (gates: GateStore, sessionId: string) => (await gates.get(sessionId)) !== undefined
 
 // The step the user has to approve now.
-export const findApprovalStep = (flow: Flow | undefined): Step | undefined =>
-  flow?.steps?.find(s => s.status === 'in_progress' && s.approvalRequired && !s.approved)
+export const findApprovalStep = (flow: Flow | undefined): Step | undefined => flow?.steps?.find(s => s.status === 'in_progress' && s.approvalRequired && !s.approved)
 
 export function questionFor(step: Step, dir: string): string {
   const output = step.stepDefinition?.output
@@ -52,7 +52,9 @@ export async function askGate(files: FileSystem, approve: Approver, gates: GateS
     }
     let answer: string
     await gates.set(sessionId, { ...gate, dialog: true }) // the pane shows its own buttons only while no dialog is open
-    try { answer = await ask(questionFor(step, gate.dir), [APPROVE, CHANGES]) } catch {
+    try {
+      answer = await ask(questionFor(step, gate.dir), [APPROVE, CHANGES])
+    } catch {
       await gates.set(sessionId, { dir: gate.dir, stepId: gate.stepId })
       return 'The user did not answer. The gate stays open, and only the user can approve.'
     }
@@ -64,7 +66,9 @@ export async function askGate(files: FileSystem, approve: Approver, gates: GateS
     }
     await markApproved(approve, gate)
     return approvedText(step)
-  } finally { asking.delete(sessionId) }
+  } finally {
+    asking.delete(sessionId)
+  }
 }
 
 const answerRequest = (step: Step, change: string | undefined) =>
@@ -90,7 +94,10 @@ export function gateForPane(flow: Flow | undefined, gate: Gate | undefined, dir:
   const asked = gate !== undefined && gate.dir === dir && gate.stepId === step.id
   const output = step.stepDefinition?.output
   return {
-    state: !asked ? 'working' : gate.dialog ? 'dialog' : 'ready', stepId: step.id, number: String(step.number), name: step.name ?? "",
+    state: !asked ? 'working' : gate.dialog ? 'dialog' : 'ready',
+    stepId: step.id,
+    number: String(step.number),
+    name: step.name ?? '',
     output: [output?.description, output?.artifacts?.length ? `Output: ${output.artifacts.join(', ')}` : ''].filter(Boolean).join(' · '),
   }
 }
@@ -99,7 +106,16 @@ export type PaneAnswer = { text: string } | { error: string }
 
 // The user presses Approve or Request changes in the pane. Everything is checked again now, not when the card was drawn:
 // the step must still be the one that waits, the agent must have asked, and no dialog may be open.
-async function answerFromPane(files: FileSystem, approve: Approver, gates: GateStore, sessionId: string, dir: string, stepId: string, change: string | undefined, log?: AnswerLog): Promise<PaneAnswer> {
+async function answerFromPane(
+  files: FileSystem,
+  approve: Approver,
+  gates: GateStore,
+  sessionId: string,
+  dir: string,
+  stepId: string,
+  change: string | undefined,
+  log?: AnswerLog,
+): Promise<PaneAnswer> {
   const gate = await gates.get(sessionId)
   const now = gateForPane(await readFlow(files, dir), gate, dir)
   if (!now || now.stepId !== stepId) return { error: 'That step no longer waits for approval.' }
@@ -110,13 +126,19 @@ async function answerFromPane(files: FileSystem, approve: Approver, gates: GateS
   const problem = await log?.(dir, answerRequest(step, change === undefined ? undefined : change.trim() || '(no text given)'))
   if (problem) return { error: `The log of your answer failed: ${problem}` }
   if (change === undefined) {
-    try { await markApproved(approve, { dir, stepId }) } catch (error) { return { error: `The script did not approve: ${error instanceof Error ? error.message : String(error)}` } }
+    try {
+      await markApproved(approve, { dir, stepId })
+    } catch (error) {
+      return { error: `The script did not approve: ${error instanceof Error ? error.message : String(error)}` }
+    }
   }
   await gates.clear(sessionId)
   return { text: change === undefined ? approvedText(step) : changesText(step, change.trim() || '(no text given)') }
 }
-export const approveFromPane = (files: FileSystem, approve: Approver, gates: GateStore, sessionId: string, dir: string, stepId: string, log?: AnswerLog) => answerFromPane(files, approve, gates, sessionId, dir, stepId, undefined, log)
-export const requestChangesFromPane = (files: FileSystem, approve: Approver, gates: GateStore, sessionId: string, dir: string, stepId: string, reason: string, log?: AnswerLog) => answerFromPane(files, approve, gates, sessionId, dir, stepId, reason, log)
+export const approveFromPane = (files: FileSystem, approve: Approver, gates: GateStore, sessionId: string, dir: string, stepId: string, log?: AnswerLog) =>
+  answerFromPane(files, approve, gates, sessionId, dir, stepId, undefined, log)
+export const requestChangesFromPane = (files: FileSystem, approve: Approver, gates: GateStore, sessionId: string, dir: string, stepId: string, reason: string, log?: AnswerLog) =>
+  answerFromPane(files, approve, gates, sessionId, dir, stepId, reason, log)
 
 // A prompt arrives while a gate is open: the dialog opens again. The prompt itself goes on.
 // The answer reaches the agent as a prompt of its own. Not awaited: the dialog waits for the user.
@@ -124,7 +146,9 @@ export async function reopenPanel(files: FileSystem, approve: Approver, gates: G
   const gate = await gates.get(sessionId)
   if (!gate) return
   askGate(files, approve, gates, ask, sessionId, gate, log)
-    .then(async text => { if (text && !(await hasOpenGate(gates, sessionId))) await send(text) }) // a dismissed dialog leaves the gate open and says nothing
+    .then(async text => {
+      if (text && !(await hasOpenGate(gates, sessionId))) await send(text)
+    }) // a dismissed dialog leaves the gate open and says nothing
     .catch(() => {})
 }
 
@@ -145,4 +169,5 @@ export function isHandEdit(call: HandEditCall): boolean {
   return STATE_NAME.test(command) && BASH_WRITE.test(command)
 }
 
-export const HAND_EDIT_TEXT = 'Flow files change only through the flow script (python3 scripts/flow_manager.py update-step-status, add-log-entry, add-memory-entry and the others). Do not edit them by hand. Only the user approves a step, with a click in the approval dialog.'
+export const HAND_EDIT_TEXT =
+  'Flow files change only through the flow script (python3 scripts/flow_manager.py update-step-status, add-log-entry, add-memory-entry and the others). Do not edit them by hand. Only the user approves a step, with a click in the approval dialog.'

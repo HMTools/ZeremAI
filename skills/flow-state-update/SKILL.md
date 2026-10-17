@@ -209,7 +209,7 @@ Append to `flowWideObservations` in `log.json`. Steps like `apply-changes`, `rev
 
 ### create_flow
 
-Create the files of a new flow from a template. Only the mod (when the user presses **Create flow** on the ZeremAI site, opened with `/zeremai`) and sub-flow steps use this.
+Create the files of a new flow from a template. Only the mod (when the user presses **Create flow** on the ZeremAI site, opened with `/zeremai:init`) and sub-flow steps use this.
 
 | Input | Required | Description |
 |-------|----------|-------------|

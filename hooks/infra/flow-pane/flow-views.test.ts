@@ -11,7 +11,12 @@ const steps = [
 test('memory: topics with who wrote and who read, history newest first, and what changed between entries', async () => {
   const w = world({
     [`${D}/flow.json`]: flowFile({}, steps),
-    [`${D}/memory/invoice.json`]: { entries: { a: { informationProduced: { total: '4,200', vendor: 'Acme' }, updatedAt: '2026-01-01T10:00' }, b: { informationProduced: { total: '4,500', note: 'x' }, updatedAt: '2026-01-01T11:00', decisionsMade: ['ok'] } } },
+    [`${D}/memory/invoice.json`]: {
+      entries: {
+        a: { informationProduced: { total: '4,200', vendor: 'Acme' }, updatedAt: '2026-01-01T10:00' },
+        b: { informationProduced: { total: '4,500', note: 'x' }, updatedAt: '2026-01-01T11:00', decisionsMade: ['ok'] },
+      },
+    },
     [`${D}/memory/approvals.json`]: { entries: { b: { informationProduced: { verdict: 'yes' }, updatedAt: '2026-01-01T12:00' } } },
     [`${D}/memory/_cross-references.json`]: { links: [] },
   })
@@ -33,7 +38,10 @@ test('logs: one row for each step, and the three time formats', async () => {
     [`${D}/log.json`]: { steps: { a: { timestamp: { started: 's', completed: 'c' }, actionsTaken: ['read it'], problemsEncountered: ['slow'] } } },
   })
   const rows = await logView(w.ports.files, D)
-  expect(rows.map(r => [r.number, r.kind])).toEqual([['1', 'done'], ['2', 'running']])
+  expect(rows.map(r => [r.number, r.kind])).toEqual([
+    ['1', 'done'],
+    ['2', 'running'],
+  ])
   expect(rows[0]).toMatchObject({ started: 's', completed: 'c', actions: ['read it'], problems: ['slow'] })
   expect(rows[1]).toMatchObject({ actions: [], problems: [] }) // no entry yet
 })
@@ -49,15 +57,29 @@ test('files: output first, framework files apart, a touched file knows its step'
   })
   const rows = await filesView(w.ports.files, D)
   const out = rows.filter(r => r.output).map(r => [r.name, r.step, r.openable])
-  expect(out).toEqual([['/repo/src/x.ts', '2', false], ['notes/approval.md', '2', true], ['other.txt', undefined, true], ['report.md', '1', true]])
-  expect(rows.filter(r => !r.output).map(r => r.name).sort()).toEqual(['flow.json', 'log.json', 'memory/invoice.json'])
+  expect(out).toEqual([
+    ['/repo/src/x.ts', '2', false],
+    ['notes/approval.md', '2', true],
+    ['other.txt', undefined, true],
+    ['report.md', '1', true],
+  ])
+  expect(
+    rows
+      .filter(r => !r.output)
+      .map(r => r.name)
+      .sort(),
+  ).toEqual(['flow.json', 'log.json', 'memory/invoice.json'])
 })
 
 test('the tab counts come from folder listings: topics without the cross-references file, and files without the framework files', async () => {
   const w = world({
-    [`${D}/flow.json`]: flowFile({}, steps), [`${D}/log.json`]: {},
-    [`${D}/memory/invoice.json`]: {}, [`${D}/memory/approvals.json`]: {}, [`${D}/memory/_cross-references.json`]: {},
-    [`${D}/notes/a.md`]: 'x', [`${D}/b.md`]: 'y',
+    [`${D}/flow.json`]: flowFile({}, steps),
+    [`${D}/log.json`]: {},
+    [`${D}/memory/invoice.json`]: {},
+    [`${D}/memory/approvals.json`]: {},
+    [`${D}/memory/_cross-references.json`]: {},
+    [`${D}/notes/a.md`]: 'x',
+    [`${D}/b.md`]: 'y',
   })
   expect(await tabCounts(w.ports.files, D)).toEqual({ topics: 2, files: 2 })
 })

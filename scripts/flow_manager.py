@@ -345,6 +345,10 @@ def update_step_status(a):
                 'Once approved, retry: update_step_status with status completed')
         if step.get('status') == 'blocked' and a['status'] == 'completed':
             fail('Step "%s" is blocked: the user must act first. Do not complete it; the user presses Continue and the step runs again.' % step.get('name'))
+        if a['status'] == 'in_progress':
+            early = next((s for s in flow['steps'][:flow['steps'].index(step)] if s.get('status') not in ('completed', 'skipped')), None)
+            if early:
+                fail('Step "%s" cannot start: step "%s" is %s. Wait for it. If it is blocked, the user presses Continue.' % (step.get('name'), early.get('name'), early.get('status')))
         if a['status'] == 'blocked' and not str(a.get('reason') or '').strip():
             fail('A blocked step needs a reason: say in one sentence what the user must do (input "reason", and "command" if there is one).')
         step['status'] = a['status']

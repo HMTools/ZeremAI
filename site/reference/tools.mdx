@@ -1,6 +1,6 @@
 ---
 title: "Flow tools"
-description: "The operations of the flow script. Each answers {'status': 'ok', ...} or {'status': 'error', 'message': '...'}. "
+description: "Every operation of the flow script, with what it does and what it refuses."
 ---
 
 These are the operations of the flow script `scripts/flow_manager.py` (Python 3.9 or newer). The agent runs one as a Bash command, with the name written with dashes (`update_step_status` is `update-step-status`):
@@ -24,7 +24,7 @@ After `update_flow_status` moves a folder, use the `relocated_to` path from the 
 
 | Tool | Purpose |
 |---|---|
-| `update_step_status` | `pending`, `in_progress`, `completed`, `skipped`, `awaiting_approval`. Sets `startedAt` / `completedAt`. Refuses `completed` on an unapproved step. |
+| `update_step_status` | `pending`, `in_progress`, `completed`, `skipped`, `awaiting_approval`, `blocked`. `blocked` needs `reason` (one sentence on what you must do) and may have `command`. Sets `startedAt` / `completedAt`. Refuses `completed` on an unapproved or blocked step. |
 | `update_current_state` | Set the active step, its summary, substep count, current substep |
 | `update_active_substep` | Change only the current substep |
 
@@ -48,7 +48,7 @@ After `update_flow_status` moves a folder, use the `relocated_to` path from the 
 | `add_log_entry` | Append actions, reasoning, files modified, problems, decisions, performance notes for a step |
 | `update_log_observations` | Append flow-wide patterns and recommendations |
 
-The plugin logs each prompt of the user, and each answer in the approval dialog, by itself. A small model (Haiku) writes the reason, the answer and the improvement flag of the entry. There is no tool for it.
+The plugin logs each prompt of the user, and each answer in the approval dialog, by itself, with `log_interaction` (see [Plugin-only operations](#plugin-only-operations)). A small model (Haiku) writes the reason, the answer and the improvement flag of the entry. The agent has no tool for it.
 
 ## Approval
 
@@ -70,6 +70,16 @@ The plugin logs each prompt of the user, and each answer in the approval dialog,
 | `write_finding` | Save a finding (`category`, `title`, `what`, `why`, `impact`, optional `scope`). Only Continuous Improvement calls it. |
 | `list_findings` | List findings by `status` (`open`, `applied`, `rejected`, `deferred`) and optional `templateId`. Only `apply-improvements` calls it. |
 | `update_finding_status` | Record `applied`, `rejected` or `deferred` with `notes` and `filesModified` |
+
+## Plugin-only operations
+
+The mod runs these itself. They are in the script, but the agent does not call them.
+
+| Tool | Purpose |
+|---|---|
+| `get_step_brief` | Build the prompt of a step subagent as one text: the step, the flow parameters, the memory it reads, and on a re-run its earlier summary and your corrections. It only reads. Run by the `on-step-brief` rule when a step starts. |
+| `log_interaction` | Append a user prompt or an approval answer to the log, with its reason and answer. Run before the agent sees your prompt. |
+| `approve_step` | Set `approved: true` on a step. Run after your click. The plugin refuses it for the agent. |
 
 ## Rules
 

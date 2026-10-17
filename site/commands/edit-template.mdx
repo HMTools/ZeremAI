@@ -1,0 +1,37 @@
+---
+title: "/zeremai:edit-template"
+description: "Change an installed flow template, or send your change to its marketplace as a pull request."
+---
+
+## Run it
+
+```
+/zeremai:edit-template ~/.claude/zeremai/templates/flows/development/fix-bug Add a rollback step before deploy
+```
+
+The first word is the template folder. The rest is the change. The ZeremAI site starts it for you with **Edit** and **Send as PR** on the Templates screen.
+
+## Edit
+
+1. Reads the template and its step files. If the template came from a marketplace, it tells you the change is a copy, and that the next Update from that marketplace asks before it erases it.
+2. Drafts the change and nothing else. Every `id` and `stepRef` stays.
+3. A script checks it, and the `template-reviewer` agent reviews it.
+4. Shows it on one page. After **Approve**, it writes the files into the same template folder.
+
+A running flow keeps its own copy of every step, so an edit does not reach it.
+
+## Send
+
+1. Finds the marketplace of the template. A template with no marketplace stops here.
+2. Clones the marketplace fresh into a scratch folder.
+3. Compares with the commit you installed. If the repository changed the same template since then, it does **not** push. It merges the two versions with you first.
+4. Copies your folder in, makes a branch `edit-template-<name>` and commits.
+5. Asks before the push, then opens a pull request with `gh pr create` when `gh` exists. Otherwise it gives you the branch and the address.
+
+## What it asks first
+
+**Approve** on the page, and a yes before the push. It never forces a push.
+
+## Related
+
+[Edit and send a template](/authoring/edit-and-send), [Marketplaces](/guide/marketplaces).

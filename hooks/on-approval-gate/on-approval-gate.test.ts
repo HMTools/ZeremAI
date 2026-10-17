@@ -17,7 +17,10 @@ function world(on: On, { steps = [step] as unknown[], bound = 'S1' } = {}) {
   on('fs.list', async (_$, e) => ({ value: e.path === ACTIVE ? [{ name: 'p1', kind: 'dir', size: 0, mtimeMs: 0, isLink: false }] : [] }))
   on('fs.exists', async (_$, e) => ({ value: e.path in all }))
   on('fs.read', async (_$, e) => ({ value: all[e.path] }))
-  on('fs.write', async (_$, e) => { written[e.path] = e.text; return { value: undefined } })
+  on('fs.write', async (_$, e) => {
+    written[e.path] = e.text
+    return { value: undefined }
+  })
   on('tool.call', async () => ({ result: 'done', text: 'done' }) as never)
   return written
 }

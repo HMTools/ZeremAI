@@ -3,10 +3,13 @@ import { DIR, flowFile, step, world } from '../flow-manager/fake-world'
 import { stepLine } from './step-line'
 
 const steps = [step({ id: 'a', number: 0, name: 'Read' }), step({ id: 'b', number: 1, name: 'Draft', status: 'in_progress' }), step({ id: 'c', number: 2, name: 'Ship' })]
-const at = (extra: Record<string, unknown>, status?: string) => world({
-  [`${DIR}/flow.json`]: flowFile({ currentState: { activeStep: { id: 'b', name: 'Draft the plan', actionSummary: 'x', totalSteps: 3, totalSubsteps: 4, currentSubstep: { number: 2, name: 'x' }, ...extra } } },
-    status ? steps.map(s => s.id === 'b' ? { ...s, status } : s) : steps),
-})
+const at = (extra: Record<string, unknown>, status?: string) =>
+  world({
+    [`${DIR}/flow.json`]: flowFile(
+      { currentState: { activeStep: { id: 'b', name: 'Draft the plan', actionSummary: 'x', totalSteps: 3, totalSubsteps: 4, currentSubstep: { number: 2, name: 'x' }, ...extra } } },
+      status ? steps.map(s => (s.id === 'b' ? { ...s, status } : s)) : steps,
+    ),
+  })
 
 test('a running step shows its place and its part', async () => {
   expect(await stepLine(at({}).ports.files, DIR)).toBe('Step 2 of 3 · Draft the plan · part 2 of 4')

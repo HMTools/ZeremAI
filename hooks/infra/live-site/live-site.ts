@@ -18,7 +18,12 @@ export function parseDocs(text: string): Row[] {
   const rows: Row[] = []
   for (const line of text.split('\n')) {
     if (!line.startsWith('{"id":')) continue
-    try { const d = JSON.parse(line); if (typeof d.id === 'string' && d.data && typeof d.data === 'object' && typeof d.version === 'number') rows.push({ id: d.id, data: d.data, version: d.version }) } catch { /* not a document line */ }
+    try {
+      const d = JSON.parse(line)
+      if (typeof d.id === 'string' && d.data && typeof d.data === 'object' && typeof d.version === 'number') rows.push({ id: d.id, data: d.data, version: d.version })
+    } catch {
+      /* not a document line */
+    }
   }
   return rows
 }
@@ -26,7 +31,10 @@ export function parseDocs(text: string): Row[] {
 // A short hash of the page and its rules: when it changes, the mod publishes the page again. Not a secret, only a change detector (FNV-1a).
 export function hashOf(text: string): string {
   let h = 0x811c9dc5
-  for (let i = 0; i < text.length; i++) { h ^= text.charCodeAt(i); h = Math.imul(h, 0x01000193) >>> 0 }
+  for (let i = 0; i < text.length; i++) {
+    h ^= text.charCodeAt(i)
+    h = Math.imul(h, 0x01000193) >>> 0
+  }
   return h.toString(16)
 }
 
@@ -37,19 +45,32 @@ const MAX = 2000
 export type CommandWorld = { session: string; bound: Record<string, { dir: string; flow: Flow }>; active: Record<string, string> }
 
 export async function commandWorld(files: FileSystem, session: string, bound: string[], active: string[]): Promise<CommandWorld> {
-  const read = async (dir: string): Promise<Flow | undefined> => { try { return JSON.parse(await files.read(`${dir}/flow.json`)) } catch { /* unreadable */ } }
+  const read = async (dir: string): Promise<Flow | undefined> => {
+    try {
+      return JSON.parse(await files.read(`${dir}/flow.json`))
+    } catch {
+      /* unreadable */
+    }
+  }
   const world: CommandWorld = { session, bound: Object.create(null), active: Object.create(null) }
-  for (const dir of bound) { const flow = await read(dir); if (flow) world.bound[flowIdOf(flow as Doc, dir)] = { dir, flow } }
-  for (const dir of active) { const flow = await read(dir); if (flow) world.active[flowIdOf(flow as Doc, dir)] = dir }
+  for (const dir of bound) {
+    const flow = await read(dir)
+    if (flow) world.bound[flowIdOf(flow as Doc, dir)] = { dir, flow }
+  }
+  for (const dir of active) {
+    const flow = await read(dir)
+    if (flow) world.active[flowIdOf(flow as Doc, dir)] = dir
+  }
   return world
 }
 
 type Spec = { need: string[]; maybe?: string[]; open?: true; flow?: 'step' | 'bound' | 'active'; plain?: string[] }
 const SPEC: Record<string, Spec> = {
-  'approve': { need: ['flowId', 'stepId'], flow: 'step', plain: ['flowId', 'stepId'] },
+  approve: { need: ['flowId', 'stepId'], flow: 'step', plain: ['flowId', 'stepId'] },
   'request-changes': { need: ['flowId', 'stepId', 'reason'], flow: 'step', plain: ['flowId', 'stepId'] },
-  'continue': { need: ['flowId'], maybe: ['note'], flow: 'active', plain: ['flowId'] },
-  'close': { need: ['flowId'], flow: 'bound', plain: ['flowId'] },
+  continue: { need: ['flowId'], maybe: ['note'], flow: 'active', plain: ['flowId'] },
+  close: { need: ['flowId'], flow: 'bound', plain: ['flowId'] },
+  delete: { need: ['flowId'], flow: 'active', plain: ['flowId'] }, // any running flow, also one of another session: the folder is removed for good
   'new-flow': { need: ['template'], open: true }, // one more key for each field of the template
   'fill-fields': { need: ['template', 'text'], maybe: ['values'] },
   'install-template': { need: ['marketplace', 'category', 'name'], plain: ['marketplace', 'category', 'name'] },
@@ -101,16 +122,30 @@ export async function sessionTitle(files: FileSystem, session: string, folder: s
     const text = await files.read(`${await files.home()}/.claude/projects/${folder.replace(/[^a-zA-Z0-9]/g, '-')}/${session}.jsonl`)
     const hits = text.match(/"type":"ai-title","aiTitle":"(?:[^"\\]|\\.)*"/g)
     return hits ? String(JSON.parse(`{${hits[hits.length - 1]}}`).aiTitle).slice(0, 80) : ''
-  } catch { return '' }
+  } catch {
+    return ''
+  }
 }
 
 export async function sessionDoc(files: FileSystem, session: string, dirs: string[], folder: string, beat: string, openedAt?: string, title?: string): Promise<DocWrite> {
   const flows: string[] = []
-  for (const dir of dirs) { try { flows.push(flowIdOf(JSON.parse(await files.read(`${dir}/flow.json`)), dir)) } catch { /* the flow is gone */ } }
-  return { op: 'set', collection: 'sessions', doc_id: session, data: { folder, name: folder.split('/').filter(Boolean).pop() ?? folder, beat, flows, ...(openedAt ? { openedAt } : {}), ...(title ? { title } : {}) } }
+  for (const dir of dirs) {
+    try {
+      flows.push(flowIdOf(JSON.parse(await files.read(`${dir}/flow.json`)), dir))
+    } catch {
+      /* the flow is gone */
+    }
+  }
+  return {
+    op: 'set',
+    collection: 'sessions',
+    doc_id: session,
+    data: { folder, name: folder.split('/').filter(Boolean).pop() ?? folder, beat, flows, ...(openedAt ? { openedAt } : {}), ...(title ? { title } : {}) },
+  }
 }
 
-const fieldsOf = (t?: TemplateInfo) => (t?.fields ?? []).map(f => ({ name: f.name, required: f.required, type: 'text', description: f.description, example: f.example, options: f.options, allowOther: f.allowOther }))
+const fieldsOf = (t?: TemplateInfo) =>
+  (t?.fields ?? []).map(f => ({ name: f.name, required: f.required, type: 'text', description: f.description, example: f.example, options: f.options, allowOther: f.allowOther }))
 
 // The catalog of the marketplaces joined with the installed templates (they know the fields), and one row for each marketplace.
 // ponytail: a template that is neither installed nor in a cache any more keeps its old row; delete rows when a reader shows that.
@@ -119,7 +154,18 @@ export function templateDocs(entries: CatalogEntry[], templates: TemplateInfo[],
   const installed = (category: string, name: string) => templates.find(t => t.category === category && t.name === name)
   for (const e of entries) {
     const t = installed(e.category, e.name)
-    rows.set(`${e.category}~${e.name}`, { name: e.name, category: e.category, title: e.title, description: e.description, installed: e.state !== 'available', state: e.state, ...(e.edited ? { edited: true } : {}), marketplace: e.marketplace, ...(t ? { steps: t.stepCount } : {}), fields: e.state === 'available' ? [] : fieldsOf(t) })
+    rows.set(`${e.category}~${e.name}`, {
+      name: e.name,
+      category: e.category,
+      title: e.title,
+      description: e.description,
+      installed: e.state !== 'available',
+      state: e.state,
+      ...(e.edited ? { edited: true } : {}),
+      marketplace: e.marketplace,
+      ...(t ? { steps: t.stepCount } : {}),
+      fields: e.state === 'available' ? [] : fieldsOf(t),
+    })
   }
   for (const t of templates) {
     const id = `${t.category}~${t.name}`
@@ -129,7 +175,12 @@ export function templateDocs(entries: CatalogEntry[], templates: TemplateInfo[],
   for (const m of markets) {
     if (!PLAIN.test(m.name)) continue
     const count = entries.filter(e => e.marketplace === m.name).length
-    docs.push({ op: 'set', collection: 'marketplaces', doc_id: m.name, data: { name: m.name, templates: count, enabled: m.enabled, cached: m.cached, ...(m.lastSynced ? { refreshedAt: m.lastSynced } : {}) } })
+    docs.push({
+      op: 'set',
+      collection: 'marketplaces',
+      doc_id: m.name,
+      data: { name: m.name, templates: count, enabled: m.enabled, cached: m.cached, ...(m.lastSynced ? { refreshedAt: m.lastSynced } : {}) },
+    })
   }
   return docs
 }

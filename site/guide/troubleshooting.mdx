@@ -1,6 +1,6 @@
 ---
 title: "Troubleshooting"
-description: "## 'The flow tools are not here, so mods are off'"
+description: "Fixes for the errors and stuck states you are most likely to meet."
 ---
 
 ## "The flow tools are not here, so mods are off"
@@ -17,23 +17,27 @@ Open the **Templates** screen, **Refresh**, then **Install**. If Refresh fails, 
 
 ## "Session closed. Press ZeremAI in a live session."
 
-The session that the site talks to has not sent a heartbeat for 3 minutes, so the site turned its actions off. Go to a Claude Code session that is open, and press **ZeremAI ↗** above the prompt (or run `/zeremai`). The site then works with that session. If the session is open and the site still says so, run `/zeremai` and read the message: it names the last write that failed.
+The session that the site talks to has not sent a heartbeat for 3 minutes, so the site turned its actions off. Go to a Claude Code session that is open, and press **ZeremAI ↗** above the prompt (or run `/zeremai:init`). The site then works with that session. If the session is open and the site still says so, run `/zeremai:init` and read the message: it names the last write that failed.
 
 ## "This page has no session. Press ZeremAI in the session you want."
 
-You opened the pinned link, with no session in it. The site only shows the data. Press **ZeremAI ↗** in a session to get a link that names the session.
+See [Session states](/ui/session-states). You opened the pinned link, with no session in it. The site only shows the data. Press **ZeremAI ↗** in a session to get a link that names the session.
 
 ## A button on the site stays on "Sending…" or "Running…"
 
 The command waits for your session. It starts within about 5 seconds when the session is idle or working. If it does not start, check that the session is open and has the flow, then press the button again. A command for another session is left alone by design.
 
-## `/zeremai` does nothing, or the page does not open
+## `/zeremai:init` does nothing, or the page does not open
 
 ZeremAI opens the page with the Artifact tool, so you need a claude.ai sign-in and a surface with that tool (not print mode, not the VS Code extension). If the tool cannot open the page, ZeremAI uses the system opener and then shows the link in a message. Open the link by hand.
 
 ## Agent cannot edit a flow file
 
 Intended. A flow's state files and findings change only through the flow script (`scripts/flow_manager.py`), and the plugin checks every call. If a call is refused or errors, read its message: it says what to do next.
+
+## A step says "blocked"
+
+A retry cannot help, so the agent stopped and told you what to do. Read the reason on the site, do what it says, then press **Continue**. See [Blocked steps](/guide/blocked-steps).
 
 ## Step will not complete
 

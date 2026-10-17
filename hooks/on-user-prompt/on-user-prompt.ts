@@ -17,30 +17,43 @@ import { findFlowDir, hasFlowInstance, sessionKey } from '../infra/flow-reposito
 //    If the log fails, the prompt is dropped and the user is told why;
 //  - while an approval gate is open, opens the approval dialog again;
 
-const filesOf = ($: any): FileSystem => ({
-  home: async () => (await $.env.get('HOME')) ?? (await $.env.get('USERPROFILE')), // Windows has no HOME in every shell
-  list: path => $.fs.list(path),
-  exists: path => $.fs.exists(path),
-  read: path => $.fs.read(path),
-})
-const linksOf = ($: any): SessionLinks => ({
-  get: async sessionId => ((await $.store.get(sessionKey(sessionId))) as string[] | undefined) ?? [],
-})
+function filesOf($: any): FileSystem {
+  return {
+    home: async () => (await $.env.get('HOME')) ?? (await $.env.get('USERPROFILE')), // Windows has no HOME in every shell
+    list: path => $.fs.list(path),
+    exists: path => $.fs.exists(path),
+    read: path => $.fs.read(path),
+  }
+}
+function linksOf($: any): SessionLinks {
+  return {
+    get: async sessionId => ((await $.store.get(sessionKey(sessionId))) as string[] | undefined) ?? [],
+  }
+}
 
-const pythonOf = async ($: any) => (await $.env.get('OS')) === 'Windows_NT' ? 'python' : 'python3'
-const logDepsOf = ($: any): LogDeps => ({
-  files: filesOf($), links: linksOf($),
-  complete: request => $.model.complete(request),
-  script: async (sub, input) => runScript(argv => $.process.run(argv, { timeoutMs: 60_000 }), await pythonOf($), slash($.plugin.root), sub, input),
-})
+async function pythonOf($: any) {
+  return (await $.env.get('OS')) === 'Windows_NT' ? 'python' : 'python3'
+}
+function logDepsOf($: any): LogDeps {
+  return {
+    files: filesOf($),
+    links: linksOf($),
+    complete: request => $.model.complete(request),
+    script: async (sub, input) => runScript(argv => $.process.run(argv, { timeoutMs: 60_000 }), await pythonOf($), slash($.plugin.root), sub, input),
+  }
+}
 
-const gatesOf = ($: any): GateStore => ({
-  get: async sessionId => ((await $.store.get(`gate:${sessionId}`)) as Gate | undefined) ?? undefined,
-  set: (sessionId, gate) => $.store.set(`gate:${sessionId}`, gate),
-  clear: sessionId => $.store.delete(`gate:${sessionId}`),
-})
+function gatesOf($: any): GateStore {
+  return {
+    get: async sessionId => ((await $.store.get(`gate:${sessionId}`)) as Gate | undefined) ?? undefined,
+    set: (sessionId, gate) => $.store.set(`gate:${sessionId}`, gate),
+    clear: sessionId => $.store.delete(`gate:${sessionId}`),
+  }
+}
 
-const approverOf = ($: any): Approver => async (dir, stepId) => approveStep(argv => $.process.run(argv, { timeoutMs: 60_000 }), (await $.env.get('OS')) === 'Windows_NT' ? 'python' : 'python3', slash($.plugin.root), dir, stepId)
+function approverOf($: any): Approver {
+  return async (dir, stepId) => approveStep(argv => $.process.run(argv, { timeoutMs: 60_000 }), (await $.env.get('OS')) === 'Windows_NT' ? 'python' : 'python3', slash($.plugin.root), dir, stepId)
+}
 
 export const register: Register = on => {
   on('prompt.submit', async ($, e, next) => {
@@ -49,7 +62,15 @@ export const register: Register = on => {
       const sessionId = await $.session.id()
       const problem = await logPrompt(logDepsOf($), sessionId, e.text)
       if (problem) return { drop: `Flow log failed, so your prompt was not sent: ${problem} Send it again, or close the flow.` }
-      await reopenPanel(filesOf($), approverOf($), gatesOf($), (q, options) => $.ui.ask(q, options), text => $.prompt.submit({ text }), sessionId, (dir, request) => logInteraction(logDepsOf($), dir, request))
+      await reopenPanel(
+        filesOf($),
+        approverOf($),
+        gatesOf($),
+        (q, options) => $.ui.ask(q, options),
+        text => $.prompt.submit({ text }),
+        sessionId,
+        (dir, request) => logInteraction(logDepsOf($), dir, request),
+      )
     }
     return next(e)
   })

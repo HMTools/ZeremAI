@@ -147,13 +147,13 @@ class ToolsTest(FlowBase):
 
         def go(step_id):
             results.append(self.call('update-step-status', flowDir=self.dir, stepId=step_id, status='in_progress'))
-        threads = [threading.Thread(target=go, args=(s,)) for s in ['s1', 's2'] * 3]
+        threads = [threading.Thread(target=go, args=(s,)) for s in ['s1'] * 6]
         for t in threads:
             t.start()
         for t in threads:
             t.join()
         self.assertTrue(all(r['status'] == 'ok' for r in results), results)
-        self.assertEqual([s['status'] for s in self.get(self.flow)['steps']], ['in_progress', 'in_progress'])
+        self.assertEqual([s['status'] for s in self.get(self.flow)['steps']], ['in_progress', 'pending'])
         self.assertEqual([n for n in os.listdir(self.dir)], ['flow.json'])  # no lock or temp file in the flow folder
 
 
@@ -202,6 +202,16 @@ class StepStatusTest(FlowBase):
         self.err('update-step-status', 'is blocked', flowDir=self.dir, stepId='s1', status='completed')
         self.ok('update-step-status', flowDir=self.dir, stepId='s1', status='in_progress')
         self.assertNotIn('blocked', self.get(self.flow)['steps'][0])
+
+    def test_a_step_cannot_start_before_an_earlier_step_is_done(self):
+        for early in ['pending', 'in_progress', 'blocked', 'awaiting_approval']:
+            self.put_flow(steps=[step(status=early), step(id='s2', number=1, status='pending')])
+            self.err('update-step-status', 'cannot start', flowDir=self.dir, stepId='s2', status='in_progress')
+            self.assertEqual(self.get(self.flow)['steps'][1]['status'], 'pending')
+
+    def test_a_step_starts_after_earlier_steps_are_completed_or_skipped(self):
+        self.put_flow(steps=[step(status='completed'), step(id='s2', number=1, status='skipped'), step(id='s3', number=2)])
+        self.ok('update-step-status', flowDir=self.dir, stepId='s3', status='in_progress')
 
     def test_unknown_status_unknown_step_and_missing_flow_are_errors(self):
         self.put_flow()

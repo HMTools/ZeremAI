@@ -11,10 +11,16 @@ const flowJson = (extra = {}) => JSON.stringify({ status: 'running', metadata: {
 function world(json = flowJson()) {
   const written: Record<string, string> = {}
   const files: FileSystem = {
-    home: async () => '/h', list: async () => [], exists: async p => p === `${DIR}/flow.json`,
-    read: async p => { if (p !== `${DIR}/flow.json`) throw new Error('missing'); return json },
+    home: async () => '/h',
+    list: async () => [],
+    exists: async p => p === `${DIR}/flow.json`,
+    read: async p => {
+      if (p !== `${DIR}/flow.json`) throw new Error('missing')
+      return json
+    },
   }
-  const write = async (dir: string, stepId: string) => { // approve-step: set approved on the step, touch lastUpdated, write the file the way the script does
+  const write = async (dir: string, stepId: string) => {
+    // approve-step: set approved on the step, touch lastUpdated, write the file the way the script does
     const flow = JSON.parse(json)
     flow.steps.find((s: any) => s.id === stepId).approved = true
     flow.metadata.lastUpdated = 'now'
@@ -22,11 +28,20 @@ function world(json = flowJson()) {
   }
   const gates = new Map<string, Gate>([['S1', gate]])
   const store: GateStore = {
-    get: async id => gates.get(id), set: async (id, g) => { gates.set(id, g) }, clear: async id => { gates.delete(id) },
+    get: async id => gates.get(id),
+    set: async (id, g) => {
+      gates.set(id, g)
+    },
+    clear: async id => {
+      gates.delete(id)
+    },
   }
   return { files, write, store, written }
 }
-const answers = (label: string): Ask => async () => label
+const answers =
+  (label: string): Ask =>
+  async () =>
+    label
 
 test('the question names the step, its output and the folder', () => {
   const q = questionFor(step, DIR)
@@ -66,7 +81,16 @@ test('Request changes with no text', async () => {
 })
 test('a dismissed dialog: nothing is approved and the gate stays open', async () => {
   const w = world()
-  const text = await askGate(w.files, w.write, w.store, async () => { throw new Error('dismissed') }, 'S1', gate)
+  const text = await askGate(
+    w.files,
+    w.write,
+    w.store,
+    async () => {
+      throw new Error('dismissed')
+    },
+    'S1',
+    gate,
+  )
   expect(text).toContain('only the user can approve')
   expect(w.written).toEqual({})
   expect(await hasOpenGate(w.store, 'S1')).toBe(true)
@@ -80,7 +104,10 @@ test('a gate for a step that is gone is closed', async () => {
 test('one question at a time: the second asker gets nothing', async () => {
   const w = world()
   let release = () => {}
-  const slow: Ask = () => new Promise(resolve => { release = () => resolve(APPROVE) })
+  const slow: Ask = () =>
+    new Promise(resolve => {
+      release = () => resolve(APPROVE)
+    })
   const first = askGate(w.files, w.write, w.store, slow, 'S1', gate)
   await new Promise(r => setTimeout(r, 0))
   expect(await askGate(w.files, w.write, w.store, answers(APPROVE), 'S1', gate)).toBeUndefined()
@@ -91,14 +118,34 @@ test('one question at a time: the second asker gets nothing', async () => {
 test('a prompt with an open gate: the dialog opens and the answer is sent as a prompt', async () => {
   const w = world()
   const sent: string[] = []
-  await reopenPanel(w.files, w.write, w.store, answers(APPROVE), async t => { sent.push(t) }, 'S1')
+  await reopenPanel(
+    w.files,
+    w.write,
+    w.store,
+    answers(APPROVE),
+    async t => {
+      sent.push(t)
+    },
+    'S1',
+  )
   await new Promise(r => setTimeout(r, 0))
   expect(sent[0]).toContain('The user approved step 1')
 })
 test('a prompt with an open gate and a dismissed dialog: nothing is sent', async () => {
   const w = world()
   const sent: string[] = []
-  await reopenPanel(w.files, w.write, w.store, async () => { throw new Error('dismissed') }, async t => { sent.push(t) }, 'S1')
+  await reopenPanel(
+    w.files,
+    w.write,
+    w.store,
+    async () => {
+      throw new Error('dismissed')
+    },
+    async t => {
+      sent.push(t)
+    },
+    'S1',
+  )
   await new Promise(r => setTimeout(r, 0))
   expect(sent).toEqual([])
   expect(await hasOpenGate(w.store, 'S1')).toBe(true)
@@ -107,7 +154,16 @@ test('a prompt with no gate: nothing happens', async () => {
   const w = world()
   await w.store.clear('S1')
   const sent: string[] = []
-  await reopenPanel(w.files, w.write, w.store, answers(APPROVE), async t => { sent.push(t) }, 'S1')
+  await reopenPanel(
+    w.files,
+    w.write,
+    w.store,
+    answers(APPROVE),
+    async t => {
+      sent.push(t)
+    },
+    'S1',
+  )
   await new Promise(r => setTimeout(r, 0))
   expect(sent).toEqual([])
 })
@@ -138,13 +194,7 @@ test('hand edit: Write on an improvement finding is refused', () => {
 test('hand edit: Bash that writes log.json is refused', () => {
   expect(isHandEdit({ tool: 'Bash', command: `echo '{}' > ${P.replace('flow.json', 'log.json')}` })).toBe(true)
 })
-for (const command of [
-  `sed -i 's/false/true/' ${P}`,
-  `echo '{}' > ${P}`,
-  `python3 -c "import json; open('${P}','w').write('{}')"`,
-  `cat x | tee ${P}`,
-  `jq '.a=1' ${P} > /tmp/x && mv /tmp/x ${P}`,
-]) {
+for (const command of [`sed -i 's/false/true/' ${P}`, `echo '{}' > ${P}`, `python3 -c "import json; open('${P}','w').write('{}')"`, `cat x | tee ${P}`, `jq '.a=1' ${P} > /tmp/x && mv /tmp/x ${P}`]) {
   test(`hand edit: Bash refused: ${command.slice(0, 40)}`, () => expect(isHandEdit({ tool: 'Bash', command })).toBe(true))
 }
 for (const command of [`cat ${P}`, `ls ${P} 2>/dev/null`, 'python3 /x/flow_manager.py update-step-status --flow-dir /p', 'git status']) {
@@ -168,7 +218,17 @@ test('the gate card is working until the agent asks, dialog while the question i
 test('while the question is open the gate says so, and a dismissed question gives the pane the buttons', async () => {
   const w = world()
   let during: Gate | undefined
-  await askGate(w.files, w.write, w.store, async () => { during = await w.store.get('S1'); throw new Error('dismissed') }, 'S1', gate)
+  await askGate(
+    w.files,
+    w.write,
+    w.store,
+    async () => {
+      during = await w.store.get('S1')
+      throw new Error('dismissed')
+    },
+    'S1',
+    gate,
+  )
   expect(during?.dialog).toBe(true)
   expect((await w.store.get('S1'))?.dialog).toBeUndefined()
 })

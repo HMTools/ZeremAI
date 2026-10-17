@@ -1,10 +1,13 @@
 import { test, expect } from 'claude-code/testing'
 import { ACTIVE, flowFile, step, world } from '../flow-manager/fake-world'
-import { boundView, deleteFlow, fingerprint, stepDetail, dirNameFor, handoff, inFolder, listFlows, listTemplates, resumeFlow, startFlow, waitingCount, wrongOptions } from './flow-pane'
+import { boundView, deleteFlow, purgeFlow, fingerprint, stepDetail, dirNameFor, handoff, inFolder, listFlows, listTemplates, resumeFlow, startFlow, waitingCount, wrongOptions } from './flow-pane'
 
 const T = '/h/.claude/zeremai/templates/flows/dev/bug'
 const template = {
-  type: 'template', name: 'bug', id: 'tid', category: 'dev',
+  type: 'template',
+  name: 'bug',
+  id: 'tid',
+  category: 'dev',
   parameters: { required: ['workItemId'], optional: ['repo'], definitions: { workItemId: { description: 'the item', example: '1345467' } } },
   steps: [{ name: 'Design', stepRef: 'r1' }],
 }
@@ -68,42 +71,77 @@ test('the Continue list shows this folder, or all folders; a flow with no folder
 })
 
 test('the bound view lists every step with its look', async () => {
-  const w = world({ [`${ACTIVE}/p1/flow.json`]: flowFile({ name: 'Invoice' }, [
-    step({ id: 'a', number: 1, name: 'Read', status: 'completed' }),
-    step({ id: 'b', number: 2, name: 'Approve', status: 'awaiting_approval' }),
-    step({ id: 'c', number: 3, name: 'Send', status: 'pending' }),
-  ]) })
+  const w = world({
+    [`${ACTIVE}/p1/flow.json`]: flowFile({ name: 'Invoice' }, [
+      step({ id: 'a', number: 1, name: 'Read', status: 'completed' }),
+      step({ id: 'b', number: 2, name: 'Approve', status: 'awaiting_approval' }),
+      step({ id: 'c', number: 3, name: 'Send', status: 'pending' }),
+    ]),
+  })
   const view = await boundView(w.ports.files, `${ACTIVE}/p1`)
   expect(view).toMatchObject({ name: 'Invoice', step: 2, total: 3, kind: 'waiting' })
-  expect(view!.steps.map(s => [s.number, s.name, s.kind])).toEqual([['1', 'Read', 'done'], ['2', 'Approve', 'waiting'], ['3', 'Send', 'pending']])
+  expect(view!.steps.map(s => [s.number, s.name, s.kind])).toEqual([
+    ['1', 'Read', 'done'],
+    ['2', 'Approve', 'waiting'],
+    ['3', 'Send', 'pending'],
+  ])
   expect(await boundView(w.ports.files, `${ACTIVE}/gone`)).toBeUndefined()
 })
 
 test('the active step lists its substeps, a sub-flow hangs under its step, and the parent shows', async () => {
-  const subs = [{ number: 1, name: 'Show amount' }, { number: 2, name: 'Ask approver' }]
-  const w = world({ [`${ACTIVE}/p1/flow.json`]: flowFile({
-    name: 'Invoice',
-    currentState: { activeStep: { id: 'b', name: 'Approve', actionSummary: 'x', totalSteps: 2, totalSubsteps: 2, currentSubstep: { number: 2, name: 'Ask approver' } } },
-    subFlowState: { parentFlow: { id: 'up', name: 'Month end', flowPath: `${ACTIVE}/up`, returnToStep: 'x' }, childFlows: [{ id: 'k', name: 'Lookup', status: 'completed', spawnedAtStep: 'a', syncPoint: 'after-a', flowPath: `${ACTIVE}/k` }] },
-  }, [
-    step({ id: 'a', number: 1, name: 'Read', status: 'completed' }),
-    step({ id: 'b', number: 2, name: 'Approve', status: 'in_progress', stepDefinition: { substeps: subs } }),
-  ]) })
+  const subs = [
+    { number: 1, name: 'Show amount' },
+    { number: 2, name: 'Ask approver' },
+  ]
+  const w = world({
+    [`${ACTIVE}/p1/flow.json`]: flowFile(
+      {
+        name: 'Invoice',
+        currentState: { activeStep: { id: 'b', name: 'Approve', actionSummary: 'x', totalSteps: 2, totalSubsteps: 2, currentSubstep: { number: 2, name: 'Ask approver' } } },
+        subFlowState: {
+          parentFlow: { id: 'up', name: 'Month end', flowPath: `${ACTIVE}/up`, returnToStep: 'x' },
+          childFlows: [{ id: 'k', name: 'Lookup', status: 'completed', spawnedAtStep: 'a', syncPoint: 'after-a', flowPath: `${ACTIVE}/k` }],
+        },
+      },
+      [step({ id: 'a', number: 1, name: 'Read', status: 'completed' }), step({ id: 'b', number: 2, name: 'Approve', status: 'in_progress', stepDefinition: { substeps: subs } })],
+    ),
+  })
   const view = (await boundView(w.ports.files, `${ACTIVE}/p1`))!
   expect(view.parent).toEqual({ name: 'Month end', dir: `${ACTIVE}/up` })
   expect(view.steps[0].substeps).toEqual([]) // only the active step lists them
   expect(view.steps[0].children).toEqual([{ name: 'Lookup', kind: 'done', dir: `${ACTIVE}/k`, returnsTo: 'after-a' }])
-  expect(view.steps[1].substeps).toEqual([{ number: 1, name: 'Show amount', active: false }, { number: 2, name: 'Ask approver', active: true }])
+  expect(view.steps[1].substeps).toEqual([
+    { number: 1, name: 'Show amount', active: false },
+    { number: 2, name: 'Ask approver', active: true },
+  ])
 })
 
 test('the step detail joins the definition, the memory entries and the log; empty parts stay empty', async () => {
   const w = world({
-    [`${ACTIVE}/p1/flow.json`]: flowFile({}, [step({ id: 'b', number: 2, name: 'Approve', status: 'completed', stepDefinition: { output: { description: 'a decision' }, memoryFileUsage: { readFrom: ['invoice.json'], writeTo: ['approvals'] } } })]),
+    [`${ACTIVE}/p1/flow.json`]: flowFile({}, [
+      step({
+        id: 'b',
+        number: 2,
+        name: 'Approve',
+        status: 'completed',
+        stepDefinition: { output: { description: 'a decision' }, memoryFileUsage: { readFrom: ['invoice.json'], writeTo: ['approvals'] } },
+      }),
+    ]),
     [`${ACTIVE}/p1/log.json`]: { steps: { b: { actionsTaken: ['read invoice'], decisionsMade: ['under limit'], problemsEncountered: [] } } },
     [`${ACTIVE}/p1/memory/approvals.json`]: { entries: { b: { informationProduced: { verdict: 'yes' }, decisionsMade: ['under limit', 'no review'], filesModifiedCreated: ['a.md'] } } },
   })
   const d = (await stepDetail(w.ports.files, `${ACTIVE}/p1`, 'b'))!
-  expect(d).toMatchObject({ number: '2', kind: 'done', produces: ['a decision'], reads: ['invoice'], writes: ['approvals'], actions: ['read invoice'], files: ['a.md'], problems: [], produced: [['verdict', 'yes']] })
+  expect(d).toMatchObject({
+    number: '2',
+    kind: 'done',
+    produces: ['a decision'],
+    reads: ['invoice'],
+    writes: ['approvals'],
+    actions: ['read invoice'],
+    files: ['a.md'],
+    problems: [],
+    produced: [['verdict', 'yes']],
+  })
   expect(d.decisions).toEqual(['under limit', 'no review']) // the same decision in the log and in memory shows once
   expect(await stepDetail(w.ports.files, `${ACTIVE}/p1`, 'zz')).toBeUndefined()
 })
@@ -116,6 +154,17 @@ test('delete moves a running flow to deleted/, keeps both when the name is taken
   await expect(deleteFlow(w.ports, '/h/.claude/zeremai/completed/p1')).rejects.toThrow('not a running flow folder')
   await expect(deleteFlow(w.ports, `${ACTIVE}/p1/memory`)).rejects.toThrow('not a running flow folder')
   await expect(deleteFlow(w.ports, `${ACTIVE}/../x`)).rejects.toThrow('not a running flow folder')
+})
+
+test('purge removes a running flow folder of any session, and refuses any other folder', async () => {
+  const w = world({ [`${ACTIVE}/p1/flow.json`]: flowFile(), [`${ACTIVE}/p1/log.json`]: '{}' })
+  await purgeFlow(w.ports, `${ACTIVE}/p1/`)
+  expect(w.removed).toEqual([`${ACTIVE}/p1`])
+  expect(Object.keys(w.disk)).toEqual([])
+  await expect(purgeFlow(w.ports, '/h/.claude/zeremai/completed/p1')).rejects.toThrow('not a running flow folder')
+  await expect(purgeFlow(w.ports, `${ACTIVE}/p1/memory`)).rejects.toThrow('not a running flow folder')
+  await expect(purgeFlow(w.ports, `${ACTIVE}/../x`)).rejects.toThrow('not a running flow folder')
+  expect(w.removed).toHaveLength(1)
 })
 
 test('the fingerprint changes with a step, a state or a time, and not with the order of reads', async () => {
@@ -184,7 +233,10 @@ test('a waiting step puts its number on the flow; a running one gets the time of
 })
 test('a failed flow has a reason from the log of its failed step; a paused one names the step it stopped at', async () => {
   const w = world({
-    [`${ACTIVE}/f/flow.json`]: flowFile({ name: 'F', status: 'failed' }, [step({ id: 'a', number: 0, name: 'Design', status: 'completed' }), step({ id: 'b', number: 1, name: 'Build', status: 'failed' })]),
+    [`${ACTIVE}/f/flow.json`]: flowFile({ name: 'F', status: 'failed' }, [
+      step({ id: 'a', number: 0, name: 'Design', status: 'completed' }),
+      step({ id: 'b', number: 1, name: 'Build', status: 'failed' }),
+    ]),
     [`${ACTIVE}/f/log.json`]: { steps: { b: { problemsEncountered: ['first', 'tests did not pass'] } } },
     [`${ACTIVE}/p/flow.json`]: flowFile({ name: 'P', status: 'paused' }, [step({ id: 'a', number: 0, name: 'Design', status: 'pending' })]),
   })
@@ -216,10 +268,12 @@ test('a flow with a blocked step is blocked, and needs the user', async () => {
 })
 
 test('a value outside a fixed list is wrong, unless the field allows another', () => {
-  const t = { fields: [
-    { name: 'env', required: true, example: '', description: '', options: ['staging', 'production'] },
-    { name: 'region', required: false, example: '', description: '', options: ['eu'], allowOther: true },
-  ] } as any
+  const t = {
+    fields: [
+      { name: 'env', required: true, example: '', description: '', options: ['staging', 'production'] },
+      { name: 'region', required: false, example: '', description: '', options: ['eu'], allowOther: true },
+    ],
+  } as any
   expect(wrongOptions(t, { env: 'prod', region: 'us' })).toEqual(['env must be one of: staging, production'])
   expect(wrongOptions(t, { env: 'staging' })).toEqual([])
 })

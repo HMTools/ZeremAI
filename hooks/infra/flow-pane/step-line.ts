@@ -4,11 +4,18 @@ import type { FileSystem } from '../ports/ports'
 // An empty text clears the line: the folder has moved (the flow finished) or the flow is not running.
 export async function stepLine(files: FileSystem, dir: string): Promise<string> {
   let flow: any
-  try { flow = JSON.parse(await files.read(`${dir}/flow.json`)) } catch { return '' }
+  try {
+    flow = JSON.parse(await files.read(`${dir}/flow.json`))
+  } catch {
+    return ''
+  }
   if (flow.status !== 'running') return ''
   const steps: any[] = flow.steps ?? []
   const active = flow.currentState?.activeStep
-  const index = Math.max(0, steps.findIndex(s => s.id === active?.id))
+  const index = Math.max(
+    0,
+    steps.findIndex(s => s.id === active?.id),
+  )
   const step = steps[index]
   if (!step) return ''
   const parts = [`Step ${index + 1} of ${steps.length}`, active?.name ?? step.name]

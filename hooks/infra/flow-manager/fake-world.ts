@@ -9,6 +9,7 @@ export function world(initial: Record<string, unknown> = {}, { failMove = false 
   const disk: Record<string, string> = {}
   for (const [path, value] of Object.entries(initial)) disk[path] = typeof value === 'string' ? value : JSON.stringify(value)
   const moved: string[][] = []
+  const removed: string[] = []
   const scripts: { sub: string; input: Record<string, any> }[] = [] // the script calls
   const links: Record<string, string[]> = {} // session id → the folders it bound
   let counter = 0
@@ -22,20 +23,39 @@ export function world(initial: Record<string, unknown> = {}, { failMove = false 
         return [...new Set(names.map(n => n.split('/')[0]))].map(name => ({ name, kind: names.some(n => n.startsWith(`${name}/`)) ? 'dir' : 'file' }))
       },
       exists: async path => path in disk || under(path).length > 0,
-      read: async path => { if (!(path in disk)) throw new Error(`missing: ${path}`); return disk[path] },
+      read: async path => {
+        if (!(path in disk)) throw new Error(`missing: ${path}`)
+        return disk[path]
+      },
     },
-    write: async (path, text) => { disk[path] = text },
+    write: async (path, text) => {
+      disk[path] = text
+    },
     move: async (from, to) => {
       moved.push([from, to])
       if (failMove) throw new Error('disk is read-only')
-      for (const path of Object.keys(disk)) if (path.startsWith(`${from}/`)) { disk[to + path.slice(from.length)] = disk[path]; delete disk[path] }
+      for (const path of Object.keys(disk))
+        if (path.startsWith(`${from}/`)) {
+          disk[to + path.slice(from.length)] = disk[path]
+          delete disk[path]
+        }
+    },
+    remove: async path => {
+      removed.push(path)
+      if (failMove) throw new Error('disk is read-only')
+      for (const p of Object.keys(disk)) if (p.startsWith(`${path}/`)) delete disk[p]
     },
     now: () => `2026-01-01T00:00:${String(++counter).padStart(2, '0')}.000Z`,
     uuid: () => `id-${++counter}`,
     pluginRoot: '/plugin',
     cwd: async () => '/work',
     sessionId: async () => 'S1',
-    links: { get: async id => links[id] ?? [], add: async (id, dir) => { links[id] = [...(links[id] ?? []).filter(d => d !== dir), dir] } },
+    links: {
+      get: async id => links[id] ?? [],
+      add: async (id, dir) => {
+        links[id] = [...(links[id] ?? []).filter(d => d !== dir), dir]
+      },
+    },
     // A stand-in for scripts/flow_manager.py (the real one has its own Python tests): it records the call and fakes the two commands the pane runs.
     script: async (sub, input) => {
       scripts.push({ sub, input })
@@ -44,24 +64,41 @@ export function world(initial: Record<string, unknown> = {}, { failMove = false 
         disk[`${input.flowDir}/flow.json`] = JSON.stringify(flowFile({ name: JSON.parse(disk[input.templatePath]).name, parameters: input.params ?? {} }))
         return { status: 'ok', files_written: ['flow.json'] }
       }
-      if (sub === 'approve-step') { const flow = JSON.parse(disk[`${input.flowDir}/flow.json`]); flow.steps.find((s: any) => s.id === input.stepId).approved = true; disk[`${input.flowDir}/flow.json`] = JSON.stringify(flow); return { status: 'ok', files_written: ['flow.json'] } }
-      if (sub === 'update-step-status') { const flow = JSON.parse(disk[`${input.flowDir}/flow.json`]); flow.steps.find((s: any) => s.id === input.stepId).status = input.status; disk[`${input.flowDir}/flow.json`] = JSON.stringify(flow); return { status: 'ok', files_written: ['flow.json'] } }
+      if (sub === 'approve-step') {
+        const flow = JSON.parse(disk[`${input.flowDir}/flow.json`])
+        flow.steps.find((s: any) => s.id === input.stepId).approved = true
+        disk[`${input.flowDir}/flow.json`] = JSON.stringify(flow)
+        return { status: 'ok', files_written: ['flow.json'] }
+      }
+      if (sub === 'update-step-status') {
+        const flow = JSON.parse(disk[`${input.flowDir}/flow.json`])
+        flow.steps.find((s: any) => s.id === input.stepId).status = input.status
+        disk[`${input.flowDir}/flow.json`] = JSON.stringify(flow)
+        return { status: 'ok', files_written: ['flow.json'] }
+      }
       return { status: 'error', message: `fake script: ${sub}` }
     },
   }
   const json = (path: string) => JSON.parse(disk[path])
-  return { ports, disk, moved, links, json, scripts }
+  return { ports, disk, moved, removed, links, json, scripts }
 }
 
 export const step = (extra: Record<string, unknown> = {}) => ({ id: 's1', number: 0, name: 'Design', status: 'pending', stepRef: 'r1', stepDefinition: {}, ...extra })
 export const flowFile = (extra: Record<string, unknown> = {}, steps: unknown[] = [step()]) => ({
-  type: 'flow-instance', id: 'pid', name: 'P', status: 'running',
+  type: 'flow-instance',
+  id: 'pid',
+  name: 'P',
+  status: 'running',
   metadata: { template: 'T', created: 'then', lastUpdated: 'then', flowPath: DIR },
-  parameters: {}, currentState: { activeStep: { id: 's1', name: 'Design', actionSummary: 'x', totalSteps: 1, totalSubsteps: 0 } },
-  steps, ...extra,
+  parameters: {},
+  currentState: { activeStep: { id: 's1', name: 'Design', actionSummary: 'x', totalSteps: 1, totalSubsteps: 0 } },
+  steps,
+  ...extra,
 })
 export const logFile = () => ({
-  type: 'log-file', metadata: { flow: 'pid' }, steps: {},
+  type: 'log-file',
+  metadata: { flow: 'pid' },
+  steps: {},
   flowWideObservations: { patternsDetected: [], userFeedbackSummary: [], efficiencyMetrics: {}, recommendationsForFuture: [] },
   executionMetrics: { totalSteps: 1, stepsCompleted: 0, currentStep: 's1' },
 })

@@ -9,11 +9,11 @@ The mod is a set of hooks. Claude Code calls a hook when something happens. Each
 
 | Event | When it fires | Rules that listen |
 |---|---|---|
-| `session.start` | A session starts, and again after every reload of the mod | `on-flow-tools`: draws the step line, shows a toast when findings wait, registers `/zeremai` |
+| `session.start` | A session starts, and again after every reload of the mod | `on-flow-tools`: draws the step line, shows a toast when findings wait, registers `/zeremai:init` |
 | `prompt.submit` | You send a prompt (or the plugin sends one) | `on-user-prompt`: logs your prompt, reopens a closed approval dialog |
 | `tool.call` | The agent is about to run a tool | `on-flow-tools`, `on-approval-gate`, `on-pending-checkpoint`, `on-todo-tool` |
 | `turn.complete` | The agent ends a turn | `on-agent-stopping`: sends a re-prompt if the flow has work left |
-| `command.run` | `/zeremai` runs (any word) | `on-live-page`: opens the site, and publishes it the first time |
+| `command.run` | `/zeremai:init` runs (any word) | `on-live-page`: opens the site, and publishes it the first time |
 | `ui.render` | Claude Code draws the line above the prompt | `on-flow-pane`: the button with the flow summary and **ZeremAI ↗** |
 | a timer | Every 5 seconds | `on-live-page`: reads the commands you pressed on the site and writes the changed flow state. `on-flow-pane`: keeps the button current |
 

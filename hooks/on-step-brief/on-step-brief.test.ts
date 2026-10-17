@@ -7,14 +7,24 @@ const flowFile = (status = 'in_progress', maxFixes?: number) => JSON.stringify({
 const GOOD = '```json\n' + JSON.stringify({ summary: 'Plan written.', memory: [{ topic: 'context', info: { a: 1 } }], log: { actions: ['x'] } }) + '\n```'
 
 const PASS = { status: 'ok', result: 'pass', checks: [] }
-const FAIL = { status: 'ok', result: 'fail', checks: [{ name: 'has rollback', passed: false, message: 'add a rollback section' }, { name: 'has plan', passed: true }] }
+const FAIL = {
+  status: 'ok',
+  result: 'fail',
+  checks: [
+    { name: 'has rollback', passed: false, message: 'add a rollback section' },
+    { name: 'has plan', passed: true },
+  ],
+}
 
 // A fake disk with one flow folder bound to session S1. The engine side is a stand-in:
 // it starts agent A1 with the prompt it is given, and the flow script answers for `scriptAnswers`.
 // A script answer can be a list: one answer for each call, the last one repeats.
 function world(on: On, { stepStatus = 'in_progress', delivered = true, maxFixes = undefined as number | undefined, scriptAnswers = {} as Record<string, any> } = {}) {
   const all: Record<string, string> = { [`${DIR}/flow.json`]: flowFile(stepStatus, maxFixes) }
-  const script: { sub: string; input: any }[] = [], spawned: string[] = [], sent: any[] = [], prompts: string[] = []
+  const script: { sub: string; input: any }[] = [],
+    spawned: string[] = [],
+    sent: any[] = [],
+    prompts: string[] = []
   mock.env(on, { HOME: '/h' })
   mock.store(on, { 'session:S1': [DIR] })
   on('session.id', async () => ({ value: 'S1' }))
@@ -25,18 +35,30 @@ function world(on: On, { stepStatus = 'in_progress', delivered = true, maxFixes 
     const [, , sub, , json] = e.argv as string[]
     script.push({ sub, input: JSON.parse(json) })
     const set = scriptAnswers[sub]
-    const answer = Array.isArray(set) ? (set.length > 1 ? set.shift() : set[0]) : set ?? (sub === 'get-step-brief' ? { status: 'ok', text: 'THE BRIEF' } : sub === 'run-verifiers' ? PASS : { status: 'ok' })
+    const answer = Array.isArray(set)
+      ? set.length > 1
+        ? set.shift()
+        : set[0]
+      : (set ?? (sub === 'get-step-brief' ? { status: 'ok', text: 'THE BRIEF' } : sub === 'run-verifiers' ? PASS : { status: 'ok' }))
     return { value: { exitCode: 0, stdout: JSON.stringify(answer), stderr: '', timedOut: false } } as never
   })
-  on('agent.spawn', async (_$, e: any) => { spawned.push(e.prompt); return { model: 'm', agentId: 'A1' } as never })
-  on('session.send', async (_$, e: any) => { sent.push(e); return (delivered ? { isDelivered: true } : { isDelivered: false, reason: 'gone' }) as never })
-  on('prompt.submit', async (_$, e: any) => { if (e.origin?.kind === 'plugin') prompts.push(e.text); return { drop: 'test' } })
+  on('agent.spawn', async (_$, e: any) => {
+    spawned.push(e.prompt)
+    return { model: 'm', agentId: 'A1' } as never
+  })
+  on('session.send', async (_$, e: any) => {
+    sent.push(e)
+    return (delivered ? { isDelivered: true } : { isDelivered: false, reason: 'gone' }) as never
+  })
+  on('prompt.submit', async (_$, e: any) => {
+    if (e.origin?.kind === 'plugin') prompts.push(e.text)
+    return { drop: 'test' }
+  })
   on('turn.complete', async () => ({ text: 'ENGINE' }))
   return { script, spawned, sent, prompts }
 }
 const spawn = ($: any, prompt = 'Run the step.') => $.agent.spawn({ prompt, subagentType: 'zeremai:step-executor' })
-const end = ($: any, answer: string, extra = {}) =>
-  $.turn.complete({ answer, durationMs: 1, isAborted: false, turnId: 't1', reason: 'answer', agentId: 'A1', ...extra })
+const end = ($: any, answer: string, extra = {}) => $.turn.complete({ answer, durationMs: 1, isAborted: false, turnId: 't1', reason: 'answer', agentId: 'A1', ...extra })
 const saved = (w: ReturnType<typeof world>) => w.script.filter(c => c.sub !== 'get-step-brief' && c.sub !== 'run-verifiers')
 
 test('the step subagent starts with the brief as its prompt', async ($, on) => {
@@ -103,7 +125,9 @@ test('the fixed block is saved, and the plugin tells the orchestrator', async ($
 test('after 2 fix rounds the plugin says the result is missing and saves nothing', async ($, on) => {
   const w = world(on)
   await spawn($)
-  await end($, 'no'); await end($, 'no'); await end($, 'no')
+  await end($, 'no')
+  await end($, 'no')
+  await end($, 'no')
   expect(w.sent.length).toBe(2)
   expect(saved(w)).toEqual([])
   expect(w.prompts).toEqual(['Step result missing: nothing was saved. Start the step again.'])
@@ -149,7 +173,9 @@ test('a result that passes its checks after a fix is saved, and the plugin tells
 test('checks that still fail after 2 fixes: the result is saved once and the orchestrator reads which checks fail', async ($, on) => {
   const w = world(on, { scriptAnswers: { 'run-verifiers': FAIL } })
   await spawn($)
-  await end($, GOOD); await end($, GOOD); await end($, GOOD)
+  await end($, GOOD)
+  await end($, GOOD)
+  await end($, GOOD)
   expect(w.sent.length).toBe(2)
   expect(saved(w).map(c => c.sub)).toEqual(['add-memory-entry', 'add-memory-entry', 'add-log-entry'])
   expect(w.prompts[0]).toContain('Checks still fail after 2 fix tries')

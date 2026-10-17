@@ -11,22 +11,39 @@ const OK = JSON.stringify({ status: 'ok', files_written: ['flow.json'] })
 // answers). `script` collects what the mod itself runs with $.process.run, which is the flow script.
 function world(on: On, { bound = 'S1', stdout = OK } = {}) {
   const all: Record<string, string> = { [`${DIR}/flow.json`]: flowFile }
-  const bash: string[] = [], script: { sub: string; input: any }[] = []
-  const toasts: string[] = [], lines: string[] = []
+  const bash: string[] = [],
+    script: { sub: string; input: any }[] = []
+  const toasts: string[] = [],
+    lines: string[] = []
   mock.env(on, { HOME: '/h' })
   const store: Record<string, unknown> = { [`session:${bound}`]: [DIR] }
   on('store.get', async (_$, e: any) => ({ value: store[e.key] as never }))
-  on('store.set', async (_$, e: any) => { store[e.key] = e.value; return { value: undefined } as never })
-  on('store.delete', async (_$, e: any) => { delete store[e.key]; return { value: undefined } as never })
+  on('store.set', async (_$, e: any) => {
+    store[e.key] = e.value
+    return { value: undefined } as never
+  })
+  on('store.delete', async (_$, e: any) => {
+    delete store[e.key]
+    return { value: undefined } as never
+  })
   on('session.id', async () => ({ value: 'S1' }))
   on('session.cwd', async () => ({ value: '/work' }))
   on('fs.list', async (_$, e) => {
-    const names = [...new Set(Object.keys(all).filter(p => p.startsWith(`${e.path}/`)).map(p => p.slice(e.path.length + 1).split('/')[0]))]
+    const names = [
+      ...new Set(
+        Object.keys(all)
+          .filter(p => p.startsWith(`${e.path}/`))
+          .map(p => p.slice(e.path.length + 1).split('/')[0]),
+      ),
+    ]
     return { value: names.map(name => ({ name, kind: Object.keys(all).some(p => p.startsWith(`${e.path}/${name}/`)) ? 'dir' : 'file', size: 0, mtimeMs: 0, isLink: false })) }
   })
   on('fs.exists', async (_$, e) => ({ value: e.path in all || Object.keys(all).some(p => p.startsWith(`${e.path}/`)) }))
   on('fs.read', async (_$, e) => ({ value: all[e.path] }))
-  on('fs.write', async (_$, e) => { all[e.path] = e.text; return { value: undefined } })
+  on('fs.write', async (_$, e) => {
+    all[e.path] = e.text
+    return { value: undefined }
+  })
   on('process.run', async (_$, e: any) => {
     const [, , sub, , json] = e.argv as string[]
     script.push({ sub, input: JSON.parse(json) })
@@ -40,8 +57,14 @@ function world(on: On, { bound = 'S1', stdout = OK } = {}) {
     return { result: { stdout, stderr: '', interrupted: false } } as never
   })
   on('session.start', async () => ({ cwd: '/work' }) as never)
-  on('ui.toast', async (_$, e: any) => { toasts.push(e.text); return { value: undefined } as never })
-  on('ui.status', async (_$, e: any) => { lines.push(e.text); return { value: undefined } as never })
+  on('ui.toast', async (_$, e: any) => {
+    toasts.push(e.text)
+    return { value: undefined } as never
+  })
+  on('ui.status', async (_$, e: any) => {
+    lines.push(e.text)
+    return { value: undefined } as never
+  })
   return { all, bash, script, store, toasts, lines }
 }
 const cmd = (root: string, sub: string, input: unknown) => `python3 ${root}/scripts/flow_manager.py ${sub} --json '${JSON.stringify(input)}'`

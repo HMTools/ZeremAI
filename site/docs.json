@@ -15,14 +15,6 @@
   "navigation": {
     "groups": [
       {
-        "group": "Build",
-        "pages": [
-          "authoring/templates",
-          "authoring/steps",
-          "authoring/verifiers"
-        ]
-      },
-      {
         "group": "Get started",
         "pages": [
           "index",
@@ -31,16 +23,73 @@
         ]
       },
       {
+        "group": "Build",
+        "pages": [
+          "authoring/templates",
+          "authoring/steps",
+          "authoring/verifiers",
+          "authoring/edit-and-send"
+        ]
+      },
+      {
+        "group": "UI",
+        "pages": [
+          "guide/live-site",
+          "ui/flows",
+          "ui/new-flow",
+          "ui/templates",
+          "ui/session-states",
+          "ui/plan-pages",
+          "ui/terminal"
+        ]
+      },
+      {
         "group": "Guide",
         "pages": [
-          "guide/concepts",
-          "guide/live-site",
-          "guide/approvals",
-          "guide/marketplaces",
-          "guide/flow-files",
-          "guide/sub-flows",
-          "guide/improvements",
-          "guide/troubleshooting"
+          {
+            "group": "Concepts",
+            "pages": [
+              "guide/concepts",
+              "guide/flow-files"
+            ]
+          },
+          {
+            "group": "Run a flow",
+            "pages": [
+              "guide/approvals",
+              "guide/blocked-steps",
+              "guide/sub-flows"
+            ]
+          },
+          {
+            "group": "Share templates",
+            "pages": [
+              "guide/marketplaces"
+            ]
+          },
+          {
+            "group": "Improve",
+            "pages": [
+              "guide/improvements"
+            ]
+          },
+          {
+            "group": "Help",
+            "pages": [
+              "guide/troubleshooting"
+            ]
+          }
+        ]
+      },
+      {
+        "group": "Commands",
+        "pages": [
+          "commands/init",
+          "commands/create-template",
+          "commands/edit-template",
+          "commands/view-template",
+          "commands/create-marketplace",
+          "commands/apply-improvements"
         ]
       },
       {

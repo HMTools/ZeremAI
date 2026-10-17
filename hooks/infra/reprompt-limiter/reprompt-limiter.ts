@@ -17,6 +17,8 @@ export function createRepromptLimiter(): RepromptLimiter {
       last = { key, timesInARow }
       return timesInARow
     },
-    reset() { last = undefined },
+    reset() {
+      last = undefined
+    },
   }
 }

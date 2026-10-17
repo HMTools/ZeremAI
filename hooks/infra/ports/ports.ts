@@ -25,12 +25,12 @@ export type SessionLinks = { get(sessionId: string): Promise<string[]> }
 
 export type Ask = (question: string, options: readonly string[]) => Promise<string>
 
-
 // What the flow tools need from the mods API. The mod builds it from `$`.
 export type ManagerPorts = {
   files: FileSystem
   write: FileWriter
   move(from: string, to: string): Promise<void> // moves a folder; rejects with the reason when it fails
+  remove(path: string): Promise<void> // removes a folder for good; rejects with the reason when it fails
   now(): string
   uuid(): string
   pluginRoot: string

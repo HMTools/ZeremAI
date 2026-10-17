@@ -1,0 +1,29 @@
+---
+title: "New flow screen"
+description: "Pick a template, fill in its fields, and start a flow."
+---
+
+On the **New flow** screen you start a flow from an installed template.
+
+<Frame caption="The New flow screen. Demo data.">
+  <img className="dark:hidden" src="/images/ui/new-flow-light.png" alt="The New flow screen: a searchable list of templates on the left, and on the right the fields of the chosen template with a Create flow button." />
+  <img className="hidden dark:block" src="/images/ui/new-flow-dark.png" alt="The New flow screen: a searchable list of templates on the left, and on the right the fields of the chosen template with a Create flow button." />
+</Frame>
+
+## What is on the screen
+
+1. **The template list**, grouped by category. Search works. The star next to a name keeps it near the top.
+2. **Describe it in your own words.** Write what you want, press **Fill the fields**, and Claude suggests a value for each field. You can change them.
+3. **The fields** of the template. Required ones have a star. Each box shows an example. A field that has a list of choices is a dropdown, and it refuses any other value unless the template lets you type your own.
+4. **Flow name** (optional). Without it ZeremAI names the flow after the template.
+5. **Create flow.**
+
+## What happens
+
+ZeremAI creates the flow, binds it to your session, and the agent starts the first step. The screen goes to [Flows](/ui/flows) and shows the new flow.
+
+The flow starts in the project folder of the session where you pressed ZeremAI, because the agent edits files there.
+
+## Related
+
+[Write a template](/authoring/templates), [Templates screen](/ui/templates).

@@ -1,0 +1,42 @@
+---
+title: "In the terminal"
+description: "What ZeremAI shows in Claude Code itself: the line above the prompt and the approval dialog."
+---
+
+The site is where you manage flows. A few things stay in the terminal.
+
+## The line above the prompt
+
+A line above the prompt shows the flow of this session and how many other flows need you. It ends with **ZeremAI ↗**. Press it to open [the site](/guide/live-site).
+
+```
+▲ Bug fix · step 3/7 · approve step 3 · ✕1 failed · ZeremAI ↗
+● Bug fix · step 3/7 · running
+● Bug fix · step 3/7 · running · no log for 12 min
+Flows · ▲2 approve · ✕1 failed
+```
+
+| Part | Meaning |
+|---|---|
+| `▲ Bug fix` | The flow bound to this session, with a symbol for its state. |
+| `step 3/7` | The step it is on, out of all steps. |
+| `approve step 3` | What it waits for. Other words are `blocked`, `failed` and `paused`. |
+| `✕1 failed` | How many other flows are in that state: `▲` approve or blocked, `✕` failed, `‖` paused. |
+| `no log for 12 min` | A running flow went quiet. |
+| `Flows` | No flow is bound to this session. |
+
+Each symbol comes with a word, so colour is never the only signal.
+
+## The approval dialog
+
+When a step needs your approval, a dialog opens in the terminal with the step name and its output. You can answer there or on the site: **Approve**, or **Request changes** with what to change. Both do the same thing. There is no Reject button.
+
+While the dialog is open, the agent can only research. If you close the dialog, it reopens with your next prompt. See [Approvals](/guide/approvals).
+
+## Toasts
+
+When a rule blocks or re-prompts the agent, a short message tells you why Claude changed course. The same text shows at most once in 30 seconds. See [Mod events](/design/lifecycles/mod-events).
+
+## Related
+
+[The ZeremAI site](/guide/live-site), [Approvals](/guide/approvals).

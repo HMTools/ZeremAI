@@ -9,109 +9,109 @@
  * of a step within a running flow instance.
  */
 
-import { StepRef, StepDefinitionId } from "./shared-types";
+import { StepRef, StepDefinitionId } from './shared-types'
 
 export interface StepDefinition {
   /** Discriminator field - always "step" */
-  type: 'step';
+  type: 'step'
 
   /** Unique identifier (UUID v4) — stable across renames and reorganizations */
-  id: StepDefinitionId;
+  id: StepDefinitionId
 
   /** Step identifier (e.g., "understand-context", "apply-changes") */
-  name: string;
+  name: string
 
   /** Category folder name (e.g., "planning", "investigation", "common") */
-  category: string;
+  category: string
 
   /** Step metadata */
   metadata: {
     /** Human-readable title */
-    title: string;
+    title: string
     /** When and why to use this step */
-    purposeAndUsage: string;
+    purposeAndUsage: string
     /** Last updated date (YYYY-MM-DD) */
-    lastUpdated: string;
-  };
+    lastUpdated: string
+  }
 
   /** What this step produces */
   output: {
     /** Description of the output */
-    description: string;
+    description: string
     /** Files or artifacts created */
-    artifacts: string[];
+    artifacts: string[]
     /** Fields updated in memory topic files */
-    memoryUpdates: string[];
-  };
+    memoryUpdates: string[]
+  }
 
   /** Agent execution guidance - the core of JSON-first architecture */
   guidance: {
     /** What must be true before starting this step */
-    prerequisites: string[];
+    prerequisites: string[]
     /** Specific actions the agent should take */
-    specificActions: string[];
+    specificActions: string[]
     /** Files the step works with */
     files: {
       /** Files to read */
-      read: string[];
+      read: string[]
       /** Files to create */
-      create: string[];
+      create: string[]
       /** Files to update */
-      update: string[];
-    };
+      update: string[]
+    }
     /** Tools required for this step */
-    tools: string[];
+    tools: string[]
     /** Best practices to follow */
-    bestPractices: string[];
-  };
+    bestPractices: string[]
+  }
 
   /** Detailed substeps with full descriptions and actions */
   substeps: Array<{
     /** Substep number (1-based) */
-    number: number;
+    number: number
     /** Substep name */
-    name: string;
+    name: string
     /** Full description of what this substep accomplishes */
-    description: string;
+    description: string
     /** Specific actions to take in this substep */
-    actions: string[];
+    actions: string[]
     /** Condition description - when provided, substep only runs if condition is met */
-    conditional?: string;
-  }>;
+    conditional?: string
+  }>
 
   /** Flow information for documentation */
   flow: {
     /** Textual description of the flow (mermaid diagram stays in MD) */
-    description: string;
-  };
+    description: string
+  }
 
   /** How this step uses the memory topic files */
   memoryFileUsage: {
     /** Topic files this step reads from (e.g., ["context.json", "identified-files.json"]) */
-    readFrom: string[];
+    readFrom: string[]
     /** Topic files this step writes to (e.g., ["findings.json"]) */
-    writeTo: string[];
+    writeTo: string[]
     /** Descriptive fields documenting what data is produced */
-    fields: string[];
-  };
+    fields: string[]
+  }
 
   /** Dependencies and requirements */
   dependencies: {
     /** Component files required */
-    requiredComponents: string[];
+    requiredComponents: string[]
     /** Files that must exist */
-    requiredFiles: string[];
+    requiredFiles: string[]
     /** Tools needed */
-    requiredTools: string[];
-  };
+    requiredTools: string[]
+  }
 
   /** References to related resources */
   references: {
     /** Related step names */
-    relatedSteps: string[];
+    relatedSteps: string[]
     /** Templates that use this step */
-    usedInTemplates: string[];
-  };
+    usedInTemplates: string[]
+  }
 
   // ============================================
   // Optional step-specific fields
@@ -119,45 +119,48 @@ export interface StepDefinition {
 
   /** Step-specific parameters (for configurable steps like identify-files, review-verify-document) */
   parameters?: {
-    required?: string[];
-    optional?: string[];
-    defaults?: Record<string, unknown>;
-    definitions?: Record<string, {
-      type: string;
-      description: string;
-      enum?: string[];
-      default?: string | boolean;
-      example?: unknown;
-    }>;
-  };
+    required?: string[]
+    optional?: string[]
+    defaults?: Record<string, unknown>
+    definitions?: Record<
+      string,
+      {
+        type: string
+        description: string
+        enum?: string[]
+        default?: string | boolean
+        example?: unknown
+      }
+    >
+  }
 
   /** Search modes configuration (for identify-files step) */
   searchModes?: Array<{
-    mode: string;
-    default: boolean;
-    description: string;
-  }>;
+    mode: string
+    default: boolean
+    description: string
+  }>
 
   /** Capture types configuration (for capture-test-failure step) */
   captureTypes?: Array<{
-    type: string;
-    capture: string;
-  }>;
+    type: string
+    capture: string
+  }>
 
   /** Change proposal format specification (for design-implementation-plan step) */
   changeProposalFormat?: {
     modification: {
-      prefix: string;
-      fields: string[];
-    };
+      prefix: string
+      fields: string[]
+    }
     newFile: {
-      prefix: string;
-      fields: string[];
-    };
-  };
+      prefix: string
+      fields: string[]
+    }
+  }
 
   /** Whether this step requires approval when used standalone */
-  approvalRequired?: boolean;
+  approvalRequired?: boolean
 }
 
 /**
@@ -169,53 +172,56 @@ export interface StepDefinition {
  */
 export interface EmbeddedStepDefinition {
   output?: {
-    description: string;
-    artifacts: string[];
-    memoryUpdates: string[];
-  };
+    description: string
+    artifacts: string[]
+    memoryUpdates: string[]
+  }
 
   guidance: {
-    prerequisites: string[];
-    specificActions: string[];
+    prerequisites: string[]
+    specificActions: string[]
     files: {
-      read: string[];
-      create: string[];
-      update: string[];
-    };
-    tools: string[];
-    bestPractices: string[];
-  };
+      read: string[]
+      create: string[]
+      update: string[]
+    }
+    tools: string[]
+    bestPractices: string[]
+  }
 
   substeps: Array<{
-    number: number;
-    name: string;
-    description: string;
-    actions: string[];
-    conditional?: string;
-  }>;
+    number: number
+    name: string
+    description: string
+    actions: string[]
+    conditional?: string
+  }>
 
   flow?: {
-    description: string;
-  };
+    description: string
+  }
 
   memoryFileUsage?: {
-    readFrom: string[];
-    writeTo: string[];
-    fields: string[];
-  };
+    readFrom: string[]
+    writeTo: string[]
+    fields: string[]
+  }
 
   parameters?: {
-    required?: string[];
-    optional?: string[];
-    defaults?: Record<string, unknown>;
-    definitions?: Record<string, {
-      type: string;
-      description: string;
-      enum?: string[];
-      default?: string | boolean;
-      example?: unknown;
-    }>;
-  };
+    required?: string[]
+    optional?: string[]
+    defaults?: Record<string, unknown>
+    definitions?: Record<
+      string,
+      {
+        type: string
+        description: string
+        enum?: string[]
+        default?: string | boolean
+        example?: unknown
+      }
+    >
+  }
 
-  [key: string]: unknown;
+  [key: string]: unknown
 }

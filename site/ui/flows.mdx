@@ -1,0 +1,49 @@
+---
+title: "Flows screen"
+description: "See every flow, approve a step, unblock a flow, or close and delete it."
+---
+
+The **Flows** screen is where you spend most of your time. It shows every flow, with the flows that need you first.
+
+<Frame caption="The Flows screen in Two lanes view. Demo data.">
+  <img className="dark:hidden" src="/images/ui/flows-waiting-light.png" alt="The Flows screen: a row of flows at the top, a card for step 3 that waits for approval, and the steps in two lanes with the step panel on the right." />
+  <img className="hidden dark:block" src="/images/ui/flows-waiting-dark.png" alt="The Flows screen: a row of flows at the top, a card for step 3 that waits for approval, and the steps in two lanes with the step panel on the right." />
+</Frame>
+
+## What is on the screen
+
+1. **The flow row.** One button for each flow, with its state word and its age. **here** marks a flow that your session runs. Pick a flow to see it below.
+2. **The header of the flow.** Its name, which session runs it (`Runs in:`), its state, the step it is on, its template and the time of its last change. The switch on the right picks the view of the steps.
+3. **The card for a step that needs you.** It names the step and says why. For an approval it has **Approve** and **Request changes**. **Show the step** jumps to the step. See [Approvals](/guide/approvals).
+4. **The buttons of the flow.** **Close flow** and **Delete flow**, described below.
+5. **The steps.** In **Two lanes** (above) Claude is on the left and you are on the right, so you see when Claude works alone and when you step in. In **Runbook** the steps are a list.
+6. **The step panel.** Tabs **Step**, **Logs**, **Memory** and **Files** show what the flow did, what it remembers and the files it changed. Only you, the owner, can read the last three.
+
+<Frame caption="The same flow in Runbook view. The boxed STOP marks the step you approve. Demo data.">
+  <img className="dark:hidden" src="/images/ui/flows-runbook-light.png" alt="The Flows screen in Runbook view: steps grouped in parts, a boxed STOP under the step that waits for approval, and a note for a loop." />
+  <img className="hidden dark:block" src="/images/ui/flows-runbook-dark.png" alt="The Flows screen in Runbook view: steps grouped in parts, a boxed STOP under the step that waits for approval, and a note for a loop." />
+</Frame>
+
+Each step has a symbol and a word: `waits for you`, `blocked`, `running`, `done`, `failed`, `paused` or `pending`. Colour is never the only signal.
+
+## What you can do
+
+| Button | What it does |
+|---|---|
+| **Approve** | The same click as in the approval dialog. The step is marked approved and can complete. |
+| **Request changes** | Needs a reason. The agent reads it, changes the step and asks again. |
+| **Continue** | Resumes a paused, failed or blocked flow from its last incomplete step. |
+| **Close flow** | Asks you to confirm. Your session stops working on that flow. The files stay, and you can **Continue** later. |
+| **Delete flow** | Asks `Delete "<name>"? Its folder is removed for good.` and then removes the flow folder. It works on any active flow, also one that another session runs. |
+
+## A blocked step
+
+A blocked step shows a card with the step name, the reason in one sentence, the command to run when there is one, and **Continue**. There is nothing to approve. Do what the reason says, then press **Continue**. See [Blocked steps](/guide/blocked-steps).
+
+## A flow with child flows
+
+A step that starts a child flow shows a link to it. In Runbook it reads `Runs a child flow. Open "<name>"`. The child is a flow of its own in the flow row. See [Sub-flows](/guide/sub-flows).
+
+## Related
+
+[New flow](/ui/new-flow), [Session states](/ui/session-states), [The ZeremAI site](/guide/live-site).

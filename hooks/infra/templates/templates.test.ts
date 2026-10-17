@@ -15,7 +15,11 @@ const setup = (extra: Record<string, unknown> = {}, { windows = false, fail = ''
   const w = world({ [`${ROOT}/config/marketplaces.json`]: CONFIG, ...extra })
   const calls: string[][] = []
   const ports: TemplatePorts = {
-    files: w.ports.files, write: w.ports.write, now: w.ports.now, pluginRoot: '/plugin', windows,
+    files: w.ports.files,
+    write: w.ports.write,
+    now: w.ports.now,
+    pluginRoot: '/plugin',
+    windows,
     run: async argv => {
       calls.push(argv)
       if (fail && argv[0] === fail) return { exitCode: 1, stdout: '', stderr: 'boom' }
@@ -28,13 +32,18 @@ const setup = (extra: Record<string, unknown> = {}, { windows = false, fail = ''
 test('catalog: available, installed, update; hidden folders are skipped', async () => {
   const { ports } = setup({
     ...cacheFiles,
-    [`${ROOT}/config/installed-templates.json`]: { templates: [
-      { name: 'fix', category: 'dev', type: 'flow', marketplace: 'official', installedAt: 't', version: 'old' },
-      { name: 'plan', category: 'dev', type: 'flow', marketplace: 'official', installedAt: 't', version: 'abc123' },
-    ] },
+    [`${ROOT}/config/installed-templates.json`]: {
+      templates: [
+        { name: 'fix', category: 'dev', type: 'flow', marketplace: 'official', installedAt: 't', version: 'old' },
+        { name: 'plan', category: 'dev', type: 'flow', marketplace: 'official', installedAt: 't', version: 'abc123' },
+      ],
+    },
   })
   const entries = await catalog(ports)
-  expect(entries.map(e => [e.category, e.name, e.state])).toEqual([['dev', 'fix', 'update'], ['dev', 'plan', 'installed']])
+  expect(entries.map(e => [e.category, e.name, e.state])).toEqual([
+    ['dev', 'fix', 'update'],
+    ['dev', 'plan', 'installed'],
+  ])
   expect(entries[0]).toMatchObject({ title: 'Fix a bug', description: 'Fixes bugs' })
 })
 test('catalog: a marketplace with no cache is skipped; the config is seeded from the plugin default', async () => {
@@ -58,13 +67,18 @@ test('install: replaces the folder, copies, and records the git hash', async () 
   const { ports, calls, w } = setup(cacheFiles)
   await installTemplate(ports, { marketplace: 'official', category: 'dev', name: 'fix' })
   const to = `${ROOT}/templates/flows/dev/fix`
-  expect(calls.slice(0, 3)).toEqual([['rm', '-rf', to], ['mkdir', '-p', `${ROOT}/templates/flows/dev`], ['cp', '-R', `${CACHE}/templates/flows/dev/fix`, to]])
+  expect(calls.slice(0, 3)).toEqual([
+    ['rm', '-rf', to],
+    ['mkdir', '-p', `${ROOT}/templates/flows/dev`],
+    ['cp', '-R', `${CACHE}/templates/flows/dev/fix`, to],
+  ])
   expect(w.json(`${ROOT}/config/installed-templates.json`).templates).toMatchObject([{ name: 'fix', category: 'dev', type: 'flow', marketplace: 'official', version: 'abc123' }])
 })
 test('install on Windows uses one PowerShell command each', async () => {
   const { ports, calls } = setup(cacheFiles, { windows: true })
   await installTemplate(ports, { marketplace: 'official', category: 'dev', name: 'fix' })
-  expect(calls[0][0]).toBe('powershell'); expect(calls[0][4]).toContain('Remove-Item')
+  expect(calls[0][0]).toBe('powershell')
+  expect(calls[0][4]).toContain('Remove-Item')
   expect(calls[1][4]).toContain('Copy-Item')
 })
 test('install: a template that is not in the cache, a bad name and a failed copy are errors', async () => {
@@ -94,7 +108,8 @@ test('add: defaults, and a duplicate name, a bad name, a dash address and a bad 
   await expect(addMarketplace(ports, { ...FIELDS, name: 'a', url: '--upload-pack=x' })).rejects.toThrow('does not start with "-"')
   await expect(addMarketplace(ports, { ...FIELDS, name: 'a', priority: 'x' })).rejects.toThrow('whole number')
   await expect(addMarketplace(ports, { ...FIELDS, name: 'a', url: 'team.git' })).rejects.toThrow('starts with https://')
-  for (const url of ['https://x/t.git', 'ssh://h/t.git', 'git@github.com:o/t.git', '/srv/t', './t', 'C:\\t']) await addMarketplace(ports, { ...FIELDS, name: `ok-${url.length}-${url.charCodeAt(0)}`, url })
+  for (const url of ['https://x/t.git', 'ssh://h/t.git', 'git@github.com:o/t.git', '/srv/t', './t', 'C:\\t'])
+    await addMarketplace(ports, { ...FIELDS, name: `ok-${url.length}-${url.charCodeAt(0)}`, url })
 })
 test('toggle flips enabled; list shows the cache', async () => {
   const { ports, w } = setup(cacheFiles)
@@ -133,7 +148,11 @@ test('edited: install saves a base code; a changed file shows as edited; a manif
   expect((await catalog(ports))[0].edited).toBeUndefined()
   await w.ports.write(`${mine}/step/step.json`, JSON.stringify({ a: 2 }))
   expect((await catalog(ports))[0]).toMatchObject({ edited: true })
-  const old = setup({ ...fixed, [`${ROOT}/config/installed-templates.json`]: { templates: [{ name: 'fix', category: 'dev', type: 'flow', marketplace: 'official', installedAt: 't', version: 'abc123' }] }, [`${mine}/fix.json`]: {} })
+  const old = setup({
+    ...fixed,
+    [`${ROOT}/config/installed-templates.json`]: { templates: [{ name: 'fix', category: 'dev', type: 'flow', marketplace: 'official', installedAt: 't', version: 'abc123' }] },
+    [`${mine}/fix.json`]: {},
+  })
   expect((await catalog(old.ports))[0].edited).toBeUndefined()
   expect(old.w.json(`${ROOT}/config/installed-templates.json`).templates[0].baseHash).toBeTruthy()
 })

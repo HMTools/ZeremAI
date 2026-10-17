@@ -12,7 +12,7 @@ test('17 flow operations, each with a unique name, a description and a schema wh
   }
   expect(FLOW_TOOLS.map(t => t.name)).not.toContain('log_interaction') // the mod logs, not the agent
 })
-test('the agent gets every operation but bind_flow (the mod\'s own); approve-step is the mod\'s alone', () => {
+test("the agent gets every operation but bind_flow (the mod's own); approve-step is the mod's alone", () => {
   expect(AGENT_SUBCOMMANDS).toContain('update-step-status')
   expect(AGENT_SUBCOMMANDS).not.toContain('log-interaction')
   expect(AGENT_SUBCOMMANDS).not.toContain('bind-flow')

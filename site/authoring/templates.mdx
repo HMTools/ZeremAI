@@ -7,7 +7,7 @@ A template is one JSON file plus a subfolder per step. Publish it in a git [mark
 
 ## Create one with the skill
 
-In a Claude Code session, run:
+In a Claude Code session, run [`/zeremai:create-template`](/commands/create-template):
 
 ```
 /zeremai:create-template Review a pull request for security problems, and ask me before it writes the report
@@ -19,11 +19,17 @@ The rest of this page describes the files, which you can also write by hand.
 
 ## Read an installed template
 
+See also [`/zeremai:view-template`](/commands/view-template) and [Plan pages](/ui/plan-pages).
+
 ```
 /zeremai:view-template payoflows-e2e-development
 ```
 
 The command opens the template on one calm page, even with 20 steps, and a switch at the top picks how you read it. **Runbook** is a page of type: parts for the phases, a number and one sentence for each step, a boxed STOP after each approval step, and a note for each loop and child flow, which opens under its step. **Two lanes** puts Claude on the left and you on the right, with time running down, so you see when Claude works alone and when you step in. Pick a step to see its actions and output in the side panel. The Form tab shows which steps use each parameter. Nothing is changed.
+
+## Edit an installed template
+
+Change an installed template, or send your change to its marketplace: see [Edit and send a template](/authoring/edit-and-send).
 
 ## Layout
 
@@ -161,6 +167,6 @@ Put `"approvalRequired": true` on steps whose output a human should review befor
 ## Test it
 
 1. Put the template in a marketplace repo (or copy it to `~/.claude/zeremai/templates/flows/<category>/`).
-2. Run `/zeremai`, open **Templates** on the site → Refresh → Install.
+2. Run `/zeremai:init`, open **Templates** on the site → Refresh → Install.
 3. Create a flow from the **New flow** screen and run through it.
 4. Check the finished flow's log for friction. Fix and repeat.

@@ -17,7 +17,7 @@ export const AGENT_SUBCOMMANDS = FLOW_TOOLS.filter(t => t.name !== 'bind_flow').
 export const SCRIPT_SUBCOMMANDS = [...AGENT_SUBCOMMANDS, 'approve-step']
 // The agent asks the user to approve a step. The mod shows the dialog itself: the script never runs for this one.
 export const REQUEST_APPROVAL = 'request-approval'
-const schemaOf = (sub: string) => !AGENT_SUBCOMMANDS.includes(sub) ? undefined : FLOW_TOOLS.find(t => dashed(t.name) === sub)?.inputSchema as { properties: Doc; required: string[] } | undefined
+const schemaOf = (sub: string) => (!AGENT_SUBCOMMANDS.includes(sub) ? undefined : (FLOW_TOOLS.find(t => dashed(t.name) === sub)?.inputSchema as { properties: Doc; required: string[] } | undefined))
 
 // The commands that change the flow and wait for the approval dialog.
 export const DIALOG_GATED = ['update-step-status', 'update-current-state', 'update-active-substep', 'update-flow-status']
@@ -30,8 +30,14 @@ export async function runScript(run: Runner, python: string, pluginRoot: string,
   try {
     const out = await run([python, scriptPath(pluginRoot), sub, '--json', JSON.stringify(input)])
     const line = out.stdout.trim().split('\n').filter(Boolean).pop() ?? ''
-    try { return JSON.parse(line) as Result } catch { return { status: 'error', message: `flow_manager.py gave no JSON (exit ${out.exitCode}): ${(out.stderr || out.stdout).trim().slice(0, 300)}` } }
-  } catch (error) { return { status: 'error', message: `flow_manager.py did not start: ${error instanceof Error ? error.message : String(error)}` } }
+    try {
+      return JSON.parse(line) as Result
+    } catch {
+      return { status: 'error', message: `flow_manager.py gave no JSON (exit ${out.exitCode}): ${(out.stderr || out.stdout).trim().slice(0, 300)}` }
+    }
+  } catch (error) {
+    return { status: 'error', message: `flow_manager.py did not start: ${error instanceof Error ? error.message : String(error)}` }
+  }
 }
 
 // ── The command of the agent ─────────────────────────────────────────────
@@ -45,15 +51,24 @@ export function parseCommand(command: string, pluginRoot: string): { sub: string
   const m = /^\s*(?:python3?|py)(?:\.exe)?\s+("?)([^\s"']+)\1\s+([a-z-]+)\s+--json\s+'((?:[^']|'\\'')*)'\s*$/.exec(command)
   if (!m) return { error: `One form only: python3 ${scriptPath(pluginRoot)} <subcommand> --json '<one JSON object>' (single quotes, no pipe, no ; and nothing after the closing quote).` }
   if (slash(m[2]) !== scriptPath(pluginRoot)) return { error: `Run this plugin's script only: ${scriptPath(pluginRoot)}` }
-  try { return { sub: m[3], input: JSON.parse(m[4].replace(/'\\''/g, "'")) } } catch { return { error: 'The text after --json must be one JSON object.' } }
+  try {
+    return { sub: m[3], input: JSON.parse(m[4].replace(/'\\''/g, "'")) }
+  } catch {
+    return { error: 'The text after --json must be one JSON object.' }
+  }
 }
 
 const typeOk = (spec: Doc, value: unknown) =>
-  spec.type === 'string' ? typeof value === 'string'
-    : spec.type === 'number' ? typeof value === 'number'
-      : spec.type === 'boolean' ? typeof value === 'boolean'
-        : spec.type === 'array' ? Array.isArray(value) && value.every(v => typeof v === (spec.items?.type ?? 'string'))
-          : spec.type === 'object' ? typeof value === 'object' && value !== null && !Array.isArray(value)
+  spec.type === 'string'
+    ? typeof value === 'string'
+    : spec.type === 'number'
+      ? typeof value === 'number'
+      : spec.type === 'boolean'
+        ? typeof value === 'boolean'
+        : spec.type === 'array'
+          ? Array.isArray(value) && value.every(v => typeof v === (spec.items?.type ?? 'string'))
+          : spec.type === 'object'
+            ? typeof value === 'object' && value !== null && !Array.isArray(value)
             : true
 
 // Every input checked against the schema of the tool: required, no unknown key, the type, the values of an enum.
@@ -107,7 +122,7 @@ export function checkCall(command: string, moment: Moment): Verdict {
     if (input.parentFlowPath !== undefined && !moment.bound.includes(input.parentFlowPath as string)) return { deny: 'The parent flow is not bound to this session.' }
     return { allow: true, sub, input }
   }
-  if (!moment.bound.length) return { deny: 'No flow is bound to this session. Start one on the ZeremAI site (/zeremai), or create one with create-flow.' }
+  if (!moment.bound.length) return { deny: 'No flow is bound to this session. Start one on the ZeremAI site (/zeremai:init), or create one with create-flow.' }
   if (sub === 'list-findings' || sub === 'update-finding-status') return { allow: true, sub, input } // not about one flow folder
   if (typeof input.flowDir === 'string' && !moment.bound.includes(input.flowDir)) return { deny: `That folder is not a flow of this session. Flows of this session: ${moment.bound.join(', ')}` }
 

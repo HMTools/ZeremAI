@@ -24,21 +24,29 @@ type Prompt = { key: string; text: string } // key = step id + state; the re-pro
 
 // ── The mods API, as the infra functions need it ────────────────────────────
 
-const filesOf = ($: any): FileSystem => ({
-  home: async () => (await $.env.get('HOME')) ?? (await $.env.get('USERPROFILE')), // Windows has no HOME in every shell
-  list: path => $.fs.list(path),
-  exists: path => $.fs.exists(path),
-  read: path => $.fs.read(path),
-})
-const linksOf = ($: any): SessionLinks => ({
-  get: async sessionId => ((await $.store.get(sessionKey(sessionId))) as string[] | undefined) ?? [],
-})
-const agentsOf = ($: any): ListAgents => () => $.agent.list()
-const gatesOf = ($: any): GateStore => ({
-  get: async sessionId => ((await $.store.get(`gate:${sessionId}`)) as Gate | undefined) ?? undefined,
-  set: (sessionId, gate) => $.store.set(`gate:${sessionId}`, gate),
-  clear: sessionId => $.store.delete(`gate:${sessionId}`),
-})
+function filesOf($: any): FileSystem {
+  return {
+    home: async () => (await $.env.get('HOME')) ?? (await $.env.get('USERPROFILE')), // Windows has no HOME in every shell
+    list: path => $.fs.list(path),
+    exists: path => $.fs.exists(path),
+    read: path => $.fs.read(path),
+  }
+}
+function linksOf($: any): SessionLinks {
+  return {
+    get: async sessionId => ((await $.store.get(sessionKey(sessionId))) as string[] | undefined) ?? [],
+  }
+}
+function agentsOf($: any): ListAgents {
+  return () => $.agent.list()
+}
+function gatesOf($: any): GateStore {
+  return {
+    get: async sessionId => ((await $.store.get(`gate:${sessionId}`)) as Gate | undefined) ?? undefined,
+    set: (sessionId, gate) => $.store.set(`gate:${sessionId}`, gate),
+    clear: sessionId => $.store.delete(`gate:${sessionId}`),
+  }
+}
 
 // Not awaited: the new turn only starts once the current one has ended.
 // A guard that blocks or re-prompts the agent says so in a toast: the user then knows why Claude changed course. One toast in 30 seconds for the same text.
@@ -49,9 +57,16 @@ async function say($: any, text: string): Promise<void> {
   if (text === lastToast && now - lastToastMs < 30_000) return
   lastToast = text
   lastToastMs = now
-  try { await $.ui.toast(text) } catch { /* a surface that cannot show a toast */ }
+  try {
+    await $.ui.toast(text)
+  } catch {
+    /* a surface that cannot show a toast */
+  }
 }
-const startNewTurn = ($: any, text: string) => { void say($, 'Flow: Claude stopped early, so the flow asked it to carry on.'); void $.prompt.submit({ text }) }
+function startNewTurn($: any, text: string) {
+  void say($, 'Flow: Claude stopped early, so the flow asked it to carry on.')
+  void $.prompt.submit({ text })
+}
 
 // The user's own prompt starts the count again (called by the prompt hook in ../on-user-prompt).
 export const startCountingAgain = () => repromptLimiter.reset()
@@ -64,7 +79,10 @@ export const register: Register = on => {
     if (!isMainAgentAnswer(e)) return result
 
     const prompt = await promptToContinue($, await $.session.id())
-    if (!prompt) { repromptLimiter.reset(); return result }
+    if (!prompt) {
+      repromptLimiter.reset()
+      return result
+    }
     const timesInARow = repromptLimiter.record(prompt.key)
     if (timesInARow <= MAX_REPROMPTS) startNewTurn($, prompt.text)
     return result
@@ -97,11 +115,12 @@ async function promptToContinue($: any, sessionId: string): Promise<Prompt | und
   // The user approved the step: the agent must complete it before anything else.
   if (runningStep?.approvalRequired) return completeApprovedStepPrompt(runningStep, flowDir)
 
-  // No approval is open and a step has not started: the agent must start it, not stop.
-  if (pendingStep) return startNextStepPrompt(pendingStep, flowDir)
-
   // A normal step is in progress: wait for its executor, or start the step again if the executor is gone.
+  // This comes before the pending rule: no later step may start while an earlier one runs.
   if (runningStep) return promptForRunningStep($, runningStep, flowDir)
+
+  // Nothing runs and a step has not started: the agent must start it, not stop.
+  if (pendingStep) return startNextStepPrompt(pendingStep, flowDir)
 }
 
 // Wait for the step's executor. With no executor, an approval step needs the user's answer and any other step is lost.
@@ -117,15 +136,15 @@ const describeStep = (s: Step) => `Step ${s.number} — "${s.name}" (ID: ${s.id}
 function waitForExecutorPrompt(step: Step, flowDir: string): Prompt {
   return {
     key: `${step.id}:waiting`,
-    text: `${describeStep(step)} is still in progress — do not stop yet.\nFlow dir: ${flowDir}\n\n` +
-      'Wait for its step-executor subagent to finish.',
+    text: `${describeStep(step)} is still in progress — do not stop yet.\nFlow dir: ${flowDir}\n\n` + 'Wait for its step-executor subagent to finish.',
   }
 }
 
 function lostStepPrompt(step: Step, flowDir: string): Prompt {
   return {
     key: `${step.id}:lost`,
-    text: `${describeStep(step)} is in_progress but no step-executor is running — it likely crashed or was lost.\nFlow dir: ${flowDir}\n\n` +
+    text:
+      `${describeStep(step)} is in_progress but no step-executor is running — it likely crashed or was lost.\nFlow dir: ${flowDir}\n\n` +
       'Start the step again with the Agent tool (subagent_type zeremai:step-executor), or mark it failed.',
   }
 }
@@ -133,7 +152,8 @@ function lostStepPrompt(step: Step, flowDir: string): Prompt {
 function startNextStepPrompt(step: Step, flowDir: string): Prompt {
   return {
     key: `${step.id}:pending`,
-    text: `Flow has remaining steps — do not stop yet.\n\nNext step to execute: ${describeStep(step)}\nFlow dir: ${flowDir}\n\n` +
+    text:
+      `Flow has remaining steps — do not stop yet.\n\nNext step to execute: ${describeStep(step)}\nFlow dir: ${flowDir}\n\n` +
       'Continue: set the next step to in_progress, then start the step-executor subagent with the Agent tool.\n' +
       'Only stop while the user decides on an approval (after calling request_approval) or after all steps are complete.',
   }
@@ -142,7 +162,8 @@ function startNextStepPrompt(step: Step, flowDir: string): Prompt {
 function approvalCheckpointPrompt(step: Step, flowDir: string): Prompt {
   return {
     key: `${step.id}:approval`,
-    text: `Approval required — step "${step.name}" has approvalRequired: true and the user has not approved it.\n` +
+    text:
+      `Approval required — step "${step.name}" has approvalRequired: true and the user has not approved it.\n` +
       `Flow dir: ${flowDir}\n\n` +
       'Before stopping, you must:\n  1. Present your deliverables to the user\n' +
       '  2. Call the tool request_approval. It shows the user a dialog and waits for the click. The answer is the result.\n\n' +
@@ -153,7 +174,6 @@ function approvalCheckpointPrompt(step: Step, flowDir: string): Prompt {
 function completeApprovedStepPrompt(step: Step, flowDir: string): Prompt {
   return {
     key: `${step.id}:approved`,
-    text: `${describeStep(step)} is approved but not completed — do not stop yet.\nFlow dir: ${flowDir}\n\n` +
-      'Complete it with the tool update_step_status (status completed).',
+    text: `${describeStep(step)} is approved but not completed — do not stop yet.\nFlow dir: ${flowDir}\n\n` + 'Complete it with the tool update_step_status (status completed).',
   }
 }
