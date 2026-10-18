@@ -1,0 +1,94 @@
+---
+title: "Write a step"
+description: "A step definition is the sole source of instructions for the subagent that runs it. Write it as if the executor knows nothing else, because that is tr"
+---
+
+A step definition is the sole source of instructions for the subagent that runs it. Write it as if the executor knows nothing else, because that is true: it gets only a brief that the plugin builds from the step definition, the flow parameters and the memory it may read.
+
+## Skeleton
+
+```json
+{
+  "type": "step",
+  "id": "28047be4-e7c5-4152-8329-2929982ad042",
+  "name": "diagnose",
+  "category": "investigation",
+  "metadata": {
+    "title": "Diagnose the bug",
+    "purposeAndUsage": "Find the root cause before any fix is planned.",
+    "lastUpdated": "2026-10-12"
+  },
+  "output": {
+    "description": "Root cause with evidence",
+    "artifacts": ["diagnosis.md"],
+    "memoryUpdates": ["rootCause"]
+  },
+  "guidance": {
+    "prerequisites": ["Bug description is in flow parameters"],
+    "specificActions": [
+      "Reproduce the bug",
+      "Trace the failing path to the first wrong value",
+      "Write the root cause and evidence to diagnosis.md"
+    ],
+    "files": { "read": ["src/**"], "create": ["diagnosis.md"], "update": [] },
+    "tools": ["shell"],
+    "bestPractices": ["Fix causes, not symptoms", "Cite file:line for every claim"]
+  },
+  "substeps": [
+    {
+      "number": 1,
+      "name": "Reproduce",
+      "description": "Confirm the failure",
+      "actions": ["Run the repro", "Record the exact error"]
+    },
+    {
+      "number": 2,
+      "name": "Trace",
+      "description": "Find the root cause",
+      "actions": ["Follow the call path", "Note the first wrong value"],
+      "conditional": "Only if the repro fails"
+    }
+  ],
+  "flow": { "description": "Reproduce → trace → write diagnosis" },
+  "memoryFileUsage": {
+    "readFrom": ["context"],
+    "writeTo": ["diagnosis"],
+    "fields": ["rootCause", "evidence"]
+  },
+  "verifiers": [{ "script": "check-diagnosis.py", "timeoutSec": 5 }],
+  "maxFixes": 2,
+  "dependencies": { "requiredComponents": [], "requiredFiles": [], "requiredTools": [] },
+  "references": { "relatedSteps": ["plan-fix"], "usedInTemplates": ["fix-bug"] }
+}
+```
+
+## What the executor does with it
+
+1. Starts with a **brief** that the plugin builds: the step definition, the flow parameters, and the content of the memory topics in `memoryFileUsage.readFrom`.
+2. Reports the substep count, then runs each substep.
+3. Ends with one result block: a summary, memory entries for the topics in `memoryFileUsage.writeTo` (an empty list means no limit), and the log. The plugin saves it.
+4. If the step has `verifiers`, the plugin runs them. A failed check goes back to the executor to fix. See [Deterministic Verifiers](/authoring/verifiers).
+
+If it needs an answer from you it cannot ask directly. It stops and reports the questions. The main agent asks, then re-runs the step with your answers as corrections.
+
+## Verifiers
+
+A step can list Python scripts that check its work with code, and send failures back to the executor. See [Deterministic Verifiers](/authoring/verifiers). The fields are `verifiers` and `maxFixes`.
+
+## Rules of thumb
+
+- **One purpose per step.** If the title needs "and", split it.
+- **Concrete actions.** "Trace the call path from the controller" beats "investigate".
+- **Declare memory access.** It is the contract between steps, and it keeps context small.
+- **Make outputs checkable.** List artifacts so a reviewer knows what to look for.
+- **Use `conditional`** on substeps that only sometimes apply.
+- **Let the template add approvals.** The step's `approvalRequired` applies only when used standalone.
+- **Log problems in the step's guidance.** Continuous Improvement turns recorded problems into findings.
+
+## Optional fields
+
+`verifiers` and `maxFixes` (see [Deterministic Verifiers](/authoring/verifiers)), `parameters` (step-specific `required`/`optional`/`definitions`/`defaults`) are allowed. Only some fields are carried into the flow with the step, and so reach the brief: `output`, `guidance`, `substeps`, `flow`, `memoryFileUsage`, `parameters`, `verifiers`, `maxFixes`, and the framework-step fields `improvementCategories`, `prioritization`, `workflow`, `successCriteria`, `searchModes`, `changeProposalFormat` and `captureTypes`. Any other key, such as `metadata`, `dependencies` or `references`, stays in the step file and is not seen by the executor.
+
+## Reuse
+
+Steps are not shared. A template finds its steps only in its own folder, so each template holds its own copy. To reuse a step, copy its folder into the other template and give it a new UUID. Existing flows keep the copy embedded at creation.

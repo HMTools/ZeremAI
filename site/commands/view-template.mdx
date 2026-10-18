@@ -1,0 +1,29 @@
+---
+title: "/zeremai:view-template"
+description: "Open an installed flow template on one readable page."
+---
+
+## Run it
+
+```
+/zeremai:view-template codefactory-e2e-development
+```
+
+Give a template name, or a path to its JSON file or folder. If two categories hold the name, it asks which one. With nothing, it lists the installed names.
+
+## What it does
+
+1. Finds the template.
+2. Builds a page with `scripts/template_to_page.py`.
+3. Publishes it as an Artifact, or gives you the file path when there is no Artifact tool.
+4. Tells you how many steps, approvals and loops it has.
+
+It reads only. It never edits the template, reviews it or starts a flow. A child template that cannot be found shows as missing.
+
+## Result
+
+An outline of the steps, a ribbon that shows where you approve, and where loops and child flows start. The switch at the top picks **Runbook** or **Two lanes**. See [Plan pages](/ui/plan-pages).
+
+## Related
+
+[Write a template](/authoring/templates), [Sub-flows](/guide/sub-flows).

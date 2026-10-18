@@ -1,0 +1,938 @@
+<title>CodeFactory E2E Development</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;600;700&family=Fragment+Mono&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,600;1,6..72,400&display=swap">
+<style>
+  /* Layout: a title and one line of facts, then the steps as a runbook or as two lanes, with a quiet side panel for the picked step. Colour: white and Claude orange. A bar at the bottom, only for an answer. */
+  :root {
+    --bg: #ffffff; --surface: #ffffff; --fg: #141413; --muted: #6b6a63; --line: #ecebe6; --line2: #d6d4cc; --hover: #f8f7f3; --sel: #fdf0e9;
+    --accent: #d97757; --accent-text: #b4532f; --accent-bg: #fdeee6; --ink: #141413; --on-ink: #ffffff;
+    --font-body: "Schibsted Grotesk", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --font-mono: "Fragment Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+    --bg: #1f1e1d; --surface: #2a2927; --fg: #f0eee6; --muted: #a8a69c; --line: #3a3834; --line2: #55524b; --hover: #32302d; --sel: #3a3834;
+    --accent: #e8845f; --accent-text: #e8845f; --accent-bg: #4a2e23; --ink: #f0eee6; --on-ink: #1f1e1d; color-scheme: dark; } }
+  :root[data-theme="dark"] {
+    --bg: #1f1e1d; --surface: #2a2927; --fg: #f0eee6; --muted: #a8a69c; --line: #3a3834; --line2: #55524b; --hover: #32302d; --sel: #3a3834;
+    --accent: #e8845f; --accent-text: #e8845f; --accent-bg: #4a2e23; --ink: #f0eee6; --on-ink: #1f1e1d; color-scheme: dark; }
+
+  body { background: var(--bg); color: var(--fg); font: 15px/1.55 var(--font-body); padding-inline: 16px; padding-block: 28px 0; }
+  .wrap { max-width: 1180px; margin-inline: auto; display: grid; gap: 22px; }
+  h1, h3, h4, p { margin: 0; } h1 { font-size: 26px; line-height: 1.15; letter-spacing: -.015em; text-wrap: balance; font-weight: 650; }
+  h4 { font-size: 13px; font-weight: 600; color: var(--muted); margin-bottom: 6px; }
+  code, .mono { font-family: var(--font-mono); font-size: 12.5px; }
+  button { font: inherit; color: inherit; cursor: pointer; } :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .muted { color: var(--muted); }
+  .link { background: none; border: 0; padding: 0; color: var(--accent-text); font-weight: 550; text-align: left; } .link:hover { text-decoration: underline; }
+
+  /* header */
+  .head { display: grid; gap: 6px; }
+  .facts { color: var(--muted); font-size: 14px; display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; }
+  .purpose { max-width: 74ch; color: var(--muted); padding-top: 6px; }
+  .vt { margin-left: auto; display: inline-flex; border: 1px solid var(--line2); border-radius: 8px; overflow: hidden; } .vt button { background: none; border: 0; padding: 3px 12px; font-size: 13px; font-weight: 550; color: var(--muted); }
+  .vt button + button { border-left: 1px solid var(--line2); } .vt button[aria-pressed="true"] { background: var(--sel); color: var(--fg); }
+
+
+  /* shell */
+  .shell { display: grid; gap: 28px; grid-template-columns: minmax(0, 1fr); align-items: start; }
+  @media (min-width: 980px) { .shell { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } .side { position: sticky; top: 12px; max-height: calc(100vh - 96px); overflow: auto; } .backbtn { display: none; } }
+
+  /* the steps */
+  .list { padding-bottom: 12px; }
+  .dcrumb { display: flex; gap: 6px; align-items: center; padding: 0 0 10px; font-size: 13.5px; color: var(--muted); }
+  .fwrow { padding: 18px 0 0; color: var(--muted); font-size: 13.5px; }
+  /* runbook: a page of type */
+  .rb { font-family: "Newsreader", Georgia, serif; max-width: 600px; }
+  .rb .part { margin: 22px 0 2px; font: 700 11px/1.2 var(--font-body); letter-spacing: .12em; text-transform: uppercase; color: var(--accent-text); border-bottom: 1px solid var(--ink); padding-bottom: 6px; } .rb .part:first-child { margin-top: 0; }
+  .rb .st { display: grid; grid-template-columns: 32px minmax(0, 1fr); padding: 8px 10px 3px 0; cursor: pointer; border-radius: 8px; } .rb .st:hover { background: var(--hover); } .rb .st[aria-pressed="true"] { background: var(--sel); }
+  .rb .no { text-align: right; padding-right: 10px; font-size: 16px; line-height: 1.4; color: var(--muted); font-variant-numeric: lining-nums; }
+  .rb .st b { font-size: 16.5px; font-weight: 600; line-height: 1.3; display: block; } .rb .st p { font-size: 14.5px; line-height: 1.4; color: var(--muted); margin-top: 1px; }
+  .rb .stop { margin: 5px 0 2px 32px; border: 1px solid var(--accent-text); color: var(--accent-text); padding: 3px 9px; font: 700 10.5px var(--font-body); letter-spacing: .06em; text-transform: uppercase; display: inline-block; }
+  .rb .nt { margin: 3px 0 0 32px; font-style: italic; color: var(--muted); font-size: 14px; line-height: 1.4; }
+  .rb .nt button { font: inherit; font-style: italic; background: none; border: 0; padding: 0; color: var(--accent-text); text-decoration: underline; cursor: pointer; }
+  .rb .kids { margin: 6px 0 6px 32px; padding-left: 12px; border-left: 1px solid var(--line2); } .rb .kids .st { grid-template-columns: 26px minmax(0, 1fr); } .rb .kids .st b { font-size: 15px; } .rb .kids .st p { font-size: 13.5px; } .rb .kids .no { font-size: 14px; } .rb .kids .stop, .rb .kids .nt { margin-left: 26px; }
+  /* two lanes: Claude on the left, you on the right, time running down */
+  .lanes { border: 1px solid var(--line); border-radius: 14px; background: var(--surface); padding: 10px 6px 4px; } .lanes svg { display: block; width: 100%; height: auto; }
+  .lp { cursor: pointer; } .lp rect { fill: var(--surface); stroke: var(--line2); stroke-width: 1.4; } .lp.you rect { fill: var(--accent-bg); stroke: var(--accent); } .lp:hover rect { stroke: var(--muted); } .lp.you:hover rect { stroke: var(--accent-text); }
+  .lp.sel rect { stroke: var(--accent); stroke-width: 2.6; } .lp:focus-visible rect { stroke: var(--accent); stroke-width: 2.6; }
+  .lp text { fill: var(--fg); font-family: var(--font-body); font-size: 13.5px; font-weight: 600; } .lp text.lnu { fill: var(--muted); font-family: var(--font-mono); font-size: 11.5px; font-weight: 400; }
+  .lnt { fill: var(--muted); font-family: var(--font-mono); font-size: 11px; } .lph { fill: var(--muted); font-family: var(--font-body); font-size: 12px; font-weight: 600; }
+  .lw { fill: none; stroke: var(--line2); stroke-width: 1.4; } .lw.you { stroke: var(--accent); opacity: .7; } .lmid { stroke: var(--line); stroke-dasharray: 3 5; }
+  .lhd { font-family: var(--font-mono); font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; } .lhd.c { fill: var(--muted); } .lhd.u { fill: var(--accent-text); }
+  
+
+  /* side panel */
+  .side { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; }
+  .tabs { display: flex; border-bottom: 1px solid var(--line); padding: 0 10px; gap: 4px; overflow-x: auto; }
+  .tabs button { background: none; border: 0; padding: 14px 8px 11px; font-weight: 550; font-size: 14px; color: var(--muted); border-bottom: 2px solid transparent; white-space: nowrap; }
+  .tabs button[aria-selected="true"] { color: var(--fg); border-bottom-color: var(--accent); }
+  .pane { padding: 18px; display: grid; gap: 18px; }
+  .pnav { display: flex; align-items: center; gap: 8px; } .pnav .arrows { margin-left: auto; display: inline-flex; gap: 4px; }
+  .pnav .arrows button { width: 28px; height: 28px; padding: 0; border: 1px solid var(--line2); border-radius: 8px; background: none; font-size: 17px; line-height: 1; }
+  .pnav .arrows button:hover:not(:disabled) { background: var(--hover); } .pnav .arrows button:disabled { opacity: .4; cursor: default; }
+  .sthead { display: grid; gap: 4px; } .sthead h3 { font-size: 19px; line-height: 1.25; font-weight: 650; } .sub { color: var(--muted); font-size: 13.5px; }
+  .pane ul { margin: 0; padding-left: 18px; display: grid; gap: 4px; }
+  .note { border-left: 2px solid var(--line2); padding: 2px 0 2px 12px; color: var(--fg); display: grid; gap: 4px; } .note b { font-weight: 600; }
+  .trigc { display: grid; gap: 8px; } .trigc .t { display: grid; grid-template-columns: 96px 1fr; gap: 10px; align-items: baseline; } .trigc .t > span:first-child { color: var(--muted); font-size: 13px; }
+  mark { background: var(--accent-bg); color: var(--fg); border-radius: 4px; padding: 0 3px; font-family: var(--font-mono); font-size: 12.5px; }
+  .ph { border: 1px dashed var(--line2); border-radius: 4px; padding: 0 3px; font-family: var(--font-mono); font-size: 12.5px; }
+  .pchips { display: flex; flex-wrap: wrap; gap: 6px; } .pchips button { border: 1px solid var(--line2); background: none; border-radius: 6px; padding: 2px 8px; font-family: var(--font-mono); font-size: 12.5px; }
+  textarea, input[type="text"] { width: 100%; font: inherit; background: var(--surface); color: var(--fg); border: 1px solid var(--line2); border-radius: 8px; padding: 9px 10px; } textarea { min-height: 72px; resize: vertical; }
+  .field { display: grid; gap: 4px; } .field.hl label { color: var(--accent-text); }
+  .field label { font-weight: 600; font-size: 14px; } .field small { color: var(--muted); font-size: 13px; }
+  .used { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: center; font-size: 13px; color: var(--muted); } .used button { background: none; border: 0; padding: 0; color: var(--accent-text); font-size: 13px; font-weight: 550; } .used button:hover { text-decoration: underline; }
+  .find { border-top: 1px solid var(--line); padding-top: 12px; display: grid; gap: 6px; } .find:first-child { border-top: 0; padding-top: 0; }
+  .frow { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: center; } .lv { font-weight: 600; font-size: 13px; } .fixed { color: var(--muted); font-size: 13px; margin-left: auto; }
+  .seg { display: inline-flex; border: 1px solid var(--line2); border-radius: 8px; overflow: hidden; margin-left: auto; } .seg button { background: none; border: 0; padding: 4px 12px; font-size: 13px; font-weight: 550; } .seg button + button { border-left: 1px solid var(--line2); }
+  .seg button[aria-pressed="true"] { background: var(--ink); color: var(--on-ink); }
+  pre.tree { margin: 0; font: 12.5px/1.65 var(--font-mono); overflow-x: auto; }
+  .folded { display: flex; gap: 10px; align-items: baseline; color: var(--muted); font-size: 13.5px; }
+
+  /* answer bar */
+  .bar { position: sticky; bottom: 0; z-index: 5; margin-inline: -16px; padding: 10px 16px calc(10px + env(safe-area-inset-bottom, 0px)); background: var(--surface); border-top: 1px solid var(--line); }
+  .barin { max-width: 1180px; margin-inline: auto; display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; } .barin .sum { flex: 1 1 240px; font-size: 13.5px; color: var(--muted); }
+  .btn { border: 1px solid var(--line2); background: none; border-radius: 9px; padding: 8px 16px; font-weight: 600; } .btn.primary { background: var(--accent); color: #141413; border-color: var(--accent); }
+  .btn:disabled { opacity: .5; cursor: not-allowed; }
+  dialog { width: min(540px, calc(100vw - 32px)); border: 1px solid var(--line2); border-radius: 14px; padding: 0; background: var(--surface); color: var(--fg); } dialog::backdrop { background: rgba(10, 16, 15, .5); }
+  .dlg { padding: 20px; display: grid; gap: 12px; } .dlg h3 { font-size: 18px; } .dlg .actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
+  .sent { color: var(--fg); font-weight: 600; } .err { color: var(--fg); font-weight: 600; }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; scroll-behavior: auto !important; } }
+</style>
+
+<div class="wrap">
+  <header class="head">
+    <h1 id="title"></h1>
+    <p class="facts"><span id="facts"></span><button class="link" id="more" type="button">Details</button><span class="vt" role="group" aria-label="View"><button type="button" id="vRun" aria-pressed="false">Runbook</button><button type="button" id="vLane" aria-pressed="true">Two lanes</button></span></p>
+    <p class="purpose" id="purpose" hidden></p>
+  </header>
+  <div class="shell">
+    <div class="list" id="list" role="group" aria-label="Steps"></div>
+    <aside class="side" id="side" aria-label="Step details">
+      <div class="tabs" role="tablist" id="tabs"></div>
+      <div class="pane" id="pane"></div>
+    </aside>
+  </div>
+  <div class="bar" id="bar"><div class="barin">
+    <p class="sum" id="sum"></p>
+    <button class="btn" id="askBtn" type="button">Ask for changes</button>
+    <button class="btn primary" id="okBtn" type="button">Approve</button>
+  </div></div>
+</div>
+<dialog id="dlg"><div class="dlg" id="dlgBody"></div></dialog>
+
+<!-- DATA: the only part the agent or the exporter replaces. Write "<" inside strings as <.
+  mode: "draft" (shows the answer bar) or "view" (an installed template, no answer bar). findings: null when there was no review.
+  A step's kind is new | copied | sub. phase is optional text. loop is {to, max, when} with "to" a step index. -->
+<script type="application/json" id="data">
+{
+ "mode": "draft",
+ "title": "CodeFactory E2E Development",
+ "category": "development",
+ "name": "codefactory-e2e-development",
+ "purpose": "Use to take one Azure DevOps PBI from first read to verified production release inside the code-factory repository: design, test plan, code, tests, CI, review, merge, dev deploy, production deploy and close. Needs a person present for every approval and every production action. Do not use it for work outside code-factory or for work that needs no code change.",
+ "params": [
+  {
+   "name": "workItemId",
+   "required": true,
+   "type": "text",
+   "description": "The Azure DevOps work item to deliver",
+   "example": "412345"
+  },
+  {
+   "name": "baseBranch",
+   "required": false,
+   "type": "text",
+   "description": "The branch to start from",
+   "example": "main"
+  },
+  {
+   "name": "targetComponent",
+   "required": false,
+   "type": "text",
+   "description": "The part of the repo to change",
+   "example": "payments-api"
+  }
+ ],
+ "steps": [
+  {
+   "name": "Load PBI context",
+   "phase": "Understand",
+   "kind": "new",
+   "summary": "Read the Azure DevOps work item {{workItemId}} and write down what must be built and how it is judged done.",
+   "actions": [
+    "Fetch work item {{workItemId}} with the Azure DevOps tools (title, description, acceptance criteria, parent feature, linked PRs and test cases).",
+    "Copy acceptance criteria verbatim and number them AC1, AC2, so later steps can cite them.",
+    "List anything vague or contradictory as 'Open questions'. If one blocks design, ask the user before finishing the step."
+   ],
+   "output": [
+    "pbi-context.md"
+   ],
+   "uses": [
+    "workItemId"
+   ]
+  },
+  {
+   "name": "Analyze code impact",
+   "phase": "Understand",
+   "kind": "new",
+   "summary": "Find the files, services and tests the change will touch in {{targetComponent}}.",
+   "actions": [
+    "Search the repo for the code named in the acceptance criteria.",
+    "List each file with the reason it changes.",
+    "Note risks: shared code, migrations, public contracts."
+   ],
+   "output": [
+    "code-impact.md"
+   ],
+   "uses": [
+    "targetComponent"
+   ]
+  },
+  {
+   "name": "Write low-level design",
+   "phase": "Design",
+   "kind": "new",
+   "approval": true,
+   "summary": "Describe the change file by file, and wait for your approval.",
+   "actions": [
+    "Write one section for each file from the impact notes.",
+    "Cite the acceptance criteria by number.",
+    "Show the design and wait for the user to approve it."
+   ],
+   "output": [
+    "low-level-design.md"
+   ],
+   "uses": []
+  },
+  {
+   "name": "Write test plan",
+   "phase": "Design",
+   "kind": "new",
+   "approval": true,
+   "summary": "List the tests that prove each acceptance criterion, and wait for your approval.",
+   "actions": [
+    "One test case for each criterion, with the file it lives in.",
+    "Name the data each test needs.",
+    "Show the plan and wait for the user to approve it."
+   ],
+   "output": [
+    "test-plan.md"
+   ],
+   "uses": []
+  },
+  {
+   "name": "Implement code",
+   "phase": "Build",
+   "kind": "new",
+   "summary": "Make the change from the approved design on a new branch from {{baseBranch}}.",
+   "actions": [
+    "Create the branch from {{baseBranch}}.",
+    "Change one file at a time, in the order of the design.",
+    "Keep each commit small and named for its criterion."
+   ],
+   "output": [
+    "Code changes"
+   ],
+   "uses": [
+    "baseBranch"
+   ]
+  },
+  {
+   "name": "Test each changed file",
+   "phase": "Build",
+   "kind": "sub",
+   "summary": "Start one test-file flow for each changed file, and go on while they run.",
+   "actions": [
+    "Start a child flow for each changed file.",
+    "Keep going: the build step waits for them."
+   ],
+   "output": [
+    "One summary from each child"
+   ],
+   "uses": [],
+   "child": "test-file",
+   "forEach": "changedFiles",
+   "trigger": {
+    "condition": "When the design lists more than one file",
+    "parameters": {
+     "filePath": "{{item}}",
+     "baseBranch": "{{baseBranch}}"
+    },
+    "sync": "Run local build, lint and tests",
+    "syncTo": 6
+   }
+  },
+  {
+   "name": "Run local build, lint and tests",
+   "phase": "Build",
+   "kind": "new",
+   "summary": "Build, lint and run the tests. Go back to implement if one fails.",
+   "actions": [
+    "Run the build, the linter and the test suite.",
+    "If anything fails, fix it by going back to the implement step."
+   ],
+   "output": [
+    "local-checks.md"
+   ],
+   "uses": [],
+   "loop": {
+    "to": 4,
+    "max": 3,
+    "when": "a check fails"
+   }
+  },
+  {
+   "name": "Audit against coding standards",
+   "phase": "Build",
+   "kind": "new",
+   "approval": true,
+   "summary": "Check the change against the repo's standards, and wait for your approval.",
+   "actions": [
+    "Read the repo's coding standards.",
+    "List each deviation with file and line.",
+    "Show the list and wait for the user."
+   ],
+   "output": [
+    "standards-audit.md"
+   ],
+   "uses": []
+  },
+  {
+   "name": "Open pull request",
+   "phase": "Review",
+   "kind": "new",
+   "summary": "Open a pull request that links the work item.",
+   "actions": [
+    "Push the branch.",
+    "Open the pull request with the criteria in its description."
+   ],
+   "output": [
+    "Pull request"
+   ],
+   "uses": [
+    "workItemId"
+   ]
+  },
+  {
+   "name": "Get CI green",
+   "phase": "Review",
+   "kind": "sub",
+   "summary": "Hand the pipeline to the ci-doctor flow and wait for it.",
+   "actions": [
+    "Start ci-doctor.",
+    "Wait for it to end."
+   ],
+   "output": [
+    "Green pipeline"
+   ],
+   "uses": [],
+   "child": "ci-doctor",
+   "forEach": "",
+   "trigger": {
+    "condition": "",
+    "parameters": {},
+    "sync": "immediate",
+    "syncTo": null
+   }
+  },
+  {
+   "name": "Address review comments",
+   "phase": "Review",
+   "kind": "new",
+   "summary": "Answer each reviewer comment and change the code where needed.",
+   "actions": [
+    "Read each comment.",
+    "Fix or answer it, and mark it resolved."
+   ],
+   "output": [
+    "Resolved comments"
+   ],
+   "uses": [],
+   "loop": {
+    "to": 8,
+    "max": 2,
+    "when": "reviewers ask for changes"
+   }
+  },
+  {
+   "name": "Approve and merge",
+   "phase": "Review",
+   "kind": "new",
+   "approval": true,
+   "summary": "Merge the pull request after you approve it.",
+   "actions": [
+    "Show the pull request status.",
+    "Merge it only after the user approves."
+   ],
+   "output": [
+    "Merged pull request"
+   ],
+   "uses": []
+  },
+  {
+   "name": "Deploy to dev",
+   "phase": "Ship",
+   "kind": "new",
+   "approval": true,
+   "summary": "Deploy the merged build to the dev stage, after you approve.",
+   "actions": [
+    "Start the dev release.",
+    "Wait for it to finish."
+   ],
+   "output": [
+    "Dev release"
+   ],
+   "uses": []
+  },
+  {
+   "name": "Verify in dev",
+   "phase": "Ship",
+   "kind": "new",
+   "summary": "Check the change works in dev.",
+   "actions": [
+    "Run the checks from the test plan against dev."
+   ],
+   "output": [
+    "dev-verification.md"
+   ],
+   "uses": []
+  },
+  {
+   "name": "Plan production release",
+   "phase": "Ship",
+   "kind": "new",
+   "approval": true,
+   "summary": "Write the release plan and wait for your approval.",
+   "actions": [
+    "List what ships, in what order, and how to roll back."
+   ],
+   "output": [
+    "release-plan.md"
+   ],
+   "uses": []
+  },
+  {
+   "name": "Write release notes",
+   "phase": "Ship",
+   "kind": "new",
+   "summary": "Write the production release notes.",
+   "actions": [
+    "Summarise the change for users."
+   ],
+   "output": [
+    "release-notes.md"
+   ],
+   "uses": []
+  },
+  {
+   "name": "Deploy to production",
+   "phase": "Ship",
+   "kind": "new",
+   "approval": true,
+   "summary": "Release to production, after you approve.",
+   "actions": [
+    "Show the release plan again.",
+    "Deploy only after the user approves."
+   ],
+   "output": [
+    "Production release"
+   ],
+   "uses": []
+  },
+  {
+   "name": "Verify production",
+   "phase": "Close",
+   "kind": "new",
+   "summary": "Check the change works in production.",
+   "actions": [
+    "Run the production checks."
+   ],
+   "output": [
+    "prod-verification.md"
+   ],
+   "uses": []
+  },
+  {
+   "name": "Update wiki",
+   "phase": "Close",
+   "kind": "new",
+   "approval": true,
+   "summary": "Update the wiki page for the changed feature, after you approve.",
+   "actions": [
+    "Draft the wiki change.",
+    "Publish it only after the user approves."
+   ],
+   "output": [
+    "Wiki page"
+   ],
+   "uses": []
+  },
+  {
+   "name": "Close PBI",
+   "phase": "Close",
+   "kind": "new",
+   "summary": "Close work item {{workItemId}} with a link to the release.",
+   "actions": [
+    "Set the state to Done.",
+    "Add the release link."
+   ],
+   "output": [
+    "Closed work item"
+   ],
+   "uses": [
+    "workItemId"
+   ]
+  }
+ ],
+ "children": {
+  "test-file": {
+   "title": "Test one file",
+   "name": "test-file",
+   "params": [
+    {
+     "name": "filePath",
+     "required": true,
+     "type": "text",
+     "description": "The changed file to test",
+     "example": "src/a.ts"
+    },
+    {
+     "name": "baseBranch",
+     "required": false,
+     "type": "text",
+     "description": "Branch",
+     "example": "main"
+    }
+   ],
+   "steps": [
+    {
+     "name": "Write the test",
+     "kind": "new",
+     "approval": true,
+     "summary": "Write one test for {{filePath}} and wait for your approval.",
+     "actions": [
+      "Read {{filePath}}.",
+      "Write the test."
+     ],
+     "output": [
+      "The test file"
+     ],
+     "uses": [
+      "filePath"
+     ]
+    },
+    {
+     "name": "Run the test",
+     "kind": "new",
+     "summary": "Run it and see it fail, then pass.",
+     "actions": [
+      "Run the test."
+     ],
+     "output": [
+      "Result"
+     ],
+     "uses": []
+    },
+    {
+     "name": "Check the test is strong",
+     "kind": "sub",
+     "summary": "Break the code on purpose and see the test catch it.",
+     "child": "mutate-check",
+     "forEach": "",
+     "actions": [
+      "Start mutate-check."
+     ],
+     "output": [
+      "Result"
+     ],
+     "uses": [],
+     "trigger": {
+      "condition": "",
+      "parameters": {
+       "filePath": "{{filePath}}"
+      },
+      "sync": "immediate",
+      "syncTo": null
+     }
+    }
+   ]
+  },
+  "mutate-check": {
+   "title": "Mutate and check",
+   "name": "mutate-check",
+   "params": [
+    {
+     "name": "filePath",
+     "required": true,
+     "type": "text",
+     "description": "file",
+     "example": "src/a.ts"
+    }
+   ],
+   "steps": [
+    {
+     "name": "Scan the changed lines",
+     "kind": "new",
+     "summary": "Find the lines worth breaking.",
+     "actions": [
+      "Scan {{filePath}}."
+     ],
+     "output": [
+      "lines.md"
+     ],
+     "uses": [
+      "filePath"
+     ]
+    },
+    {
+     "name": "Report",
+     "kind": "new",
+     "summary": "Say which breaks the tests caught.",
+     "actions": [
+      "Write the report."
+     ],
+     "output": [
+      "report.md"
+     ],
+     "uses": []
+    }
+   ]
+  },
+  "ci-doctor": {
+   "title": "ci-doctor",
+   "name": "ci-doctor",
+   "params": [],
+   "steps": [],
+   "missing": true,
+   "id": "9c1f4b52-6e07-4a1d-8d2c-3a5e1f0b7e07"
+  }
+ },
+ "findings": [
+  {
+   "id": "f1",
+   "flow": "main",
+   "step": 6,
+   "level": "should",
+   "status": "open",
+   "text": "Step 7 does not say what to do after the third failed pass.",
+   "fix": "Say to stop and ask the user."
+  },
+  {
+   "id": "f2",
+   "flow": "main",
+   "step": 2,
+   "level": "must",
+   "status": "fixed",
+   "text": "Step 3 asks for approval but named no output file.",
+   "fix": "The step now writes low-level-design.md."
+  },
+  {
+   "id": "f3",
+   "flow": "test-file",
+   "step": 0,
+   "level": "note",
+   "status": "open",
+   "text": "The test approval comes once for each file. With many files this asks many times.",
+   "fix": "Approve all tests at once at the end."
+  }
+ ],
+ "files": [
+  "~/.claude/zeremai/templates/flows/development/",
+  "└─ codefactory-e2e-development/",
+  "   ├─ codefactory-e2e-development.json",
+  "   ├─ load-pbi-context/load-pbi-context.json",
+  "   └─ … 19 more step folders"
+ ]
+}
+</script>
+
+<script>
+(function () {
+  var D = JSON.parse(document.getElementById('data').textContent);
+  var VIEW = D.mode === 'view', FINDS = D.findings || [], REVIEWED = D.findings != null;
+  var S = { flow: 'main', idx: 0, tab: 'step', open: {}, values: {}, decisions: {}, notes: {}, general: '', hl: null, details: false, view: 'lanes' };
+
+  function el(tag, props) {
+    var e = document.createElement(tag), kids = Array.prototype.slice.call(arguments, 2), k;
+    for (k in props || {}) { var v = props[k]; if (v == null || v === false) continue; if (k === 'class') e.className = v; else if (k.slice(0, 2) === 'on') e.addEventListener(k.slice(2), v); else e.setAttribute(k, v === true ? '' : v); }
+    (function add(list) { list.forEach(function (c) { if (c == null || c === false) return; if (Array.isArray(c)) add(c); else e.append(c.nodeType ? c : document.createTextNode(String(c))); }); })(kids);
+    return e;
+  }
+  function $(id) { return document.getElementById(id); }
+  // Every way back from a step: loops is [{to, by: click|check|agent, max, label?, when?}]. A page made before it has only the old loop.
+  function waysOf(s) { return s.loops || (s.loop ? [{ to: s.loop.to, by: 'agent', max: s.loop.max, when: s.loop.when }] : []); }
+  function wayText(w) { var n = w.to + 1; return w.by === 'click' ? 'You can send the flow back to step ' + n + (w.label ? ' (' + w.label + ')' : '') + ', as often as you want.' : w.by === 'check' ? 'If a check fails, the flow goes back to step ' + n + ' by itself. At most ' + w.max + ' times.' : 'If this fails, go back to step ' + n + (w.when ? ' (when ' + w.when + ')' : '') + '. Do this at most ' + w.max + ' times.'; }
+  function flowOf(key) { if (key === 'main') return { key: 'main', title: D.title, name: D.name, params: D.params, steps: D.steps }; var c = D.children[key]; return { key: key, title: c.title, name: c.name, params: c.params || [], steps: c.steps || [] }; }
+  function findsOf(key, i) { return FINDS.filter(function (f) { return f.flow === key && f.step === i; }); }
+  function openOf(list) { return list.filter(function (f) { return f.status === 'open'; }); }
+  var MAIN = D.steps, APPR = [], LOOPS = [];
+  MAIN.forEach(function (s, i) { if (s.approval) APPR.push(i); waysOf(s).forEach(function (w) { LOOPS.push({ from: i, to: w.to }); }); });
+  var MAXD = 3;
+  function reach() { var seen = {}, out = []; (function walk(f, d) { f.steps.forEach(function (st) { var c = st.child; if (c && D.children[c] && !seen[c] && d < MAXD) { seen[c] = true; out.push(c); walk(flowOf(c), d + 1); } }); })(flowOf('main'), 0); return out; }
+  var REACH = reach(), CH_APPR = 0;
+  REACH.forEach(function (k) { flowOf(k).steps.forEach(function (st) { if (st.approval) CH_APPR++; }); });
+  var MISSING = Object.keys(D.children).filter(function (k) { return D.children[k].missing; });
+  function plus(seen, k) { var o = {}; for (var x in seen) o[x] = true; o[k] = true; return o; }
+  function fill(text, f) {
+    return String(text).split(/(\{\{\w+\}\})/).map(function (p) { var m = /^\{\{(\w+)\}\}$/.exec(p); if (!m) return p; var v = ((S.values[f.key] || {})[m[1]] || '').trim(); return v ? el('mark', null, v) : el('span', { class: 'ph' }, p); });
+  }
+  function pl(n, w) { return n + ' ' + w + (n === 1 ? '' : 's'); }
+
+  /* ---- header ---- */
+  function renderHead() {
+    $('title').textContent = D.title; document.title = D.title;
+    var open = openOf(FINDS).length, bits = [D.category, pl(MAIN.length, 'step'), pl(APPR.length + CH_APPR, 'approval') + (CH_APPR ? ' with children' : ''), pl(LOOPS.length, 'loop')];
+    bits.push(!REVIEWED ? 'not reviewed' : open ? open + ' to fix' : 'reviewed');
+    if (MISSING.length) bits.push(MISSING.length + ' child missing');
+    $('facts').textContent = bits.join(' · ');
+    var p = $('purpose'); p.textContent = D.purpose; p.hidden = !S.details; $('more').textContent = S.details ? 'Hide details' : 'Details';
+  }
+  function groups() { var g = []; MAIN.forEach(function (s, i) { var n = s.phase || ''; if (!g.length || g[g.length - 1].name !== n) g.push({ name: n, from: i, to: i }); else g[g.length - 1].to = i; }); return g; }
+
+  /* ---- the two views: runbook and two lanes ---- */
+  var SVGNS = 'http://www.w3.org/2000/svg';
+  function sv(tag, attrs) {
+    var e = document.createElementNS(SVGNS, tag), k, kids = Array.prototype.slice.call(arguments, 2);
+    for (k in attrs || {}) { if (attrs[k] != null) e.setAttribute(k, attrs[k]); }
+    kids.forEach(function (c) { if (c == null || c === false) return; e.append(c.nodeType ? c : document.createTextNode(String(c))); });
+    return e;
+  }
+  function crumb(f) { return el('div', { class: 'dcrumb' }, el('button', { class: 'link', type: 'button', onclick: function () { choose('main', 0, 'step'); } }, D.name), '›', f.name); }
+  function fwNote() { return el('div', { class: 'fwrow' }, 'ZeremAI adds two steps at the end: improvement findings, and complete flow.'); }
+  function pick(fkey, i) { return function () { choose(fkey, i, 'step', true); }; }
+  function keyPick(fkey, i) { return function (ev) { if (ev.target === ev.currentTarget && (ev.key === 'Enter' || ev.key === ' ')) { ev.preventDefault(); choose(fkey, i, 'step', true); } }; }
+  function renderList() {
+    var host = $('list'); host.textContent = '';
+    if (S.view === 'lanes') renderLanes(host); else renderRunbook(host);
+    host.append(fwNote());
+  }
+
+  /* runbook */
+  function rbStep(f, i, depth, seen) {
+    var s = f.steps[i], pins = openOf(findsOf(f.key, i)).length, sel = S.flow === f.key && S.idx === i, trig = s.trigger || {}, cd = s.child ? D.children[s.child] : null, miss = cd && cd.missing, out = [];
+    out.push(el('div', { class: 'st', role: 'button', tabindex: '0', 'data-flow': f.key, 'data-i': String(i), 'aria-pressed': String(sel), 'aria-label': 'Step ' + (i + 1) + ', ' + s.name + (s.approval ? ', you approve' : ''), onclick: pick(f.key, i), onkeydown: keyPick(f.key, i) },
+      el('div', { class: 'no' }, String(i + 1)), el('div', null, el('b', null, s.name), el('p', null, fill(s.summary || '', f)))));
+    if (s.approval) out.push(el('div', { class: 'stop' }, 'Stop · you approve before you go on'));
+    waysOf(s).forEach(function (w) { out.push(el('div', { class: 'nt' }, wayText(w))); });
+    f.steps.forEach(function (o, k) { if (o.trigger && o.trigger.syncTo === i) out.push(el('div', { class: 'nt' }, 'Wait here for the child flow of step ' + (k + 1) + '.')); });
+    if (s.child) {
+      var line = (s.forEach ? 'Do this once for each item of ' + s.forEach : 'Do this once') + (trig.syncTo != null ? '. The parent goes on, and waits at step ' + (trig.syncTo + 1) : '') + '. See the flow “' + s.child + '”. ';
+      if (miss) out.push(el('div', { class: 'nt' }, 'The flow “' + s.child + '” is missing' + (cd.id ? ' (id ' + cd.id + ')' : '') + '.'));
+      else {
+        var open = !!S.open[s.child], can = cd && cd.steps && cd.steps.length && depth < MAXD && !seen[s.child];
+        out.push(el('div', { class: 'nt' }, line, can ? el('button', { type: 'button', onclick: function (e) { e.stopPropagation(); S.open[s.child] = !open; renderList(); } }, open ? 'Hide its steps' : 'Show its steps') : null));
+        if (open && can) { var cf = flowOf(s.child), kids = el('div', { class: 'kids' }), sn = plus(seen, s.child); cf.steps.forEach(function (cs, j) { kids.append.apply(kids, rbStep(cf, j, depth + 1, sn)); }); out.push(kids); }
+      }
+    }
+    if (pins) out.push(el('div', { class: 'nt' }, '● ' + pins + ' to fix'));
+    return out;
+  }
+  function renderRunbook(host) {
+    var f = flowOf('main'), rb = el('div', { class: 'rb' }), cur = null, part = 0;
+    f.steps.forEach(function (s, i) {
+      var ph = s.phase || '';
+      if (ph && ph !== cur) { cur = ph; part++; rb.append(el('div', { class: 'part' }, 'Part ' + part + ' · ' + ph)); }
+      rb.append.apply(rb, rbStep(f, i, 0, {}));
+    });
+    host.append(rb);
+  }
+
+  /* two lanes */
+  function renderLanes(host) {
+    var f = flowOf(S.flow), n = f.steps.length, W = 640, RH = 58, TOP = 36, PW = 238, PH = 38, CX = [200, 500], H = TOP + n * RH + 12;
+    if (S.flow !== 'main') host.append(crumb(f));
+    var svg = sv('svg', { viewBox: '0 0 ' + W + ' ' + H, role: 'group', 'aria-label': 'Steps of ' + f.name + ' in two lanes' });
+    svg.append(sv('text', { class: 'lhd c', x: CX[0], y: 16, 'text-anchor': 'middle' }, 'Claude works'), sv('text', { class: 'lhd u', x: CX[1], y: 16, 'text-anchor': 'middle' }, 'You approve'), sv('line', { class: 'lmid', x1: W / 2 + 4, y1: 28, x2: W / 2 + 4, y2: H - 6 }));
+    function pt(i) { var lane = f.steps[i].approval ? 1 : 0; return { x: CX[lane] - PW / 2, y: TOP + i * RH, cx: CX[lane], lane: lane }; }
+    f.steps.forEach(function (s, i) {
+      if (!i) return; var a = pt(i - 1), b = pt(i), y1 = a.y + PH, y2 = b.y, my = (y1 + y2) / 2;
+      svg.append(sv('path', { class: 'lw' + (s.approval || f.steps[i - 1].approval ? ' you' : ''), d: a.cx === b.cx ? 'M' + a.cx + ' ' + y1 + ' L' + b.cx + ' ' + y2 : 'M' + a.cx + ' ' + y1 + ' C' + a.cx + ' ' + my + ' ' + b.cx + ' ' + my + ' ' + b.cx + ' ' + y2 }));
+    });
+    var phase = '';
+    f.steps.forEach(function (s, i) {
+      var p = pt(i), sel = S.flow === f.key && S.idx === i, notes = [], cd = s.child ? D.children[s.child] : null;
+      if (s.phase && s.phase !== phase) { phase = s.phase; svg.append(sv('text', { class: 'lph', x: 4, y: p.y + PH / 2 + 4 }, s.phase)); }
+      waysOf(s).forEach(function (w) { notes.push('↺ ' + (w.to + 1) + (w.max ? ' · ' + w.max + '×' : ' · click')); });
+      if (s.child) notes.push('↳ ' + s.child + (cd && cd.missing ? ' (missing)' : ''));
+      f.steps.forEach(function (o, k) { if (o.trigger && o.trigger.syncTo === i) notes.push('⧖ waits for ' + (k + 1)); });
+      var pins = openOf(findsOf(f.key, i)).length; if (pins) notes.push('● ' + pins);
+      var g = sv('g', { class: 'lp' + (s.approval ? ' you' : '') + (sel ? ' sel' : ''), tabindex: '0', role: 'button', 'aria-pressed': String(sel), 'aria-label': 'Step ' + (i + 1) + ', ' + s.name + (s.approval ? ', you approve' : '') });
+      g.append(sv('title', null, s.name), sv('rect', { x: p.x, y: p.y, width: PW, height: PH, rx: PH / 2 }), sv('text', { class: 'lnu', x: p.x + 16, y: p.y + PH / 2 + 4 }, String(i + 1).padStart(2, '0')), sv('text', { x: p.x + 42, y: p.y + PH / 2 + 4.5 }, s.name.length > 27 ? s.name.slice(0, 26) + '…' : s.name));
+      if (notes.length) g.append(sv('text', { class: 'lnt', x: p.lane ? p.x - 10 : p.x + PW + 10, y: p.y + PH / 2 + 4, 'text-anchor': p.lane ? 'end' : 'start' }, notes.join(' · ')));
+      g.addEventListener('click', pick(f.key, i)); g.addEventListener('keydown', function (ev) { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); choose(f.key, i, 'step', true); } });
+      svg.append(g);
+    });
+    host.append(el('div', { class: 'lanes' }, svg));
+  }
+
+  /* ---- selection ---- */
+  function choose(flow, idx, tab, scroll) {
+    S.flow = flow; S.idx = idx; if (tab) S.tab = tab; S.hl = null;
+    if (flow !== 'main') S.open[flow] = true;
+    renderList(); renderTabs(); renderPane();
+    if (scroll && window.matchMedia('(max-width: 979px)').matches && $('side').scrollIntoView) $('side').scrollIntoView({ block: 'start', behavior: 'smooth' });
+  }
+
+  /* ---- side panel ---- */
+  var TABS = [['step', 'Step'], ['form', 'Form'], ['review', 'Review'], ['files', 'Files']];
+  function renderTabs() {
+    var t = $('tabs'); t.textContent = ''; var open = openOf(FINDS).length;
+    TABS.forEach(function (x) { t.append(el('button', { type: 'button', role: 'tab', 'aria-selected': String(S.tab === x[0]), onclick: function () { S.tab = x[0]; S.hl = null; renderTabs(); renderPane(); } }, x[1] + (x[0] === 'review' && open ? ' ' + open : x[0] === 'form' ? ' ' + flowOf(S.flow).params.length : ''))); });
+  }
+  function renderPane() {
+    var p = $('pane'); p.textContent = ''; var f = flowOf(S.flow);
+    var list = S.tab === 'step' ? stepPane(f) : S.tab === 'form' ? formPane(f) : S.tab === 'review' ? reviewPane() : [el('div', null, el('h4', null, 'Files that will be written'), el('pre', { class: 'tree' }, D.files.join('\n')))];
+    // The row has the link to the list and, on the Step tab, the arrows. With no arrows the row is the old link alone: it hides in a wide window, as before.
+    var nav = S.tab === 'step' && f.steps.length;
+    p.append(el('div', { class: 'pnav' + (nav ? '' : ' backbtn') },
+      el('button', { class: 'link', type: 'button', onclick: function () { $('list').scrollIntoView({ behavior: 'smooth', block: 'start' }); } }, '↑ Back to the steps'),
+      nav ? el('span', { class: 'arrows' }, stepArrow(f, -1, '‹', 'Previous step'), stepArrow(f, 1, '›', 'Next step')) : null));
+    p.append.apply(p, list);
+  }
+  function stepArrow(f, delta, icon, label) {
+    var to = S.idx + delta;
+    return el('button', { type: 'button', 'aria-label': label, title: label, disabled: to < 0 || to >= f.steps.length, onclick: function () { goStep(delta); } }, icon);
+  }
+  /* one step back or on in the open flow; it stops at both ends. The arrows and the j and k keys both come here. */
+  function goStep(delta) {
+    var f = flowOf(S.flow); S.idx = Math.max(0, Math.min(f.steps.length - 1, S.idx + delta)); S.tab = 'step'; S.hl = null;
+    renderList(); renderPane(); renderTabs();
+  }
+  function stepPane(f) {
+    var st = f.steps[S.idx]; if (!st) return [el('p', { class: 'muted' }, 'Pick a step.')];
+    var key = f.key + ':' + S.idx, fl = findsOf(f.key, S.idx), out = [];
+    var sub = [st.kind === 'sub' ? 'Child flow' : st.kind === 'copied' ? 'Copied step' : 'New step']; if (st.phase) sub.push(st.phase);
+    out.push(el('div', { class: 'sthead' }, el('div', { class: 'sub' }, 'Step ' + (S.idx + 1) + ' · ' + sub.join(' · ')), el('h3', null, st.name)));
+    out.push(el('p', null, fill(st.summary || '', f)));
+    if (st.approval) out.push(el('div', { class: 'note' }, el('b', null, 'You approve before the flow goes on.'), el('span', { class: 'muted' }, 'The agent shows the result and waits for your click. It cannot approve for you.')));
+    waysOf(st).forEach(function (w) { out.push(el('div', { class: 'note' }, el('b', null, 'Can go back to step ' + (w.to + 1) + ': ' + (f.steps[w.to] ? f.steps[w.to].name : '')), el('span', { class: 'muted' }, wayText(w)))); });
+    if (st.child) {
+      var cd = D.children[st.child], tg = st.trigger || {}, ps = Object.keys(tg.parameters || {});
+      if (cd && cd.missing) out.push(el('div', { class: 'note' }, el('b', null, 'Child not found'), el('span', { class: 'muted' }, 'This step starts the template ' + st.child + (cd.id ? ', id ' + cd.id : '') + '. It is not in this repository and not installed. Install it, or add it to the marketplace, then open this page again.')));
+      else out.push(el('div', { class: 'trigc' }, el('h4', null, 'Starts the child flow ' + st.child),
+        el('div', { class: 't' }, el('span', null, 'Starts when'), el('span', null, tg.condition || 'Every time this step is reached')),
+        el('div', { class: 't' }, el('span', null, 'Runs'), el('span', null, st.forEach ? ['Once for each item of ', el('code', null, st.forEach)] : 'Once')),
+        el('div', { class: 't' }, el('span', null, 'Passes'), el('span', null, ps.length ? ps.map(function (k, n) { return [n ? ', ' : '', el('code', null, k), ' ← ', el('code', null, tg.parameters[k])]; }) : 'Nothing')),
+        el('div', { class: 't' }, el('span', null, 'Parent waits'), el('span', null, tg.syncTo != null ? ['The parent goes on. It waits at ', el('button', { class: 'link', type: 'button', onclick: function () { choose(f.key, tg.syncTo, 'step', true); } }, 'step ' + (tg.syncTo + 1) + ' · ' + f.steps[tg.syncTo].name)] : tg.sync && tg.sync !== 'immediate' ? 'At sync point "' + tg.sync + '", which is not a later step of this template.' : 'Here. The step ends when every child ends.')),
+        D.children[st.child] && D.children[st.child].steps && D.children[st.child].steps.length ? el('button', { class: 'link', type: 'button', onclick: function () { S.open[st.child] = true; renderList(); choose(st.child, 0, 'step', true); } }, 'Open ' + st.child + ' ›') : null));
+    }
+    if ((st.actions || []).length) out.push(el('div', null, el('h4', null, 'Actions'), el('ul', null, st.actions.map(function (a) { return el('li', null, fill(a, f)); }))));
+    if ((st.output || []).length) out.push(el('div', null, el('h4', null, 'Output'), el('ul', null, st.output.map(function (o) { return el('li', null, o); }))));
+    if ((st.uses || []).length) out.push(el('div', null, el('h4', null, 'Uses from the form'), el('div', { class: 'pchips' }, st.uses.map(function (u) { return el('button', { type: 'button', onclick: function () { S.tab = 'form'; S.hl = st.uses; renderTabs(); renderPane(); } }, u); }))));
+    if (fl.length) out.push(el('div', null, el('h4', null, 'Review'), el('div', { style: 'display:grid;gap:12px' }, fl.map(findingCard))));
+    if (!VIEW) {
+      var ta = el('textarea', { 'aria-label': 'Your note for ' + st.name, placeholder: 'Anything to change here? Claude reads it.', oninput: function (e) { S.notes[key] = e.target.value; renderSum(); } }); ta.value = S.notes[key] || '';
+      out.push(el('div', null, el('h4', null, 'Your note'), ta));
+    }
+    return out;
+  }
+  function findingCard(fd) {
+    var f = flowOf(fd.flow), where = (fd.flow === 'main' ? '' : f.name + ' · ') + 'step ' + (fd.step + 1) + ' · ' + f.steps[fd.step].name, LV = { must: 'Must fix', should: 'Should fix', note: 'Note' }, d = S.decisions[fd.id];
+    function pick(v) { return el('button', { type: 'button', 'aria-pressed': String(d === v), onclick: function () { S.decisions[fd.id] = d === v ? undefined : v; renderList(); renderPane(); renderSum(); } }, v === 'fix' ? 'Fix it' : 'Ignore'); }
+    return el('div', { class: 'find' }, el('div', { class: 'frow' }, el('span', { class: 'lv' }, el('i', { class: 'dotm' + (fd.level === 'must' ? '' : ' o') }), LV[fd.level]), el('button', { class: 'link', type: 'button', onclick: function () { choose(fd.flow, fd.step, 'step', true); } }, where),
+      fd.status === 'fixed' ? el('span', { class: 'fixed' }, 'Fixed') : (VIEW ? null : el('span', { class: 'seg', role: 'group', 'aria-label': 'Your decision' }, pick('fix'), pick('ignore')))),
+      el('p', null, fd.text), fd.fix ? el('p', { class: 'muted' }, (fd.status === 'fixed' ? 'Fix: ' : 'Suggested fix: ') + fd.fix) : null);
+  }
+  function reviewPane() {
+    if (!REVIEWED) return [el('p', { class: 'muted' }, 'This template has not been reviewed. Run /zeremai:create-template to plan and review a new one.')];
+    var open = openOf(FINDS), fixed = FINDS.filter(function (f) { return f.status === 'fixed'; }), out = [];
+    if (!FINDS.length) return [el('p', { class: 'muted' }, 'The reviewer found nothing.')];
+    if (open.length) out.push(el('div', null, el('h4', null, 'To fix · ' + open.length), el('div', { style: 'display:grid;gap:12px' }, open.map(findingCard))));
+    if (fixed.length) {
+      var box = el('div', { style: 'display:grid;gap:12px;padding-top:12px' }), shown = false;
+      var tog = el('button', { class: 'link', type: 'button', onclick: function () { shown = !shown; box.hidden = !shown; this.textContent = shown ? 'Hide' : 'Show'; } }, 'Show');
+      box.hidden = true; fixed.forEach(function (f) { box.append(findingCard(f)); }); out.push(el('div', null, el('div', { class: 'folded' }, 'Fixed · ' + fixed.length, tog), box));
+    }
+    return out;
+  }
+  function formPane(f) {
+    var vals = S.values[f.key] = S.values[f.key] || {}, hl = S.hl || [];
+    var req = f.params.filter(function (p) { return p.required; }), opt = f.params.filter(function (p) { return !p.required; });
+    function field(p) {
+      var id = 'p-' + f.key + '-' + p.name, users = []; f.steps.forEach(function (s, i) { if ((s.uses || []).indexOf(p.name) >= 0) users.push(i); });
+      var used = el('div', { class: 'used' }, users.length ? ['Used in'] : null, users.length ? users.map(function (i) { return el('button', { type: 'button', onclick: function () { choose(f.key, i, 'step', true); } }, (i + 1) + ' ' + f.steps[i].name); }) : el('span', null, 'Used in no step'));
+      var inp = el('input', { id: id, type: 'text', placeholder: p.example, inputmode: p.type === 'number' ? 'numeric' : null, oninput: function (e) { vals[p.name] = e.target.value; } }); inp.value = vals[p.name] || '';
+      return el('div', { class: 'field' + (hl.indexOf(p.name) >= 0 ? ' hl' : '') }, el('label', { for: id }, p.name + (p.required ? ' (required)' : '')), inp, el('small', null, p.description + ' · ' + p.type), used);
+    }
+    return [el('p', { class: 'muted' }, 'The form the ZeremAI site shows. Type a value to see it inside the steps.')].concat(req.concat(opt).map(field));
+  }
+
+  /* ---- answer bar (draft mode) ---- */
+  var CM = null, CAN = 'checking', SENT = null;
+  var REASON = { checking: '', writers_only: 'Only an editor of this artifact can send an answer.', no_session: 'Claude is not watching this page. Ask Claude to publish it again.', off: 'This page cannot send an answer here.' };
+  function bytes(s) { return new TextEncoder().encode(s).length; }
+  function clean(s) { return s.replace(/[\u0000-\u001f\u007f]+/g, ' ').replace(/\s{2,}/g, ' ').trim(); }
+  function refreshCan() {
+    var p = window.claude && window.claude.use ? window.claude.use('comments') : null;
+    if (!p) { CAN = 'off'; renderSum(); return; }
+    p.then(function (c) { CM = c; return c ? c.canSendToClaude() : 'off'; }).catch(function () { return 'off'; }).then(function (s) { CAN = s; renderSum(); });
+  }
+  function counts() {
+    var notes = Object.keys(S.notes).filter(function (k) { return (S.notes[k] || '').trim(); }).length + (S.general.trim() ? 1 : 0);
+    var dec = Object.keys(S.decisions).filter(function (k) { return S.decisions[k]; }).length; return { notes: notes, dec: dec };
+  }
+  function renderSum() {
+    if (VIEW) { $('bar').hidden = true; return; }
+    var c = counts(), s = $('sum'), ok = CAN === 'available' && !SENT; s.textContent = '';
+    if (SENT) s.append('Sent: ' + SENT + '. Claude is working.');
+    else if (CAN === 'available') s.append('Nothing is written until you approve. ' + c.notes + (c.notes === 1 ? ' note' : ' notes') + ', ' + c.dec + (c.dec === 1 ? ' decision' : ' decisions') + '.');
+    else s.append(REASON[CAN] || REASON.off);
+    ['okBtn', 'askBtn'].forEach(function (id) { $(id).hidden = !ok; });
+  }
+  function why(e) {
+    var c = e && e.code;
+    return c === 'consent_required' ? 'You did not allow comments for this page. Reload the page, press Send, and choose Allow.' : c === 'claude_unavailable' ? 'Claude could not be reached. Nothing was posted.' : c === 'rate_limited' ? 'Too fast. Wait a moment and press Send again.'
+      : c === 'invalid' ? 'The comment was rejected. Shorten the notes and try again.' : c === 'forbidden' ? 'You cannot comment on this artifact.' : 'Sending failed (' + (c || 'unknown') + '). Nothing was posted.';
+  }
+  function answerOf(verdict) {
+    var parts = ['[zeremai answer] ' + D.title, 'Verdict: ' + verdict], decisions = {}, notes = {};
+    var dl = FINDS.filter(function (f) { return S.decisions[f.id]; });
+    if (dl.length) parts.push('Decisions: ' + dl.map(function (f) { decisions[f.id] = S.decisions[f.id]; return f.id + ' (' + f.flow + ' step ' + (f.step + 1) + ') = ' + (S.decisions[f.id] === 'fix' ? 'fix it' : 'ignore'); }).join('; '));
+    var nk = Object.keys(S.notes).filter(function (k) { return (S.notes[k] || '').trim(); });
+    if (nk.length) parts.push('Notes: ' + nk.map(function (k) { var p = k.split(':'), f = flowOf(p[0]); notes[k] = S.notes[k].trim(); return f.name + ' step ' + (Number(p[1]) + 1) + ' (' + f.steps[p[1]].name + '): ' + S.notes[k].trim(); }).join('; '));
+    if (S.general.trim()) parts.push('General: ' + S.general.trim());
+    return { verdict: verdict, decisions: decisions, notes: notes, general: S.general.trim(), comment: clean(parts.join(' | ')) };
+  }
+  function submit(verdict, msg, btn) {
+    var a = answerOf(verdict), n = bytes(a.comment);
+    if (n > 4096) { msg.className = 'err'; msg.textContent = 'Your answer is ' + (n - 4096) + ' bytes over the 4 KB comment limit. Shorten the notes and try again.'; return; }
+    if (!CM) { msg.className = 'err'; msg.textContent = REASON.off; return; }
+    btn.disabled = true; msg.className = 'muted'; msg.textContent = 'Sending…';
+    CM.anchorFor($('bar')).then(function (anchor) { return CM.sendToClaude({ anchor: anchor, text: a.comment }); })
+      .then(function () { SENT = verdict; msg.className = 'sent'; msg.textContent = 'Sent. Claude has your answer and is working. Watch the chat.'; btn.hidden = true; renderSum(); })
+      .catch(function (e) { btn.disabled = false; msg.className = 'err'; msg.textContent = why(e); });
+  }
+  function openDialog(verdict) {
+    if (VIEW || CAN !== 'available' || SENT) return;
+    var body = $('dlgBody'), dlg = $('dlg'), c = counts(); body.textContent = '';
+    var openMust = FINDS.filter(function (f) { return f.status === 'open' && f.level === 'must' && !S.decisions[f.id]; }).length;
+    var general = el('textarea', { id: 'general', 'aria-label': 'Anything else', placeholder: 'Anything else for Claude? (optional)', oninput: function (e) { S.general = e.target.value; } }); general.value = S.general;
+    var msg = el('p', { class: 'muted', id: 'sendMsg', role: 'status', 'aria-live': 'polite' }), send = el('button', { class: 'btn primary', type: 'button', id: 'sendBtn' }, verdict === 'Approve' ? 'Approve and send' : 'Send for changes');
+    send.addEventListener('click', function () { submit(verdict, msg, send); });
+    [el('h3', null, verdict === 'Approve' ? 'Approve this template?' : 'Ask for changes?'),
+      el('p', { class: 'muted' }, c.dec + ' finding decisions and ' + c.notes + ' notes go with your answer, as a comment on this page that Claude receives.'),
+      verdict === 'Approve' ? el('p', { class: 'muted' }, 'Claude then writes the files. It asks in the chat before anything leaves your machine.') : el('p', { class: 'muted' }, 'Claude changes the draft, has it reviewed again, and sends you a new page.'),
+      openMust ? el('p', { class: 'sent' }, openMust + ' must-fix finding' + (openMust === 1 ? ' is' : 's are') + ' still open with no decision.') : null,
+      general, msg, el('div', { class: 'actions' }, el('button', { class: 'btn', type: 'button', onclick: function () { dlg.close(); } }, 'Back'), send)].forEach(function (x) { if (x) body.append(x); });
+    dlg.showModal();
+  }
+
+  /* ---- keyboard ---- */
+  document.addEventListener('keydown', function (e) {
+    var t = e.target; if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA') || e.metaKey || e.ctrlKey || e.altKey) return;
+    if (e.key === 'j' || e.key === 'k') { e.preventDefault(); goStep(e.key === 'j' ? 1 : -1); }
+  });
+  $('more').addEventListener('click', function () { S.details = !S.details; renderHead(); });
+  function setView(v) { S.view = v; $('vRun').setAttribute('aria-pressed', String(v === 'runbook')); $('vLane').setAttribute('aria-pressed', String(v === 'lanes')); renderList(); }
+  $('vRun').addEventListener('click', function () { setView('runbook'); });
+  $('vLane').addEventListener('click', function () { setView('lanes'); });
+  $('okBtn').addEventListener('click', function () { openDialog('Approve'); });
+  $('askBtn').addEventListener('click', function () { openDialog('Ask for changes'); });
+
+  function renderAll() { renderHead(); renderList(); renderTabs(); renderPane(); renderSum(); }
+  (function pickFirst() { var best = 0, rank = { must: 3, should: 2, note: 1 }, top = 0; MAIN.forEach(function (s, i) { findsOf('main', i).forEach(function (f) { if (f.status === 'open' && rank[f.level] > top) { top = rank[f.level]; best = i; } }); }); S.idx = best; })();
+  renderAll();
+  refreshCan();
+})();
+</script>

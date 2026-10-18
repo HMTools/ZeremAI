@@ -1,0 +1,121 @@
+{
+ "schema_version": 1,
+ "diagram_type": "sequence",
+ "meta": {
+  "title": "The path of one click",
+  "output": "click-path.html",
+  "viewBox": [
+   960,
+   585
+  ],
+  "column_fit": "spread"
+ },
+ "participants": [
+  {
+   "id": "you",
+   "type": "external",
+   "label": "You"
+  },
+  {
+   "id": "page",
+   "type": "frontend",
+   "label": "Live page"
+  },
+  {
+   "id": "db",
+   "type": "database",
+   "label": "Page database"
+  },
+  {
+   "id": "mod",
+   "type": "security",
+   "label": "Mod",
+   "sublabel": "on-live-page"
+  },
+  {
+   "id": "script",
+   "type": "backend",
+   "label": "Flow script"
+  },
+  {
+   "id": "agent",
+   "type": "backend",
+   "label": "Claude"
+  }
+ ],
+ "messages": [
+  {
+   "id": "m1",
+   "from": "you",
+   "to": "page",
+   "y": 165,
+   "label": "press Approve"
+  },
+  {
+   "id": "m2",
+   "from": "page",
+   "to": "db",
+   "y": 205,
+   "label": "command row: new",
+   "note": "button: Sent, waiting for ZeremAI"
+  },
+  {
+   "id": "m3",
+   "from": "page",
+   "to": "mod",
+   "y": 245,
+   "label": "room hint",
+   "variant": "return",
+   "note": "only wakes the mod; may be off"
+  },
+  {
+   "id": "m4",
+   "from": "mod",
+   "to": "db",
+   "y": 285,
+   "label": "read new rows",
+   "note": "every second"
+  },
+  {
+   "id": "m5",
+   "from": "mod",
+   "to": "db",
+   "y": 325,
+   "label": "claim: running",
+   "variant": "security",
+   "note": "a lost race skips the row"
+  },
+  {
+   "id": "m6",
+   "from": "mod",
+   "to": "script",
+   "y": 365,
+   "label": "log a fixed line, approve",
+   "variant": "security"
+  },
+  {
+   "id": "m7",
+   "from": "mod",
+   "to": "db",
+   "y": 405,
+   "label": "done + new flow state",
+   "note": "one write"
+  },
+  {
+   "id": "m8",
+   "from": "mod",
+   "to": "agent",
+   "y": 445,
+   "label": "the answer, as a prompt",
+   "variant": "return"
+  },
+  {
+   "id": "m9",
+   "from": "db",
+   "to": "page",
+   "y": 485,
+   "label": "each stage shows",
+   "variant": "return"
+  }
+ ]
+}

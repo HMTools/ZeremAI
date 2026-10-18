@@ -1,0 +1,91 @@
+---
+title: "Marketplaces"
+description: "Templates are distributed through git-backed marketplaces, not bundled with the plugin."
+---
+
+Templates are distributed through **git-backed marketplaces**, not bundled with the plugin.
+
+## Why
+
+- **Versioned**: track a branch or tag.
+- **Team sharing**: host private templates in your own repo.
+- **Multiple sources**: combine official and custom repos.
+- **Per-template install**: install only what you need.
+- **Update detection**: see which installed templates have newer versions.
+- **Independent updates**: update templates without updating the plugin.
+
+## Create your own
+
+A marketplace is a git repository with `templates/flows/<category>/<template>/<template>.json` in it, and a subfolder for each step. In a Claude Code session, run:
+
+```
+/zeremai:create-marketplace A shared library of review flows for the payments team
+```
+
+The skill plans the folder and shows it on one page: the file tree, how the Templates screen of the site will list it, each step, and where you want the repository to live. Nothing is written until you press **Approve**. It then creates the folder, runs `git init` on branch `main`, makes the first commit, and checks the result.
+
+Everything that leaves your machine or changes your config asks first and shows the exact command: adding the marketplace to `marketplaces.json` (with the local path, so you can install from it at once), creating a GitHub or Azure DevOps repository, and pushing to a new or an empty existing repository. It never forces a push. Details: [`/zeremai:create-marketplace`](/commands/create-marketplace). Then add templates with [`/zeremai:create-template`](/commands/create-template).
+
+To check a marketplace yourself, run the check script of the plugin:
+
+```bash
+python3 <plugin>/scripts/check_template.py --marketplace <folder>
+```
+
+It checks every template, that each folder name and category match the JSON, that template ids are unique, and that sub-flows point to templates in the repository.
+
+## Manage from the site
+
+Open `/zeremai:init` → **Templates**. The list is grouped by marketplace.
+
+| Action | Effect |
+|---|---|
+| Refresh marketplaces | Fetch the latest catalogs from all enabled marketplaces |
+| Install | Copy a template from the marketplace cache. On an installed template with a newer version it updates it. |
+| Remove | Delete an installed template. The site asks first. |
+
+An installed template also has **View**, **Edit** (type a change, then **Ask Claude**), **Update** (or **Update…** when you edited it, because it erases your change) and **Send as PR** (for a template you edited). See [Templates](/ui/templates).
+
+To set the marketplaces themselves, open **Marketplaces** (the tab next to **Templates**). See [Marketplaces screen](/ui/marketplaces) for the screen.
+
+1. **Add:** press **Add marketplace**, fill in the name and git address, then press **Add and refresh**. It clones at once.
+2. **Edit:** press **Edit** on its card to change the address, branch or priority. A new address or branch deletes the saved copy, so press **Refresh marketplaces** to clone it again.
+3. **Switch off:** use the **On / Off** switch. Refresh skips a marketplace that is off.
+4. **Remove:** press **Remove**, then **Yes, remove**. This deletes its folder in `cache/sources/`. Templates you installed stay, because they are copies.
+
+The same actions work from the prompt with [`/zeremai:marketplace`](/commands/marketplace). You can also edit [the config file](#config-file) by hand.
+
+## Config file
+
+`~/.claude/zeremai/config/marketplaces.json`:
+
+```json
+{
+  "marketplaces": [
+    {
+      "name": "official",
+      "url": "https://github.com/HMTools/ZeremAI-marketplace.git",
+      "branch": "main",
+      "enabled": true,
+      "priority": 100
+    }
+  ],
+  "settings": {
+    "autoRefreshOnStale": false,
+    "staleDurationMinutes": 1440
+  }
+}
+```
+
+| Field | Meaning |
+|---|---|
+| `name` | Short identifier |
+| `url` | Git clone URL |
+| `branch` | Branch to track (default `main`) |
+| `enabled` | Skip the marketplace when `false` |
+| `priority` | Lower number = higher priority |
+| `autoRefreshOnStale` / `staleDurationMinutes` | Reserved. They have no effect today. **Refresh marketplaces** refreshes, and so does the start of each session (see [Templates screen](/ui/templates#versions-and-update-notices)). |
+
+## Private marketplaces
+
+Use any git URL your machine can already clone (SSH, or HTTPS with your credential helper). ZeremAI runs plain `git`, so it needs no extra credentials of its own.

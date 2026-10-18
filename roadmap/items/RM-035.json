@@ -1,0 +1,25 @@
+{
+  "id": "RM-035",
+  "title": "Memory view in the flow pane",
+  "description": "Show which steps read and write which memory topics, for templates and running flows, plus current contents, per-step history and diffs.",
+  "type": "feature",
+  "status": "proposed",
+  "priority": "medium",
+  "category": "ui",
+  "milestone": "backlog",
+  "effort": "",
+  "tags": [
+    "ui",
+    "memory",
+    "templates",
+    "instances",
+    "ux"
+  ],
+  "dependencies": [],
+  "created": "2026-06-10",
+  "updated": "2026-10-12",
+  "author": "m4t4ngm@gmail.com",
+  "notes": "",
+  "acceptance_criteria": [],
+  "illustration": "memory-storage"
+}

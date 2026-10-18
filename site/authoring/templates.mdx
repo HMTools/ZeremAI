@@ -1,0 +1,193 @@
+---
+title: "Write a template"
+description: "A template is one JSON file plus a subfolder per step. Publish it in a git marketplace(/guide/marketplaces) so others can install it."
+---
+
+A template is one JSON file plus a subfolder per step. Publish it in a git [marketplace](/guide/marketplaces) so others can install it.
+
+## Create one with the skill
+
+In a Claude Code session, run [`/zeremai:create-template`](/commands/create-template):
+
+```
+/zeremai:create-template Review a pull request for security problems, and ask me before it writes the report
+```
+
+The skill plans the template from your description, copies steps that fit from your installed templates, and plans a child template when a step must repeat. A separate reviewer agent then checks the plan, and a script checks the exact facts (ids, parameters, step files). You see the result on one page, with the findings on the steps they are about. Nothing is written until you press **Approve** on the page. The skill then asks where to save: your templates folder, a marketplace repository (it opens a pull request after you confirm the push), or both.
+
+The rest of this page describes the files, which you can also write by hand.
+
+## Read an installed template
+
+See also [`/zeremai:view-template`](/commands/view-template) and [Plan pages](/ui/plan-pages).
+
+```
+/zeremai:view-template codefactory-e2e-development
+```
+
+The command opens the template on one calm page, even with 20 steps, and a switch at the top picks how you read it. **Runbook** is a page of type: parts for the phases, a number and one sentence for each step, a boxed STOP after each approval step, and a note for each loop and child flow, which opens under its step. **Two lanes** puts Claude on the left and you on the right, with time running down, so you see when Claude works alone and when you step in. Pick a step to see its actions and output in the side panel. The Form tab shows which steps use each parameter. Nothing is changed.
+
+## Edit an installed template
+
+Change an installed template, or send your change to its marketplace: see [Edit and send a template](/authoring/edit-and-send).
+
+## Layout
+
+```
+templates/flows/{category}/{template-name}/
+├── {template-name}.json        # the template
+├── changelog.json              # what changed in each version
+├── {step-a}/{step-a}.json      # step definitions
+└── {step-b}/{step-b}.json
+```
+
+Installed copies live under `~/.claude/zeremai/templates/flows/`.
+
+## Minimal template
+
+```json
+{
+  "type": "template",
+  "id": "9f1c2e7a-5b1d-4a8e-8c3f-0d2b6a7e1f10",
+  "name": "fix-bug",
+  "category": "development",
+  "metadata": {
+    "title": "Fix a bug",
+    "purposeAndUsage": "Diagnose and fix a reported bug, with a reviewed plan.",
+    "lastUpdated": "2026-10-12",
+    "version": "1.0.0"
+  },
+  "parameters": {
+    "required": ["bugDescription"],
+    "optional": ["repro"],
+    "definitions": {
+      "bugDescription": {
+        "description": "What is wrong",
+        "type": "string",
+        "example": "Login returns 500 for emails with a plus sign"
+      },
+      "repro": {
+        "description": "Steps to reproduce",
+        "type": "string",
+        "example": "POST /login with a+b@x.com"
+      }
+    }
+  },
+  "steps": [
+    {
+      "number": 1,
+      "name": "Diagnose",
+      "stepRef": "28047be4-e7c5-4152-8329-2929982ad042",
+      "stepRefName": "diagnose",
+      "context": { "bug": "{{bugDescription}}" }
+    },
+    {
+      "number": 2,
+      "name": "Plan the fix",
+      "stepRef": "c4a1f0aa-3d52-4b9e-9a77-6d0e5b2f91c3",
+      "stepRefName": "plan-fix",
+      "approvalRequired": true
+    }
+  ],
+  "references": {
+    "steps": [
+      "28047be4-e7c5-4152-8329-2929982ad042",
+      "c4a1f0aa-3d52-4b9e-9a77-6d0e5b2f91c3"
+    ],
+    "relatedTemplates": [],
+    "dependencies": []
+  }
+}
+```
+
+Generate UUIDs with `uuidgen` or `node -e "console.log(crypto.randomUUID())"`. Never reuse them.
+
+## Top-level fields
+
+| Field | Required | Notes |
+|---|---|---|
+| `type` | yes | Always `"template"` |
+| `id` | yes | UUID v4, stable forever (sub-flows and findings key on it) |
+| `name`, `category` | yes | Folder names |
+| `metadata` | yes | `title`, `purposeAndUsage`, `lastUpdated` (`YYYY-MM-DD`), `version` (`x.y.z`) |
+| `parameters` | yes | `required`, `optional`, `definitions`, optional `defaults` and `notes` |
+| `steps` | yes | Ordered list, see below |
+| `references` | yes | Step UUIDs used, related templates, dependencies |
+| `memoryFileStructure` / `memoryFileUsage` | no | Documents memory topics |
+| `guidance` | no | Per-step extra context |
+
+## Version and changelog
+
+Every template has a `metadata.version` (`x.y.z`) and a `changelog.json` next to the template file. The site shows an update only when the marketplace copy has a higher version than the one you installed, and lists what changed from the changelog.
+
+```json
+{
+  "versions": [
+    { "version": "1.1.0", "date": "2026-10-18", "changes": ["Adds a retry step after a failed CI run.", "Asks for the branch name first."] },
+    { "version": "1.0.0", "date": "2026-10-12", "changes": ["First version."] }
+  ]
+}
+```
+
+Newest first, plain sentences, one or more changes for each version. The checker needs an entry for the current `version`. Raise the version in every change: patch for a fix, minor for a new step or parameter, major for a change that breaks a flow that is running.
+
+## Parameters
+
+Use `{{paramName}}` in the values of `subFlowTrigger.parameters`. The agent replaces it with the value from the parent flow when it starts the child flow. Nothing replaces it inside a step `context`: the step brief shows the flow parameters beside the step, and the agent reads them from there. The template checker accepts `{{paramName}}` in `context` and `description` only to test that the name is defined, and the template page fills it in for the preview. Each `definitions` entry needs `description`, `type` and an `example`, since the **New flow** form on [the site](/guide/live-site) shows them. Required parameters get a star.
+
+Give a parameter `options`, a list of texts, when only a few values make sense. The form then shows a dropdown and refuses any other value. Add `"allowOther": true` to let the user also type their own.
+
+```json
+"env": { "description": "Where to deploy", "type": "string", "example": "staging", "options": ["staging", "production"] }
+```
+
+## Step entries
+
+| Field | Meaning |
+|---|---|
+| `number`, `name` | Order and label |
+| `stepRef` | UUID of the step definition's `id`. This is what resolves. |
+| `stepRefName` | Display-only companion |
+| `phase` | Optional short group name (`Design`, `Build`, `Ship`). The template page groups steps by it |
+| `description`, `context`, `notes` | Documentation for readers of the template and the template page. They do not reach the flow |
+| `approvalRequired` | User must click Approve before completion |
+| `postApprovalActions` | Documentation only. It does not reach the flow |
+| `conditional` | Documentation only. It does not reach the flow |
+| `routes` | Back buttons of an approval step: a list of `{ label, goTo }`. A click goes back to the earlier step `goTo` (a step name), with no limit. `loopBackTo` on an approval step is one route, labelled "Back to <step>". |
+| `onVerifierFail` | Name of an earlier step. If a check of this step still fails after its fix tries, the flow goes back there by itself. |
+| `loopBackTo`, `loopCondition`, `maxIterations` | `loopBackTo`: the step the agent can retry from (`route_step`), and the one Back button of an approval step. `loopCondition`: when the agent can retry. `maxIterations`: the most automatic loops (failed checks and agent retries), 3 when none is named. Your clicks never count. |
+| `subFlowTrigger` | Start a child flow, see below |
+| `fallback` | Documentation only. It does not reach the flow |
+
+When a flow starts, the script copies only these fields from a template step: `name`, `stepRef`, `stepRefName`, `approvalRequired`, `subFlowTrigger`, `loopBackTo`, `loopCondition`, `maxIterations`, `routes` and `onVerifierFail`. The step brief that the agent reads comes from the flow parameters and from the step definition file, not from the template step. Put what the agent must know in the step definition, see [Write a step](/authoring/steps). A step with no `stepRef` takes its definition from a `stepDefinition` key in the template step.
+
+<Warning>Do **not** add Continuous Improvement or Complete Flow. They are appended automatically.</Warning>
+
+## Approval checkpoints
+
+Put `"approvalRequired": true` on steps whose output a human should review before work builds on it: plans, designs, destructive changes. The gate cannot be bypassed by the agent. See [Approvals](/guide/approvals).
+
+## Sub-flows
+
+```json
+{
+  "number": 3,
+  "name": "Fix each failing test",
+  "subFlowTrigger": {
+    "template": "<UUID of another template's id>",
+    "templateName": "integration-test-fix",
+    "forEach": "failingTests",
+    "parameters": { "testName": "{{item}}" },
+    "syncPoint": "immediate"
+  }
+}
+```
+
+`template` is a UUID. `templateName` is display-only. `condition` says in words when the child starts. `parameters` maps the child's parameter names to values of the parent. `syncPoint` is `immediate` (the step waits here until every child ends), or the name of a **later** step, where the parent waits while it goes on with the steps in between. A step with `subFlowTrigger` and no step definition is driven by the parent, not a subagent. See [Sub-flows](/guide/sub-flows).
+
+## Test it
+
+1. Put the template in a marketplace repo (or copy it to `~/.claude/zeremai/templates/flows/<category>/`).
+2. Run `/zeremai:init`, open **Templates** on the site → Refresh → Install.
+3. Create a flow from the **New flow** screen and run through it.
+4. Check the finished flow's log for friction. Fix and repeat.

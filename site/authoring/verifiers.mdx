@@ -1,0 +1,101 @@
+---
+title: "Deterministic Verifiers"
+description: "Check the work of a step with a Python script. A failed check goes back to the agent to fix."
+---
+
+An agent can say a step is done when it is not. A **verifier** is a Python script that checks the work of a step with code, not with judgment: a file exists, a JSON has the right keys, a plan has a rollback section. If a check fails, the plugin sends the failure to the agent that ran the step, and the agent fixes it.
+
+Use a verifier when a script can decide. Do not use one for a judgment that a person must make: that is what [approval](/guide/approvals) is for.
+
+## Add a verifier to a step
+
+Put the script in the step folder, next to the step file, and list it in the step file:
+
+```text
+fix-bug/
+├── fix-bug.json
+└── diagnose/
+    ├── diagnose.json
+    └── check-diagnosis.py
+```
+
+```json
+"verifiers": [{ "script": "check-diagnosis.py", "timeoutSec": 5 }],
+"maxFixes": 2
+```
+
+| Field | Meaning |
+|---|---|
+| `script` | A `.py` file name in the step folder. No path. |
+| `timeoutSec` | Optional, above 0 and up to 8. Default 5. At run time the script gets at least 1 second, so a smaller value counts as 1. A slower script counts as failed. |
+| `maxFixes` | Optional, 0 to 5, default 2. How many times the agent can fix a failed check. It also counts a missing result block. |
+
+When a flow starts, the flow script saves the full path of each script in the flow. It refuses a script that is outside the step folder. A step with no `verifiers` ends as before.
+
+## Write the script
+
+The script gets two arguments: the flow folder and the step ID. It prints one line of JSON and exits with 0:
+
+```json
+{
+  "status": "fail",
+  "checks": [
+    { "name": "has rollback section", "passed": false, "message": "Add a Rollback section to plan.md" },
+    { "name": "has owner", "passed": true }
+  ]
+}
+```
+
+| Key | Meaning |
+|---|---|
+| `status` | `pass` only if every check passed, else `fail`. |
+| `checks[].name` | What the check looks for. |
+| `checks[].passed` | `true` or `false`. |
+| `checks[].message` | Optional. What is wrong and how to fix it. The agent reads it. |
+
+```python
+import json, sys, os
+
+flow_dir, step_id = sys.argv[1], sys.argv[2]
+ok = os.path.exists(os.path.join(flow_dir, "diagnosis.md"))
+checks = [{"name": "diagnosis.md exists", "passed": ok, "message": "" if ok else "Write diagnosis.md"}]
+print(json.dumps({"status": "pass" if ok else "fail", "checks": checks}))
+```
+
+A script only reads. It must not change flow files. Check an artifact in the flow folder, or a file in the project.
+
+## What happens when the step ends
+
+1. The agent ends the step with its result block.
+2. The plugin runs every verifier of the step, in parallel.
+3. If all checks pass, the plugin saves the result (memory, summary and log) and the main agent goes on.
+4. If a check fails, the plugin sends the failed checks to **the same agent**. The agent fixes the work and ends again. The main agent waits, and the plugin starts its turn again when the result is saved.
+5. After `maxFixes` tries, the plugin saves the result anyway and tells the main agent which checks still fail. If the template step names `onVerifierFail`, the flow script also sends the flow back to that earlier step by itself, with no model deciding. This counts against `maxIterations` (3 when none is named). When the limit is used, the step becomes blocked and you decide.
+
+The result is saved once, so a fix round does not add memory entries twice. The user still approves a step with a click: a verifier never approves it.
+
+The agent can also run its own checks before it ends, with the tool [`run_verifiers`](/reference/tools#verifiers).
+
+## A verifier never throws an error
+
+The flow script runs every script and always answers with the same shape. These cases are one failed check, with a message for the agent:
+
+| What the script does | What the agent gets |
+|---|---|
+| Prints a correct answer, all checks pass | `pass` |
+| Prints a correct answer, a check fails | `fail`, with that check's message |
+| Raises an error (exit code is not 0) | `fail`: "verifier crashed: " and the last line of the error |
+| Runs longer than `timeoutSec` | `fail`: "verifier timed out after 5s" |
+| Prints text that is not this shape, or nothing | `fail`: "verifier answer is not valid" |
+| The status does not match the checks | `fail`: "verifier answer is not valid" |
+| The file is missing | `fail`: "verifier file not found" |
+
+A broken script counts as a failed check, so the agent uses its tries on something it cannot fix. Test your script before you ship the template.
+
+<Warning>
+A verifier runs inside a plugin hook, which has about 10 seconds. So `timeoutSec` has a ceiling of 8 seconds, and all verifiers of a step run at the same time. Keep them fast: check files and data, do not run a test suite.
+</Warning>
+
+## Check a template
+
+`check_template.py` (used by the create-template skill) checks that `script` is a `.py` file name, that `timeoutSec` and `maxFixes` are in range, and, for a template folder, that every script file exists. A wrong name fails when you build the template, not when a user runs it.

@@ -1,0 +1,151 @@
+{
+  "schema_version": 1,
+  "diagram_type": "lifecycle",
+  "meta": {
+    "title": "States of a step",
+    "output": "site/diagrams/step-status.html"
+  },
+  "lanes": [
+    {
+      "id": "main",
+      "label": "Normal path"
+    },
+    {
+      "id": "wait",
+      "label": "Waits for you"
+    },
+    {
+      "id": "terminal",
+      "label": "Left out"
+    }
+  ],
+  "states": [
+    {
+      "id": "pending",
+      "type": "start",
+      "label": "pending",
+      "lane": "main",
+      "col": 0
+    },
+    {
+      "id": "in_progress",
+      "type": "active",
+      "label": "in_progress",
+      "lane": "main",
+      "col": 2
+    },
+    {
+      "id": "completed",
+      "type": "success",
+      "label": "completed",
+      "lane": "main",
+      "col": 4,
+      "tag": "terminal"
+    },
+    {
+      "id": "awaiting_approval",
+      "type": "waiting",
+      "label": "awaiting_approval",
+      "lane": "wait",
+      "col": 0,
+      "tag": "you click"
+    },
+    {
+      "id": "blocked",
+      "type": "waiting",
+      "label": "blocked",
+      "lane": "wait",
+      "col": 2,
+      "tag": "you act"
+    },
+    {
+      "id": "skipped",
+      "type": "neutral",
+      "label": "skipped",
+      "lane": "terminal",
+      "col": 0,
+      "tag": "terminal"
+    }
+  ],
+  "transitions": [
+    {
+      "id": "t1",
+      "from": "pending",
+      "to": "in_progress",
+      "label": "agent starts the step",
+      "labelAt": [
+        248,
+        122
+      ]
+    },
+    {
+      "id": "t2",
+      "from": "in_progress",
+      "to": "completed",
+      "label": "update-step-status",
+      "variant": "security",
+      "labelAt": [
+        556,
+        122
+      ]
+    },
+    {
+      "id": "t3",
+      "from": "in_progress",
+      "to": "awaiting_approval",
+      "label": "waits for your click",
+      "labelAt": [
+        250,
+        225
+      ]
+    },
+    {
+      "id": "t4",
+      "from": "awaiting_approval",
+      "to": "completed",
+      "label": "you approve",
+      "labelAt": [
+        620,
+        262
+      ]
+    },
+    {
+      "id": "t5",
+      "from": "in_progress",
+      "to": "blocked",
+      "label": "needs a reason",
+      "variant": "security",
+      "labelAt": [
+        402,
+        215
+      ]
+    },
+    {
+      "id": "t6",
+      "from": "blocked",
+      "to": "in_progress",
+      "label": "you press Continue",
+      "labelAt": [
+        520,
+        248
+      ]
+    },
+    {
+      "id": "t7",
+      "from": "pending",
+      "to": "skipped",
+      "label": "update-step-status"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "amber",
+      "title": "Conditions",
+      "items": [
+        "Start: every earlier step must be completed or skipped",
+        "completed with approvalRequired needs approved = true",
+        "blocked needs a reason; it can never go straight to completed"
+      ]
+    }
+  ]
+}

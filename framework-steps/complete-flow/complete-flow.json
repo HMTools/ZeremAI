@@ -1,0 +1,87 @@
+{
+  "type": "framework-step",
+  "id": "4e34c0ec-4fd0-4ba1-bc9c-0d906d712b1b",
+  "name": "complete-flow",
+  "category": "common",
+  "metadata": {
+    "title": "Complete Flow",
+    "purposeAndUsage": "MANDATORY final step for every flow. Deletes the artifact files the steps made, then marks the flow completed. The status tool records the completion time and moves the folder. Auto-injected by the framework at flow creation time.",
+    "lastUpdated": "2026-10-10"
+  },
+  "output": {
+    "description": "The flow is completed and its folder is in completed/",
+    "artifacts": [],
+    "memoryUpdates": []
+  },
+  "guidance": {
+    "prerequisites": [
+      "All flow steps completed"
+    ],
+    "mandatoryComponents": [],
+    "specificActions": [
+      "Delete every file in the flow folder that is not flow.json, log.json or the memory/ folder",
+      "Call the tool update_flow_status with status 'completed'. The tool records the completion time and moves the folder to completed/. A sub-flow must also pass a summary."
+    ],
+    "files": {
+      "read": [],
+      "create": [],
+      "update": []
+    },
+    "tools": [
+      "shell",
+      "update_flow_status"
+    ],
+    "bestPractices": [
+      "Delete the files before the status call: the tool moves the folder, and the path changes",
+      "Never delete flow.json, log.json or memory/"
+    ]
+  },
+  "substeps": [
+    {
+      "number": 1,
+      "name": "Clean Up Artifact Files",
+      "description": "Delete the files the steps made, keeping only the flow files",
+      "actions": [
+        "List all files in the flow folder",
+        "Define the allowlist of items to KEEP: [\"flow.json\", \"memory/\", \"log.json\"]",
+        "Delete all files NOT in the allowlist (*.md files, other *.json artifacts). Keep the memory/ folder intact",
+        "Verify only flow.json, memory/ and log.json remain",
+        "Output: '✓ Artifact files cleaned up - keeping only flow.json, memory/, log.json'"
+      ]
+    },
+    {
+      "number": 2,
+      "name": "Mark the Flow Completed",
+      "description": "Call the status tool: it records the completion time and moves the folder",
+      "actions": [
+        "Call the tool update_flow_status with the flow folder and status 'completed' (a sub-flow also passes a summary of what it did)",
+        "Read relocated_to in the answer: that is the new folder",
+        "Output: '✓ Flow completed and moved to {relocated_to}'"
+      ]
+    }
+  ],
+  "flow": {
+    "description": "Delete artifact files → Mark the flow completed (the tool records the time and moves the folder)"
+  },
+  "memoryFileUsage": {
+    "readFrom": [],
+    "writeTo": []
+  },
+  "dependencies": {
+    "requiredComponents": [],
+    "requiredFiles": [
+      "log.json",
+      "memory/"
+    ],
+    "requiredTools": [
+      "shell",
+      "update_flow_status"
+    ]
+  },
+  "references": {
+    "relatedSteps": [],
+    "usedInTemplates": [
+      "all flows (auto-injected by framework)"
+    ]
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "id": "RM-014",
+  "title": "Per-step model configuration",
+  "description": "Choose the model per step (today the step-executor inherits the session model), so simple steps can run on cheaper models.",
+  "type": "feature",
+  "status": "proposed",
+  "priority": "medium",
+  "category": "framework",
+  "milestone": "backlog",
+  "effort": "",
+  "tags": [],
+  "dependencies": [],
+  "created": "2026-05-29",
+  "updated": "2026-10-12",
+  "author": "m4t4ngm@gmail.com",
+  "notes": "",
+  "acceptance_criteria": [],
+  "illustration": "model-switch"
+}

@@ -1,0 +1,19 @@
+{
+  "id": "RM-003",
+  "title": "Verification checklist per step",
+  "description": "Add a verification checklist to each step, checked by a hook or by a low-cost model in a subagent, to confirm a step is really complete.",
+  "type": "feature",
+  "status": "proposed",
+  "priority": "medium",
+  "category": "framework",
+  "milestone": "backlog",
+  "effort": "",
+  "tags": [],
+  "dependencies": [],
+  "created": "2026-05-29",
+  "updated": "2026-10-12",
+  "author": "m4t4ngm@gmail.com",
+  "notes": "",
+  "acceptance_criteria": [],
+  "illustration": "validation-check"
+}

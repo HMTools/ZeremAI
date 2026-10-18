@@ -1,0 +1,19 @@
+{
+  "id": "RM-027",
+  "title": "Live substep diagram in the flow pane",
+  "description": "The pane already draws the step graph of a bound flow. Add a live view of the active step's substeps and control flow as they run.",
+  "type": "feature",
+  "status": "proposed",
+  "priority": "medium",
+  "category": "ui",
+  "milestone": "backlog",
+  "effort": "",
+  "tags": [],
+  "dependencies": [],
+  "created": "2026-05-29",
+  "updated": "2026-10-12",
+  "author": "m4t4ngm@gmail.com",
+  "notes": "",
+  "acceptance_criteria": [],
+  "illustration": "diagram-flow"
+}

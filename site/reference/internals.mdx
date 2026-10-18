@@ -1,0 +1,70 @@
+---
+title: "Skills, agent & hooks"
+description: "How the plugin is put together. You do not need this to use ZeremAI, but it explains the behavior you see."
+---
+
+How the plugin is put together. You do not need this to use ZeremAI, but it explains the behavior you see.
+
+## Plugin layout
+
+```
+zeremai/
+├── .claude-plugin/plugin.json   # manifest
+├── agents/step-executor.md      # the subagent that runs a step
+├── agents/template-reviewer.md  # the reviewer of a draft template
+├── framework-steps/             # auto-appended steps
+├── hooks/                       # the mod: one folder per rule
+├── skills/                      # flow-run, flow-state-update, ...
+├── config/marketplaces.default.json
+├── types/                       # TypeScript types + schema.json
+└── assets/logo.png
+```
+
+## Skills
+
+| Skill | User-invocable | Role |
+|---|---|---|
+| `flow-run` | via the site | Runs a bound flow: the step loop, approval checkpoints, sub-flows |
+| `flow-state-update` | no | Documents the flow tools; the rule that state changes only through them |
+| `apply-improvements` | yes | Reviews saved findings and applies the ones you approve |
+| `init` | yes | `/zeremai:init`. The mod answers it and opens the site. See [`/zeremai:init`](/commands/init) |
+| `create-template` | yes | Plans, reviews and writes a new template. See [`/zeremai:create-template`](/commands/create-template) |
+| `edit-template` | yes | Changes an installed template, or sends it as a pull request. See [`/zeremai:edit-template`](/commands/edit-template) |
+| `view-template` | yes | Opens a template on one page. See [`/zeremai:view-template`](/commands/view-template) |
+| `create-marketplace` | yes | Creates a template marketplace repository. See [`/zeremai:create-marketplace`](/commands/create-marketplace) |
+| `marketplace` | yes | `/zeremai:marketplace`. The mod answers it. Lists, adds, edits, switches and removes marketplaces. See [`/zeremai:marketplace`](/commands/marketplace) |
+| `live-flow` | no | Not a skill. The folder has only `page.html`, the page of the site that the mod publishes |
+
+## Agent
+
+**`template-reviewer`** reviews a draft template for [`/zeremai:create-template`](/commands/create-template). It reads the draft and the installed templates, and the type files if it needs them. Its tools are Read, Grep and Glob, so it never writes. It answers with a list of findings.
+
+**`step-executor`** executes one step with an isolated context. It receives a flow folder and step ID, reads its own definition and declared memory, reports progress through the flow tools, and applies corrections when re-invoked after your review. It cannot ask you questions and refuses to run sub-flow steps.
+
+## Hooks (the mod)
+
+Each rule is a folder under `hooks/`:
+
+| Rule | What it enforces |
+|---|---|
+| `on-live-page` | `/zeremai:init`: opens the [live site](/design/live-site), publishes it, writes the state of every flow to it, and runs the commands you press on it |
+| `on-flow-pane` | The button above the prompt: the flow summary and **ZeremAI ↗** |
+| `on-step-brief` | Builds the prompt of a step subagent (the step, the parameters, the memory it reads, and on a re-run its earlier summary and your corrections). When the subagent ends, saves its memory and log and runs the verifiers |
+| `on-flow-tools` | Decides if the agent may run the flow script (moment and input); shows findings waiting at session start |
+| `on-user-prompt` | Logs your prompt in the flow log before the agent sees it (a small model writes the details); reopens a closed approval dialog |
+| `on-approval-gate` | Only your click sets `approved`; blocks hand edits of flow state files |
+| `on-pending-checkpoint` | While an approval waits, refuses every tool call except research and the logging and reading commands of the flow script |
+| `on-agent-stopping` | Re-prompts the agent if it ends a turn while the flow still has work |
+| `on-todo-tool` | While a flow runs, its steps are the task list; a second todo list is refused |
+
+When a guard blocks or re-prompts the agent, a toast tells you why.
+
+For how these rules work together, see the [Technical design](/design/overview) section: [mod events](/design/lifecycles/mod-events), [the approval gate](/design/guards/approval-gate) and [stop prevention](/design/guards/stop-prevention).
+
+## Types
+
+`types/schema.json` covers the flow instance (state and status), memory and the log. It does not cover templates or steps. `scripts/check_template.py` validates a template, and the `.ts` files in `types/` hold the template and step types, for example `template-definition.ts` and `step-definition.ts`.
+
+## Source
+
+[https://github.com/HMTools/ZeremAI](https://github.com/HMTools/ZeremAI)

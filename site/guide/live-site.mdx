@@ -1,0 +1,84 @@
+---
+title: "The ZeremAI site"
+description: "One live page on claude.ai where you see every flow, approve steps, start flows and manage templates."
+---
+
+ZeremAI has no terminal pane. You use it through **one live site**: a page on claude.ai that shows every flow and changes while you watch. You press buttons on it, and your Claude Code session does the work.
+
+## Open the site
+
+Run [`/zeremai:init`](/commands/init), or press the button above the prompt. It ends with **ZeremAI ↗**:
+
+```
+▲ CodeFactory E2E · step 3/12 · approve step 3 · ZeremAI ↗
+```
+
+- **The first time in a session**, ZeremAI publishes a page for that session and pins it to your claude.ai sidebar. It keeps the link by session id.
+- **Every other time**, it opens the page of that session. A resumed session gets its page back. Any word after `/zeremai:init` does the same (`/zeremai:init live` too), except `help`, which prints a short help text.
+- The link carries the id of your session (`#<session id>`). The site uses it to know which session runs your actions.
+
+`/zeremai:init` tries the link of your session, then the plain link, and then prints `ZeremAI link: <link>`. The button above the prompt tries the Artifact tool, then the system opener (`open`, `xdg-open`, or `start` on Windows), and then shows the link in a message.
+
+When a new version of the plugin ships a new page, the next `/zeremai:init` publishes it to the same link. You do not install it.
+
+<Warning>
+  The site needs a **claude.ai sign-in** and a Claude Code surface with the **Artifact tool**. Without them you cannot start or resume a flow. This is the case in print mode and in the VS Code extension. See [Installation](/guide/installation).
+</Warning>
+
+## Plugin updates
+
+At the start of each session, ZeremAI asks Claude Code for the newest version of the plugin. If one exists, you get one message for that version, and the site shows a banner with **Update now**, **Later** and **Skip this version**, and a **What changed** link to the [Changelog](/changelog). **Later** hides the banner until you open the site again. **Update now** runs `claude plugin update zeremai@zeremai`. Restart Claude Code afterwards to load the new version. A failed check or update never stops a flow.
+
+## The screens
+
+<CardGroup cols={3}>
+  <Card title="Flows" icon="list-check" href="/ui/flows">
+    See every flow. Approve a step, unblock a flow, close or delete it.
+  </Card>
+  <Card title="New flow" icon="play" href="/ui/new-flow">
+    Pick a template, fill in its fields and start.
+  </Card>
+  <Card title="Templates" icon="folder-open" href="/ui/templates">
+    Install, view, edit, send and remove templates.
+  </Card>
+  <Card title="Marketplaces" icon="store" href="/ui/marketplaces">
+    Add, edit, switch off and remove marketplaces.
+  </Card>
+  <Card title="Flavors" icon="heart" href="/ui/flavors">
+    See and edit your preferences. Accept the ones a flow learned.
+  </Card>
+</CardGroup>
+
+For what the site shows when the session is closed or missing, see [Session states](/ui/session-states). For the parts that stay in Claude Code, see [In the terminal](/ui/terminal).
+
+## What happens when you press a button
+
+Each button sends one **command** to your session. The command starts within a few seconds. The button shows each stage:
+
+1. **Sending…** while the page writes the command.
+2. **Sent · waiting for ZeremAI** while your session has not read it yet.
+3. **ZeremAI took it · running** while your session works.
+4. The result in plain words, or the error. When ZeremAI passed a prompt to Claude, the line adds **Handed to Claude at** a time.
+
+A button stays off while its command is pending, so you cannot press it twice. A new flow shows a grey **Starting…** card at once.
+
+If it stays on "Sent, waiting for ZeremAI", read **ZeremAI last seen**. After 15 seconds the line adds "ZeremAI has not picked this up yet. ZeremAI last seen … ago."
+
+<Frame caption="A click that waits for ZeremAI. Demo data.">
+  <img className="dark:hidden" src="/images/ui/click-stages-light.png" alt="An Approve button that waits, with the stage line under it: Sent, waiting for ZeremAI, and how long ZeremAI was last seen." />
+  <img className="hidden dark:block" src="/images/ui/click-stages-dark.png" alt="An Approve button that waits, with the stage line under it: Sent, waiting for ZeremAI, and how long ZeremAI was last seen." />
+</Frame>
+
+Your session checks every command before it runs it. A wrong one gets an error message and changes nothing.
+
+## Which session runs an action
+
+The site sends each action to one session. A flow action goes to the session that holds the flow. A new flow goes to the session where you pressed ZeremAI, and starts in that session's project folder, because the agent edits files there. If that session is closed, or the page has no session, the site turns the actions off. See [Session states](/ui/session-states).
+
+## Limits
+
+- The site cannot work offline. When it loses the connection it says **Offline** and shows the last data it got.
+- The data is private. Only the owner of the page can read the logs, the memory, the file names and the commands, and only the owner can write commands.
+- Everything on the site comes from your session. If no session is live, the site shows the last data it has, with its age.
+
+For how it works inside, see [The live site](/design/live-site).

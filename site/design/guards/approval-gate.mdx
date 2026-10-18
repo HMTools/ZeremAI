@@ -1,0 +1,72 @@
+---
+title: "The approval gate"
+description: "How a step waits for your click, what the agent can do meanwhile, and why nothing can skip it."
+---
+
+A step with `approvalRequired: true` cannot complete until you approve it. The **gate** is the set of rules that make this true. It does not trust the model: four separate checks must all hold.
+
+## The gate, in states
+
+<Frame caption="States of an approval gate">
+  <img className="dark:hidden" src="/images/diagrams/approval-gate-light.svg" alt="Diagram: States of an approval gate" />
+  <img className="hidden dark:block" src="/images/diagrams/approval-gate-dark.svg" alt="Diagram: States of an approval gate" />
+</Frame>
+
+On [the site](/design/live-site), **Approve** and **Request changes** also work from `waiting`. They end the gate in the same way as the dialog.
+
+| State | What it means | Stored as |
+|---|---|---|
+| `working` | The agent works. No gate is open. | No `gate:<id>` record |
+| `dialog` | The agent asked. The dialog is on screen. | `gate:<id>` = `{ dir, stepId, dialog: true }` |
+| `waiting` | You closed the dialog. The site shows its own buttons. | `gate:<id>` = `{ dir, stepId }` |
+| `approved` | The step has `approved: true` and the gate is gone. | `approved` in `flow.json` |
+
+A Back button ends the gate too: the gate is gone, and the flow goes back (see [Loops](/design/lifecycles/flow-states#loops)).
+
+The gate is in the mod store, so a restart or a reload does not lose it.
+
+## The path of one approval
+
+<Frame caption="The path of one approval">
+  <img className="dark:hidden" src="/images/diagrams/approval-path-light.svg" alt="Diagram: The path of one approval" />
+  <img className="hidden dark:block" src="/images/diagrams/approval-path-dark.svg" alt="Diagram: The path of one approval" />
+</Frame>
+
+- `request-approval` is not run by the script. The mod answers the call itself, and the call waits for your click. The answer is the text the agent reads.
+- **Approve** makes the mod run `approve-step`. The script writes `approved: true`. No other command writes it.
+- **Request changes** returns your text to the agent. It changes the step, then calls `request-approval` again. It also sets the count of automatic loops of the step to 0 (`reset-loops`).
+- **Back** (when the step has `routes`, or `loopBackTo`) asks for a reason. The mod logs it, then runs `route-step` with `by: "click"`. The steps from the target to this one become `pending` again, and the agent is told where to start. Back has no limit.
+- If you close the dialog, nothing is decided. The gate stays open. Your next prompt opens the dialog again. Only one dialog can be open for a session at a time.
+- Your answer is logged in the flow log by the mod, before `approved` is written. If the log fails, the step is not approved and the agent is told to stop and tell you.
+
+## The four checks
+
+| # | Check | Where | Stops |
+|---|---|---|---|
+| 1 | The agent has no approve command. `approve-step` is refused for it. `reset-loops` and the click form of `route-step` are refused too. | `checkCall` in `flow-manager/script.ts` | The agent approving itself, or sending the flow back |
+| 2 | A step with `approvalRequired` cannot be set `completed` until `approved` is true. | `update_step_status` in `flow_manager.py` | Skipping the gate, even by another path |
+| 3 | While a gate is open, only research tools pass. | `on-pending-checkpoint` | Building on a step that is not approved |
+| 4 | Hand edits of `flow.json`, `log.json`, memory and findings are refused. | `on-approval-gate` | Writing `approved: true` by hand |
+
+Check 2 lives in the script, not in the mod. If the mod is not loaded, the script still refuses to complete an unapproved step.
+
+## While the gate is open
+
+`on-pending-checkpoint` listens to every `tool.call`. While a gate is open it lets only these through:
+
+- `Read`, `Glob`, `Grep`, `LS`, `WebFetch`, `WebSearch`;
+- `Agent` and `Task` (subagents, for research);
+- any MCP tool (names that start with `mcp__`);
+- Bash commands of the flow script. The script gate then decides: while a dialog is on screen, the commands that change the flow (`update-step-status`, `update-current-state`, `update-active-substep`, `update-flow-status`) are refused.
+
+Everything else (Write, Edit, other Bash commands, todo tools) is refused with a text that says an approval is needed. A toast tells you why Claude cannot go on. A subagent's own calls follow the same rule. A call that this plugin raises itself passes this check (the live site writes its database while a step waits). A fault inside the check lets the call pass, so only the hand-edit check (4) and the approval path itself fail closed.
+
+## Where you can answer
+
+You can answer in the dialog or on the site (the buttons of the card for the step that waits). A click on the site is a command row that the mod reads. The command starts within a few seconds. The button shows each stage. If it stays on "Sent, waiting for ZeremAI", read "ZeremAI last seen". See [How a click is read](/design/live-site#how-a-click-is-read). Both paths check the world again at the moment of the answer: the step must still be the one that waits, and the agent must have asked. An answer from the site while a dialog is open is refused ("Answer the dialog that is open"). Only the owner of the page can write the command row, and the mod checks the row like any other.
+
+Typing "approved" in chat does nothing. Only a click counts.
+
+## Source
+
+`hooks/on-approval-gate/`, `hooks/infra/approval-gate/approval-gate.ts` (`askGate`, `reopenPanel`, `isHandEdit`), `hooks/on-pending-checkpoint/`, `scripts/flow_manager.py` (`approve_step`, `update_step_status`).

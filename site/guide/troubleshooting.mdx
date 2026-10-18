@@ -1,0 +1,70 @@
+---
+title: "Troubleshooting"
+description: "Fixes for the errors and stuck states you are most likely to meet."
+---
+
+## "The flow script is not available, so mods are off in this session"
+
+Mods are not loaded: admin policy, untrusted folder, a crash or a rollout switch. Try `/reload-plugins`, trust the folder, or ask your admin. The agent will not edit flow files by hand as a workaround, by design.
+
+## "flow_manager.py did not start" or "gave no JSON"
+
+Python is missing or too old. Install **Python 3.9 or newer** and make sure `python3` (Windows: `python`) runs from a terminal, then press **Continue** on the flow on the site. See [Installation](/guide/installation).
+
+## The site shows no templates
+
+Open the **Templates** screen, **Refresh**, then **Install**. If Refresh fails, check you can `git clone` the marketplace URL from a terminal.
+
+## "Session closed. Press ZeremAI in a live session."
+
+The session that the site talks to has not sent a heartbeat for 3 minutes, so the site turned its actions off. Go to a Claude Code session that is open, and press **ZeremAI ↗** above the prompt (or run `/zeremai:init`). The site then works with that session. If the session is open and the site still says so, run `/zeremai:init` and read the message: it names the last write that failed.
+
+## "This page has no session. Press ZeremAI in the session you want."
+
+See [Session states](/ui/session-states). You opened the pinned link, with no session in it. The site only shows the data. Press **ZeremAI ↗** in a session to get a link that names the session.
+
+## A button on the site stays on "Sent · waiting for ZeremAI"
+
+The button shows **Sending…**, then **Sent · waiting for ZeremAI**, then **ZeremAI took it · running**. The command starts within a few seconds. If it stays on "Sent, waiting for ZeremAI", read **ZeremAI last seen**. After 15 seconds the line adds "ZeremAI has not picked this up yet. ZeremAI last seen … ago." A big number means the session is closed or busy. Check that the session is open and has the flow, then press the button again. A command for another session is left alone by design.
+
+## `/zeremai:init` does nothing, or the page does not open
+
+ZeremAI opens the page with the Artifact tool, so you need a claude.ai sign-in and a surface with that tool (not print mode, not the VS Code extension). `/zeremai:init` tries the link of your session, then the plain link, and then prints `ZeremAI link: <link>`. Open that link by hand. The system opener (`open`, `xdg-open`) is used only by the **ZeremAI ↗** button above the prompt, after the Artifact tool.
+
+## Agent cannot edit a flow file
+
+Intended. A flow's state files and findings change only through the flow script (`scripts/flow_manager.py`), and the plugin checks every call. If a call is refused or errors, read its message: it says what to do next.
+
+## A step says "blocked"
+
+A retry cannot help, so the agent stopped and told you what to do. Read the reason on the site, do what it says, then press **Continue**. See [Blocked steps](/guide/blocked-steps).
+
+## Step will not complete
+
+It has `approvalRequired: true` and you have not approved. Open the dialog (it reopens on your next prompt) and click **Approve**, or press **Approve** on the site.
+
+## "Flow log failed, so your prompt was not sent"
+
+The plugin logs each prompt of a flow session before the agent sees it. A small model (Haiku) writes the details of the entry. If that call or the flow script fails, the prompt is not sent and the message says why. Send the prompt again. If it keeps failing, close the flow on the site.
+
+## A flow stopped after I resumed Claude Code
+
+A resumed session has a new id, so it does not hold your flows. Open the flow on [the site](/guide/live-site) and press **Continue**. If another live session holds it, press **Take over** instead. See [Flows](/ui/flows).
+
+## Resume lands on the wrong step
+
+Check the truth:
+
+```bash
+cat ~/.claude/zeremai/active/<flow>/flow.json
+```
+
+Look at each step's `status` and the current-state fields. Fix status through the agent (it calls `update_step_status`), not by editing.
+
+## A flow I finished is not in `completed/`
+
+Completion moves the folder, so the path changes. Look in `~/.claude/zeremai/completed/`. Failed flows go to `failed/`.
+
+## Still stuck
+
+Open an issue: [https://github.com/HMTools/ZeremAI/issues](https://github.com/HMTools/ZeremAI/issues). Include the flow's log (remove anything private).

@@ -1,0 +1,292 @@
+<title>Payments Flows Marketplace</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;600;700&family=Fragment+Mono&display=swap">
+<style>
+  /* Layout: the new folder as a file tree on the left, an inspector on the right (file, catalog, steps, where it lives), an answer bar at the bottom. */
+  :root {
+    --bg: #ffffff; --surface: #ffffff; --fg: #141413; --muted: #6b6a63; --line: #ecebe6; --line2: #d6d4cc;
+    --main: #d97757; --main-bg: #fdeee6; --gate: #6b6a63; --gate-bg: #f4f3ef; --red: #141413; --red-bg: #f4f3ef;
+    --green: #6b6a63; --green-bg: #f4f3ef; --info: #b4532f; --info-bg: #fdeee6; --ink: #141413; --on-ink: #ffffff;
+    --font-body: "Schibsted Grotesk", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --font-mono: "Fragment Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+    --bg: #1f1e1d; --surface: #2a2927; --fg: #f0eee6; --muted: #a8a69c; --line: #3a3834; --line2: #55524b;
+    --main: #e8845f; --main-bg: #4a2e23; --gate: #a8a69c; --gate-bg: #33312d; --red: #f0eee6; --red-bg: #33312d;
+    --green: #a8a69c; --green-bg: #33312d; --info: #e8845f; --info-bg: #4a2e23; --ink: #f0eee6; --on-ink: #1f1e1d; color-scheme: dark; } }
+  :root[data-theme="dark"] {
+    --bg: #1f1e1d; --surface: #2a2927; --fg: #f0eee6; --muted: #a8a69c; --line: #3a3834; --line2: #55524b;
+    --main: #e8845f; --main-bg: #4a2e23; --gate: #a8a69c; --gate-bg: #33312d; --red: #f0eee6; --red-bg: #33312d;
+    --green: #a8a69c; --green-bg: #33312d; --info: #e8845f; --info-bg: #4a2e23; --ink: #f0eee6; --on-ink: #1f1e1d; color-scheme: dark; }
+
+  body { background: var(--bg); color: var(--fg); font: 15px/1.5 var(--font-body); padding-inline: 16px; padding-block: 20px 0; }
+  .wrap { max-width: 1240px; margin-inline: auto; display: grid; gap: 16px; }
+  h1, h3, h4, p { margin: 0; } h1 { font-size: 26px; line-height: 1.15; letter-spacing: -.015em; text-wrap: balance; }
+  h4 { font-size: 13px; color: var(--muted); font-weight: 600; margin-bottom: 6px; }
+  code, .mono { font-family: var(--font-mono); font-size: 12.5px; }
+  button { font: inherit; color: inherit; cursor: pointer; } :focus-visible { outline: 2px solid var(--info); outline-offset: 2px; }
+  .muted { color: var(--muted); }
+  .head { display: grid; gap: 6px; } .headrow { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; }
+  .path { font-family: var(--font-mono); font-size: 12.5px; color: var(--muted); overflow-wrap: anywhere; }
+  .status { font-size: 13.5px; color: var(--muted); }
+  .purpose { max-width: 70ch; color: var(--muted); font-size: 16px; }
+  .shell { display: grid; gap: 16px; grid-template-columns: minmax(0, 1fr); align-items: start; }
+  @media (min-width: 900px) { .shell { grid-template-columns: 340px minmax(0, 1fr); } .side { position: sticky; top: 12px; max-height: calc(100vh - 96px); overflow: auto; } }
+  .panel { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; min-width: 0; }
+
+  /* tree */
+  .treep { padding: 14px 10px 12px; display: grid; gap: 8px; } .treep h4 { padding-inline: 8px; }
+  .tree { display: grid; gap: 1px; }
+  .node { display: flex; gap: 8px; align-items: center; width: 100%; text-align: left; background: none; border: 0; border-radius: 8px; padding: 6px 8px; font-family: var(--font-mono); font-size: 13px; min-width: 0; }
+  .node:hover { background: var(--bg); } .node[aria-pressed="true"] { background: var(--bg); box-shadow: inset 0 0 0 2px var(--main); }
+  .node .ic { flex: none; width: 16px; text-align: center; color: var(--muted); } .node.dir .ic { color: var(--main); }
+  .node .nm { overflow-wrap: anywhere; } .node .tag { margin-left: auto; font-family: var(--font-body); font-size: 11px; font-weight: 600; color: var(--muted); background: var(--bg); padding: 1px 7px; border-radius: 999px; flex: none; }
+  .legend { padding: 8px 8px 0; border-top: 1px solid var(--line); font-size: 12.5px; color: var(--muted); }
+
+  /* inspector */
+  .tabs { display: flex; border-bottom: 1px solid var(--line); padding: 0 6px; gap: 2px; overflow-x: auto; }
+  .tabs button { background: none; border: 0; padding: 12px 10px 10px; font-weight: 600; font-size: 14px; color: var(--muted); border-bottom: 3px solid transparent; white-space: nowrap; }
+  .tabs button[aria-selected="true"] { color: var(--fg); border-bottom-color: var(--main); }
+  .pane { padding: 16px; display: grid; gap: 14px; }
+  pre.file { margin: 0; padding: 12px; background: var(--bg); border: 1px solid var(--line); border-radius: 10px; font: 12.5px/1.6 var(--font-mono); white-space: pre-wrap; overflow-wrap: anywhere; }
+  .callout { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; display: grid; gap: 4px; background: var(--bg); }
+  .chip { font-size: 11.5px; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: var(--bg); color: var(--muted); border: 1px solid var(--line); }
+  .chip.ask { background: var(--gate-bg); color: var(--gate); border-color: transparent; } .chip.local { background: var(--green-bg); color: var(--green); border-color: transparent; }
+  ol.steps { margin: 0; padding: 0; list-style: none; display: grid; gap: 8px; counter-reset: s; }
+  ol.steps li { counter-increment: s; display: grid; grid-template-columns: 26px 1fr; gap: 4px 10px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; }
+  ol.steps li::before { content: counter(s); grid-row: span 2; width: 24px; height: 24px; border-radius: 50%; background: var(--ink); color: var(--on-ink); display: grid; place-items: center; font-size: 12px; font-weight: 700; }
+  .srow { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; } .srow b { font-weight: 650; }
+
+  /* catalog preview */
+  .pane .mock { border: 1px solid var(--line2); border-radius: 12px; overflow: hidden; }
+  .mock .mh { display: flex; gap: 8px; align-items: center; padding: 10px 14px; border-bottom: 1px solid var(--line); font-weight: 650; background: var(--bg); } .mock .mh small { color: var(--muted); font-weight: 400; }
+  .mock .empty { padding: 22px 16px; display: grid; gap: 6px; justify-items: start; }
+  .mock .row { display: grid; grid-template-columns: 1fr auto; gap: 2px 12px; padding: 10px 14px; border-top: 1px dashed var(--line2); opacity: .6; } .mock .row small { color: var(--muted); }
+  .mock .btn { font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 7px; border: 1px solid var(--line2); }
+
+  /* choices */
+  fieldset { border: 0; margin: 0; padding: 0; display: grid; gap: 8px; min-width: 0; } legend { font-weight: 650; padding: 0; margin-bottom: 6px; }
+  .opt { display: grid; grid-template-columns: 22px 1fr; gap: 2px 8px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; cursor: pointer; }
+  .opt:has(input:checked) { border-color: var(--main); background: var(--main-bg); }
+  .opt small { grid-column: 2; color: var(--muted); font-size: 12.5px; } .opt input { margin-top: 3px; }
+  input[type="text"] { width: 100%; font: inherit; background: var(--bg); color: var(--fg); border: 1px solid var(--line2); border-radius: 8px; padding: 9px 10px; margin-top: 4px; }
+  textarea { width: 100%; min-height: 72px; resize: vertical; font: inherit; background: var(--bg); color: var(--fg); border: 1px solid var(--line2); border-radius: 8px; padding: 9px 10px; }
+
+  /* answer bar */
+  .bar { position: sticky; bottom: 0; z-index: 5; margin-inline: -16px; padding: 10px 16px calc(10px + env(safe-area-inset-bottom, 0px)); background: var(--surface); border-top: 1px solid var(--line); }
+  .barin { max-width: 1240px; margin-inline: auto; display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; }
+  .barin .sum { flex: 1 1 260px; font-size: 13.5px; color: var(--muted); }
+  .btn2 { border: 1px solid var(--line2); background: var(--surface); border-radius: 9px; padding: 9px 16px; font-weight: 650; } .btn2.primary { background: var(--main); color: #141413; border-color: var(--main); }
+  dialog { width: min(560px, calc(100vw - 32px)); border: 1px solid var(--line2); border-radius: 14px; padding: 0; background: var(--surface); color: var(--fg); }
+  dialog::backdrop { background: rgba(10, 18, 16, .55); }
+  .dlg { padding: 18px; display: grid; gap: 12px; } .dlg h3 { font-size: 18px; } .dlg .actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
+  .sent { color: var(--green); font-weight: 650; }
+  .err { color: var(--fg); font-weight: 650; }
+  button:disabled { opacity: .45; cursor: not-allowed; }
+</style>
+
+<div class="wrap">
+  <header class="head">
+    <div class="headrow"><span class="status">Planned · checked after it is written</span><span class="path" id="path"></span></div>
+    <h1 id="title"></h1>
+    <p class="purpose" id="purpose"></p>
+  </header>
+  <div class="shell">
+    <section class="panel treep" aria-label="Folder">
+      <h4>The new folder</h4>
+      <div class="tree" id="tree" role="group" aria-label="Files and folders"></div>
+      <p class="legend">Tap a name to read it. ZeremAI reads <code>templates/flows/</code>. A category that starts with <code>_</code> is hidden.</p>
+    </section>
+    <aside class="panel side" aria-label="Inspector">
+      <div class="tabs" role="tablist" id="tabs"></div>
+      <div class="pane" id="pane"></div>
+    </aside>
+  </div>
+  <div class="bar"><div class="barin">
+    <p class="sum" id="sum"></p>
+    <button class="btn2" id="askBtn" type="button">Ask for changes</button>
+    <button class="btn2 primary" id="okBtn" type="button">Approve</button>
+  </div></div>
+</div>
+<dialog id="dlg"><div class="dlg" id="dlgBody"></div></dialog>
+
+<!-- DATA: the only part the agent replaces. Write "<" inside strings as <. Tree "kind" is dir or file, in the order shown. "files" holds the text of each file; "notes" explains a folder. A step's "asks" is true when the skill asks before it. -->
+<script type="application/json" id="data">
+{
+  "name": "payments-flows",
+  "purpose": "A shared library of review flows for the payments team.",
+  "path": "/Users/you/projects/payments-flows",
+  "branch": "main",
+  "tree": [
+    {"path": "README.md", "kind": "file", "tag": "new"},
+    {"path": "templates", "kind": "dir"},
+    {"path": "templates/flows", "kind": "dir", "tag": "ZeremAI reads this"},
+    {"path": "templates/flows/.gitkeep", "kind": "file"}
+  ],
+  "files": {
+    "README.md": "# payments-flows\n\nA shared library of review flows for the payments team.\n\n## Use in ZeremAI\n\nRun /zeremai:init, open Templates, press Add, and give:\n\n- Name: payments-flows\n- Address: the git address of this repository\n- Branch: main\n\nThen press Refresh, and Install.\n\n## Add a template\n\nRun /zeremai:create-template with a description, and choose this repository when it asks where to save. Or put a template in templates/flows/<category>/<template>/. Steps are subfolders.\n\n## Check it\n\nRun ZeremAI's scripts/check_template.py with --marketplace and the path of this folder.\n",
+    "templates/flows/.gitkeep": ""
+  },
+  "notes": {
+    "templates": "The folder that holds everything ZeremAI installs.",
+    "templates/flows": "One folder for each category goes here, and one folder for each template inside it. The folder stays empty for now. The .gitkeep file lets git store it."
+  },
+  "steps": [
+    {"text": "Create the folder", "detail": "/Users/you/projects/payments-flows, with the files shown in the tree.", "asks": true},
+    {"text": "Start git on branch main and make the first commit", "detail": "Inside the new folder only. Nothing is sent anywhere.", "asks": false},
+    {"text": "Check the folder", "detail": "Runs check_template.py with --marketplace. An empty marketplace passes with a note.", "asks": false},
+    {"text": "Add it to your ZeremAI config", "detail": "A new entry in ~/.claude/zeremai/config/marketplaces.json, with the local path as the address.", "asks": true},
+    {"text": "Create the remote repository", "detail": "Only if you choose one under Where it lives. Shows the exact command first.", "asks": true},
+    {"text": "Push the first commit", "detail": "Never forced. Stops if the remote already has commits on this branch.", "asks": true}
+  ]
+}
+</script>
+
+<script>
+(function () {
+  var D = JSON.parse(document.getElementById('data').textContent);
+  var S = { sel: 'README.md', tab: 'file', remote: 'local', vis: 'private', url: '', register: 'yes', general: '' };
+
+  function el(tag, props) {
+    var e = document.createElement(tag), kids = Array.prototype.slice.call(arguments, 2), k;
+    for (k in props || {}) { var v = props[k]; if (v == null || v === false) continue; if (k === 'class') e.className = v; else if (k.slice(0, 2) === 'on') e.addEventListener(k.slice(2), v); else e.setAttribute(k, v === true ? '' : v); }
+    (function add(list) { list.forEach(function (c) { if (c == null || c === false) return; if (Array.isArray(c)) add(c); else e.append(c.nodeType ? c : document.createTextNode(String(c))); }); })(kids);
+    return e;
+  }
+  document.getElementById('title').textContent = D.name;
+  document.getElementById('path').textContent = D.path + ' · branch ' + D.branch;
+  document.getElementById('purpose').textContent = D.purpose;
+  document.title = D.name;
+
+  function renderTree() {
+    var t = document.getElementById('tree'); t.textContent = '';
+    D.tree.forEach(function (n) {
+      var depth = n.path.split('/').length - 1, base = n.path.split('/').pop();
+      var b = el('button', { type: 'button', class: 'node ' + n.kind, 'aria-pressed': String(S.sel === n.path), style: 'padding-left:' + (8 + depth * 18) + 'px',
+          onclick: function () { S.sel = n.path; S.tab = 'file'; renderAll(); } },
+        el('span', { class: 'ic', 'aria-hidden': 'true' }, n.kind === 'dir' ? '▸' : '·'), el('span', { class: 'nm' }, base + (n.kind === 'dir' ? '/' : '')), n.tag ? el('span', { class: 'tag' }, n.tag) : null);
+      t.append(b);
+    });
+  }
+  var TABS = [['file', 'File'], ['catalog', 'Catalog'], ['steps', 'Steps'], ['where', 'Where it lives']];
+  function renderTabs() {
+    var t = document.getElementById('tabs'); t.textContent = '';
+    TABS.forEach(function (x) { t.append(el('button', { type: 'button', role: 'tab', 'aria-selected': String(S.tab === x[0]), onclick: function () { S.tab = x[0]; renderTabs(); renderPane(); } }, x[1])); });
+  }
+  function filePane() {
+    var kind = (D.tree.filter(function (n) { return n.path === S.sel; })[0] || {}).kind;
+    if (kind === 'dir') return [el('div', null, el('h4', null, S.sel + '/'), el('p', null, D.notes[S.sel] || 'A folder.'))];
+    var text = D.files[S.sel];
+    return [el('div', null, el('h4', null, S.sel), text ? el('pre', { class: 'file' }, text) : el('p', { class: 'muted' }, D.notes[S.sel] || 'An empty file. It keeps the folder in git.'))];
+  }
+  function catalogPane() {
+    return [el('p', { class: 'muted' }, 'This is the Templates screen of the ZeremAI site once you add this marketplace.'),
+      el('div', { class: 'mock', 'aria-label': 'Preview of the Templates screen' },
+        el('div', { class: 'mh' }, 'Templates', el('small', null, ' · ' + D.name)),
+        el('div', { class: 'empty' }, el('b', null, 'No templates yet'), el('span', { class: 'muted' }, 'Add one with /zeremai:create-template, then press Refresh.')),
+        el('div', { class: 'row', 'aria-hidden': 'true' }, el('span', null, el('b', null, 'category / template'), el('br'), el('small', null, 'How a row looks after you add a template')), el('span', { class: 'btn' }, 'Install')))];
+  }
+  function stepsPane() {
+    return [el('p', { class: 'muted' }, 'Local work needs no question. Every step that edits your config or leaves your machine asks first, and shows the exact command.'),
+      el('ol', { class: 'steps' }, D.steps.map(function (s) {
+        return el('li', null, el('div', { class: 'srow' }, el('b', null, s.text), el('span', { class: 'chip ' + (s.asks ? 'ask' : 'local') }, s.asks ? 'asks first' : 'local only')), el('span', { class: 'muted' }, s.detail));
+      }))];
+  }
+  function radio(name, value, label, hint) {
+    return el('label', { class: 'opt' }, el('input', { type: 'radio', name: name, value: value, checked: S[name === 'remoteChoice' ? 'remote' : name] === value, onchange: function () { S[name === 'remoteChoice' ? 'remote' : name] = value; renderPane(); renderSum(); } }), el('b', null, label), hint ? el('small', null, hint) : null);
+  }
+  function wherePane() {
+    var out = [el('fieldset', null, el('legend', null, 'Where should it live?'),
+      radio('remoteChoice', 'local', 'Only on this machine', 'You can push it later. The skill prints the commands.'),
+      radio('remoteChoice', 'github', 'A new GitHub repository', 'Uses the gh tool.'),
+      radio('remoteChoice', 'ado', 'A new Azure DevOps repository', 'Uses the az tool with the devops extension.'),
+      radio('remoteChoice', 'existing', 'An existing remote repository', 'GitHub, Azure DevOps or any git address. It must be empty.'))];
+    if (S.remote === 'github' || S.remote === 'ado') out.push(el('fieldset', null, el('legend', null, 'Who can see it?'), radio('vis', 'private', 'Private', 'Default.'), radio('vis', 'public', 'Public', S.remote === 'ado' ? 'Azure DevOps projects set this. The skill asks.' : 'Anyone can read it.')));
+    if (S.remote === 'ado' || S.remote === 'existing') {
+      var inp = el('input', { type: 'text', id: 'url', placeholder: S.remote === 'ado' ? 'Organization and project, for example https://dev.azure.com/acme/Payments' : 'https://github.com/acme/payments-flows.git', 'aria-label': 'Address', oninput: function (e) { S.url = e.target.value; } }); inp.value = S.url;
+      out.push(el('div', null, el('h4', null, S.remote === 'ado' ? 'Azure DevOps organization and project' : 'Address of the repository'), inp,
+        el('p', { class: 'muted', style: 'margin-top:6px;font-size:13px' }, S.remote === 'existing' ? 'The skill never forces a push. If the repository already has commits on this branch, it stops and asks.' : 'The skill creates the repository there.')));
+    }
+    out.push(el('fieldset', null, el('legend', null, 'Add it to your ZeremAI config?'),
+      radio('register', 'yes', 'Yes, with the local path', 'You can install from it at once. After a push, the skill offers to switch the address to the remote.'),
+      radio('register', 'no', 'No', 'The skill prints what to type into Templates, Add.')));
+    out.push(el('p', { class: 'muted' }, 'This records what you want. Each step that leaves your machine still asks again in the chat.'));
+    return out;
+  }
+  function renderPane() {
+    var p = document.getElementById('pane'); p.textContent = '';
+    var list = S.tab === 'file' ? filePane() : S.tab === 'catalog' ? catalogPane() : S.tab === 'steps' ? stepsPane() : wherePane();
+    p.append.apply(p, list);
+  }
+  var REMOTE = { local: 'only on this machine', github: 'a new GitHub repository (' + 'private' + ')', ado: 'a new Azure DevOps repository', existing: 'an existing remote repository' };
+  function where() { return S.remote === 'github' ? 'a new GitHub repository, ' + S.vis : S.remote === 'ado' ? 'a new Azure DevOps repository, ' + S.vis : REMOTE[S.remote]; }
+
+  var CM = null, CAN = 'checking', SENT = null;
+  var REASON = { checking: 'Checking whether Claude can receive your answer…', writers_only: 'Only an editor of this artifact can send an answer.',
+    no_session: 'Claude is not watching this page right now. Ask Claude to publish it again.', off: 'Sending to Claude is not available in this view.' };
+  function bytes(s) { return new TextEncoder().encode(s).length; }
+  function clean(s) { return s.replace(/[\u0000-\u001f\u007f]+/g, ' ').replace(/\s{2,}/g, ' ').trim(); }
+  function refreshCan() {
+    var p = window.claude && window.claude.use ? window.claude.use('comments') : null;
+    if (!p) { CAN = 'off'; renderSum(); return; }
+    p.then(function (c) { CM = c; return c ? c.canSendToClaude() : 'off'; }).catch(function () { return 'off'; }).then(function (s) { CAN = s; renderSum(); });
+  }
+  function noteOf() {
+    if (SENT) return el('span', null, 'Sent: ' + SENT + '. Claude is working.');
+    if (CAN === 'available') return null;
+    return el('span', null, REASON[CAN] || REASON.off);
+  }
+  function gate() { var ok = CAN === 'available' && !SENT; ['okBtn', 'askBtn'].forEach(function (id) { document.getElementById(id).hidden = !ok; }); }
+  function why(e) {
+    var c = e && e.code;
+    return c === 'consent_required' ? 'You did not allow comments for this page. Reload the page, press Send, and choose Allow.'
+      : c === 'claude_unavailable' ? 'Claude could not be reached. Nothing was posted.'
+      : c === 'rate_limited' ? 'Too fast. Wait a moment and press Send again.'
+      : c === 'invalid' ? 'The comment was rejected. Shorten the notes and try again.'
+      : c === 'forbidden' ? 'You cannot comment on this artifact.'
+      : 'Sending failed (' + (c || 'unknown') + '). Nothing was posted.';
+  }
+  function submit(verdict, msg, btn) {
+    var a = answerOf(verdict), n = bytes(a.comment);
+    if (n > 4096) { msg.className = 'err'; msg.textContent = 'Your answer is ' + (n - 4096) + ' bytes over the 4 KB comment limit. Shorten the notes and try again.'; return; }
+    if (!CM) { msg.className = 'err'; msg.textContent = REASON.off; return; }
+    btn.disabled = true; msg.className = 'muted'; msg.textContent = 'Sending…';
+    CM.anchorFor(document.querySelector('.bar')).then(function (anchor) { return CM.sendToClaude({ anchor: anchor, text: a.comment }); })
+      .then(function () { SENT = verdict; msg.className = 'sent'; msg.textContent = 'Sent. Claude has your answer and is working. Watch the chat.'; btn.hidden = true; renderSum(); })
+      .catch(function (e) { btn.disabled = false; msg.className = 'err'; msg.textContent = why(e); });
+  }
+
+  function renderSum() {
+    var s = document.getElementById('sum'); s.textContent = '';
+    s.append('Nothing is written until you approve. ', el('b', null, where()), ' · config: ', el('b', null, S.register === 'yes' ? 'add it' : 'leave it'));
+    var n = noteOf(); if (n) s.append(' · ', n);
+    gate();
+  }
+  function renderAll() { renderTree(); renderTabs(); renderPane(); renderSum(); }
+
+  function answerOf(verdict) {
+    var choices = { remote: S.remote, visibility: S.vis, address: S.url.trim(), register: S.register === 'yes' };
+    var parts = ['[zeremai answer] ' + D.name, 'Verdict: ' + verdict, 'Where it lives: ' + where() + (S.url.trim() ? ' (' + S.url.trim() + ')' : ''), 'Add to ZeremAI config: ' + (choices.register ? 'yes, with the local path' : 'no')];
+    if (S.general.trim()) parts.push('General: ' + S.general.trim());
+    return { verdict: verdict, choices: choices, general: S.general.trim(), comment: clean(parts.join(' | ')) };
+  }
+  function openDialog(verdict) {
+    if (CAN !== 'available' || SENT) return;
+    var body = document.getElementById('dlgBody'), dlg = document.getElementById('dlg'); body.textContent = '';
+    var general = el('textarea', { id: 'general', 'aria-label': 'Anything else', placeholder: 'Anything else for Claude? (optional)', oninput: function (e) { S.general = e.target.value; } }); general.value = S.general;
+    var msg = el('p', { class: 'muted', id: 'sendMsg', role: 'status', 'aria-live': 'polite' });
+    var send = el('button', { class: 'btn2 primary', type: 'button' }, verdict === 'Approve' ? 'Approve and send' : 'Send for changes');
+    send.addEventListener('click', function () { submit(verdict, msg, send); });
+    body.append(el('h3', null, verdict === 'Approve' ? 'Approve this marketplace?' : 'Ask for changes?'),
+      el('p', null, 'Your answer goes as a comment on this page that Claude receives.'),
+      verdict === 'Approve' ? el('p', { class: 'muted' }, 'Claude writes the folder and makes the first commit. It asks in the chat before any step that leaves your machine.') : el('p', { class: 'muted' }, 'Claude changes the plan and sends you a new page.'),
+      general, msg, el('div', { class: 'actions' }, el('button', { class: 'btn2', type: 'button', onclick: function () { dlg.close(); } }, 'Back'), send));
+    dlg.showModal();
+  }
+  document.getElementById('okBtn').addEventListener('click', function () { openDialog('Approve'); });
+  document.getElementById('askBtn').addEventListener('click', function () { openDialog('Ask for changes'); });
+  renderAll();
+  refreshCan();
+})();
+</script>

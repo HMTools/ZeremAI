@@ -1,0 +1,19 @@
+{
+  "id": "RM-024",
+  "title": "Verification subagent as optional step declaration",
+  "description": "Make a verification subagent (separate context window) an optional part of a step declaration, not a dedicated step.",
+  "type": "improvement",
+  "status": "proposed",
+  "priority": "medium",
+  "category": "framework",
+  "milestone": "backlog",
+  "effort": "",
+  "tags": [],
+  "dependencies": [],
+  "created": "2026-05-29",
+  "updated": "2026-10-12",
+  "author": "m4t4ngm@gmail.com",
+  "notes": "",
+  "acceptance_criteria": [],
+  "illustration": "validation-check"
+}

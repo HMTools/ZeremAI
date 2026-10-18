@@ -1,0 +1,155 @@
+---
+title: "The live site"
+description: "How the ZeremAI site gets its data and sends your actions back: the page database, the command rows, the checks and the heartbeat."
+---
+
+The site is one Artifact page on claude.ai. It has no server of its own. The mod and the page share a small **page database** that the Artifact runtime keeps for the page. The mod writes the state of your flows into it. The page draws it and writes your **commands** into it. The mod reads them and runs them.
+
+```
+flow files  ──mod writes──▶  page database  ──page reads──▶  the site
+flow files  ◀──mod runs───   commands rows  ◀──page writes──  your press
+```
+
+The page never touches a flow file. The flow script stays the only writer.
+
+<Frame caption="The path of one click">
+  <img className="dark:hidden" src="/images/diagrams/click-path-light.svg" alt="Diagram: The path of one click" />
+  <img className="hidden dark:block" src="/images/diagrams/click-path-dark.svg" alt="Diagram: The path of one click" />
+</Frame>
+
+## The collections
+
+| Collection | One document for | Written by | Read by |
+|---|---|---|---|
+| `flows/<flowId>` | Each active flow: status, steps, what needs you | the mod | everyone with access to the page |
+| `details/<flowId>~logs`, `~memory`, `~files` | The log, the memory topics and the file names of a flow | the mod | the owner |
+| `meta/mod` | The mod: `{ beat, v }` | the mod | everyone with access |
+| `meta/ui` | The theme of every page: `{ theme }` | the mod | everyone with access |
+| `sessions/<sessionId>` | Each session: `{ folder, name, beat, flows[] }`, and when they apply `openedAt` and `title` | that session | the owner |
+| `templates/<category>~<name>` | Each template: `name`, `category`, `title`, `description`, `installed`, `state`, `marketplace`, `steps`, `fields[]`, and `edited` when you changed it | the mod | the owner |
+| `marketplaces/<name>` | Each marketplace: `{ name, url, branch, priority, templates, enabled, cached, refreshedAt }` | the mod | the owner |
+| `flavors/<id>` | Each flavor: `{ topic, text, status, source, updatedAt }`, and when they apply `fromFlow`, for a proposal `change`, `targetId`, `targetText` (the text it would change) and, when the flow saved it, `evidence` (a few of your words) | the mod | the owner |
+| `commands/<id>` | Each action you press | the page (create), the mod (update) | the owner |
+
+A flow document holds `name`, `template`, `status`, `activeStepId`, `needsYou` (the step that waits, with its name and the time), `updatedAt`, `counts` and a list of `steps`. When they apply, it also has `parentFlowId` and `activity` (the last tool call of the agent, only while the flow runs). Each step has `id`, `number`, `name`, `status`, `approval`, and when they apply `phase`, `loopBackTo`, `childFlowIds` (a list) and `summary`. The status words are `waiting`, `blocked`, `running`, `done`, `failed`, `paused` and `pending`.
+
+The mod cuts every long text and list before it writes, so each document stays far below the limit of 256 KiB.
+
+## The access rules
+
+The page declares its rules when the mod publishes it:
+
+| Path | Read | Write |
+|---|---|---|
+| everything else (`flows`, `meta`) | view | owner |
+| `details`, `commands`, `sessions`, `templates`, `marketplaces`, `flavors` | owner | owner |
+
+The **owner** is you. A person who can only view the page sees the flows and the heartbeat, and nothing else. Only the owner can write a command, so nobody else can send one. The mod still checks every command, because a row is data and not an order.
+
+The page also declares one room topic, `zerem_click`, at the level `interact`: a signed-in viewer can send it. It carries a hint and nothing else. See [How a click is read](#how-a-click-is-read).
+
+## A command, from press to result
+
+A command is one document in `commands/<id>`:
+
+```ts
+{
+  id: string; session: string; at: string        // the session that must run it
+  action: 'approve' | 'request-changes' | 'route' | 'continue' | 'close' | 'delete' | 'new-flow'
+        | 'fill-fields' | 'install-template' | 'remove-template' | 'refresh-marketplaces'
+        | 'add-marketplace' | 'update-marketplace' | 'toggle-marketplace' | 'remove-marketplace'
+        | 'view-template' | 'edit-template' | 'send-template' | 'set-theme'
+        | 'save-flavor' | 'accept-flavor' | 'accept-all-flavors' | 'remove-flavor'
+  args: Record<string, string>
+  status: 'new' | 'running' | 'done' | 'error'
+  result?: string                                  // plain words, or the answer of fill-fields
+  pickedAt?: string; handedAt?: string; doneAt?: string   // written by the mod
+}
+```
+
+The status moves one way: `new` → `running` → `done` or `error`. A row that fails a check goes from `new` to `error`. The mod adds the three fields: `pickedAt` when it takes the row, `handedAt` when a prompt went to Claude for it (only then), and `doneAt` at the end.
+
+| Action | Arguments | What the mod runs |
+|---|---|---|
+| `approve` | `flowId`, `stepId` | The call of the old pane button, `approveFromPane`: the script writes `approved` and your answer is logged. |
+| `request-changes` | `flowId`, `stepId`, `reason` | `requestChangesFromPane`: your reason goes to the agent, and the count of automatic loops of the step goes back to 0. |
+| `route` | `flowId`, `stepId`, `label`, `reason` | `goBackFromPane`: the script runs `route-step` (a Back button, no limit), and your reason goes to the agent and the log. |
+| `continue` | `flowId`, `note?`, `from?` | `resumeFlow`: binds the flow (and its running parents, oldest first) to the session and sends the agent the hand-off message. With `from` (Take over), the mod first removes the flow from the list of that session. |
+| `close` | `flowId` | Removes the flow from the list of flows bound to this session. The flow files do not change. |
+| `delete` | `flowId` | Removes the folder of any active flow for good, also one that another session runs. The next push removes its rows from the page. |
+| `new-flow` | `template` (`category/name`), `name?`, one key for each field | Creates the flow with the script, binds it, and sends the agent the hand-off message. |
+| `fill-fields` | `template`, `text`, `values?` | One model call that suggests field values. The answer is in `result` as JSON. |
+| `install-template` | `marketplace`, `category`, `name` | The install job of `infra/templates`. |
+| `remove-template` | `category`, `name` | The removal job of `infra/templates`. It takes no marketplace. |
+| `add-marketplace` | `name`, `url`, `branch?`, `priority?` | Adds it to `marketplaces.json` and clones it. |
+| `update-marketplace` | `name`, `newName?`, `url`, `branch?`, `priority?` | Changes it. A new address or branch deletes the cache. |
+| `toggle-marketplace` | `name` | Switches it on or off. |
+| `remove-marketplace` | `name` | Removes it and its cache. Installed templates stay. |
+| `view-template` | `category`, `name` | Sends the session a prompt that names the `zeremai:view-template` skill and the template folder. |
+| `edit-template` | `category`, `name`, `request` | Sends a prompt that names the `zeremai:edit-template` skill, the folder and your change. |
+| `send-template` | `marketplace`, `category`, `name` | Sends a prompt that names `zeremai:edit-template` in send mode, so it opens a pull request against that marketplace. |
+| `refresh-marketplaces` | none | `git clone` or `git pull` of every enabled marketplace, then the catalog is written again. |
+| `set-theme` | `mode` (`auto`, `light` or `dark`) | Writes the word to `~/.claude/zeremai/config/ui.json` and to the document `meta/ui` (`{ theme }`). Every page of every session shows it. |
+| `save-flavor` | `topic`, `text`, `id?` | Runs `set-flavor` of the flow script: a new active flavor, or a new text for the one with that `id`. The mod then writes the `flavors` documents again. |
+| `accept-flavor` | `id` | Runs `accept-flavor`: a proposal from a flow becomes active, replaces the text of its target, or deletes its target. |
+| `accept-all-flavors` | none | Runs `accept-all-flavors`: every waiting proposal is applied oldest first under one lock. The answer counts the accepted and the skipped ones (the flavor they change is gone). |
+| `remove-flavor` | `id` | Runs `remove-flavor`: deletes a flavor, or rejects a proposal. The page sends a delete 6 seconds after you press Delete, so Undo can cancel it. |
+
+### How a click is read
+
+The mod has one timer. It ticks every second. A read of the commands asks the database for the rows with `status == 'new'` and `session ==` its own session id, and runs them **one at a time**, in the order of `at`. A row for another session stays as it is. The read never waits for a push of the flow state.
+
+- **While no click is likely**, the mod reads on every 5th tick.
+- **While a click is likely**, it reads on every tick. That is for 30 ticks after a command or a hint from the page, and for 60 ticks after a flow starts to wait for you (the mod sees that in the flow files, with no call).
+- **Every 10th tick** it pushes the flow state and the heartbeat. See [The heartbeat](#the-heartbeat).
+- **Every 60th tick** it deletes the old commands.
+
+The mod does not read each second all the time on purpose. Each read is a tool call of Claude Code, and each tool call runs the PreToolUse and PostToolUse hooks of the machine. A hook that starts a process for each call (some organisations set one) would start about two processes each second. That slows the whole computer.
+
+The mod **claims** a row before it runs it. The claim is a write that names the version of the row it read (status `running`, and `pickedAt`). If another read already took the row, the database refuses the write and the mod skips the row. So a click never runs twice.
+
+After the command runs, **one batch** holds the row (status, `result`, `doneAt`, and `handedAt` when a prompt went to Claude) and the documents of the flow that changed. The page never shows `done` while the flow on screen is old. A command that has no flow folder (a new flow, a template job) pushes the state first, and then writes the row. A push that is asked while another push runs runs again when that one ends.
+
+The page also sends a hint on the room (`zerem_click`) after it writes a row. The hook `session.receive` of `on-live-page` takes the event, starts a read of the commands and consumes the event, so the model never sees it. The hint is only a wake-up. The room can be off, and it can drop an event. Then the timer reads the click on its next tick.
+
+The **row** stays the click, and a row is kept on purpose. A reload of the page or a dropped connection loses nothing, because the row is in the database until the mod has run it.
+
+### The checks
+
+`checkCommand` (`hooks/infra/live-site/`) runs before anything else. It refuses a row, with a plain message in `result`, when:
+
+- the action is not on the list, or the row has no `args`;
+- the row is for another session;
+- an argument is missing, is not a string, is longer than 2,000 characters, or has a name that is not plain;
+- an argument that the action does not take is there (only `new-flow` takes more, one key for each field of the template);
+- a name that becomes part of a path (`flowId`, `stepId`, `marketplace`, `category`, `name`) has anything but letters, digits, `.`, `_` and `-`;
+- `template` is not `category/name`;
+- the `set-theme` mode is not `auto`, `light` or `dark`;
+- the flow is not bound to this session (`close`, `approve`, `request-changes`, `route`), or is not in the list of active flows (`continue`, `delete`);
+- the step does not wait for approval any more (`approve`, `request-changes`, `route`). This is the same check as the approval gate. See [The approval gate](/design/guards/approval-gate).
+
+Only a row that passes every check reaches a call.
+
+## The writes
+
+The database refuses a write to a document that exists unless the write names the **version** it last saw (`if_version`). The mod is the only writer of most documents, so it keeps the version of each document it wrote. It learns the versions it does not know with one `list` of the collection. If a write says the version is wrong, the mod learns them again and tries once more.
+
+The mod writes only the documents whose text changed since the last push, in batches of 50. A batch that fails leaves its documents marked as not written, so the next tick sends them again. A failed write never touches the flow. The reason is kept in the store (`livePageError`) and `/zeremai:init` shows it. The next good push clears it.
+
+## The heartbeat
+
+Every 10 seconds the mod writes `meta/mod` and the row of its session, `sessions/<sessionId>`, with the current time in `beat`. The list `flows` in the session row holds the ids of the flows bound to that session. The page uses it to send a flow action to the session that holds the flow.
+
+The page treats a `beat` older than 3 minutes as a closed session. It then turns its actions off and says **Session closed. Press ZeremAI in a live session.** A quiet flow writes no rows, so without a heartbeat the page could not tell a quiet flow from a closed session.
+
+Every minute the mod also deletes the commands that are older than one day, up to 50 rows each time. It is not part of the heartbeat.
+
+## The link and the republish
+
+Each session has its own page and database. The mod stores the link in its store by session id (`livePageUrl:<sessionId>`, and the page hash as `livePageHash:<sessionId>`). `livePageUrls` lists every page of the mod, and the lock on `commands` covers all of them. The old shared link (`livePageUrl`) is no longer used. The button and `/zeremai:init` open `<link>?s=<sessionId>#<sessionId>`. The page reads the id after `#`, or `?s=` to know where to send the actions that have no flow, such as a new flow. If the host passes neither, the page uses the live session that opened it in the last 10 minutes (the mod stores `openedAt:<sessionId>` when the button or `/zeremai:init` opens the page, and writes it to the session row). The timer starts at `session.start`, which fires again after each reload of the plugin.
+
+When the mod starts its timer, and on each `/zeremai:init`, it makes a short hash of `skills/live-flow/page.html` and of the rules above. If the hash is not the one in the store (`livePageHash:<sessionId>`), it publishes the page again to the **same** link, with the same rules, and stores the new hash. A new version of the plugin therefore updates the page, and the pinned link stays the same.
+
+## Source
+
+`hooks/on-live-page/on-live-page.ts` (the command word, the timer, the command reader, the publish, the writes), `hooks/infra/live-page/live-page.ts` (the flow documents, the rules), `hooks/infra/live-site/live-site.ts` (`checkCommand`, the session and template documents), `hooks/on-flow-pane/on-flow-pane.ts` (the button above the prompt), `skills/live-flow/page.html` (the site).

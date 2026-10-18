@@ -1,0 +1,19 @@
+{
+  "id": "RM-019",
+  "title": "Knowledge graph integration (graphify)",
+  "description": "Integrate graphify to build a knowledge graph from flow data and explore relationships and dependencies.",
+  "type": "feature",
+  "status": "proposed",
+  "priority": "low",
+  "category": "framework",
+  "milestone": "backlog",
+  "effort": "",
+  "tags": [],
+  "dependencies": [],
+  "created": "2026-05-29",
+  "updated": "2026-10-12",
+  "author": "m4t4ngm@gmail.com",
+  "notes": "",
+  "acceptance_criteria": [],
+  "illustration": "graph-network"
+}

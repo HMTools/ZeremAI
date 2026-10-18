@@ -1,0 +1,68 @@
+---
+title: "Mod events"
+description: "Which Claude Code event reaches which rule, and what the mod keeps when it reloads."
+---
+
+The mod is a set of hooks. Claude Code calls a hook when something happens. Each rule listens to the events it needs.
+
+## The events the mod uses
+
+| Event | When it fires | Rules that listen |
+|---|---|---|
+| `session.start` | A session starts, and again after every reload of the mod | `on-flow-tools`: draws the step line, shows a toast when findings wait, registers the command word `zeremai`. `on-live-page`: starts its timer |
+| `prompt.submit` | You send a prompt (or the plugin sends one) | `on-user-prompt`: logs your prompt, reopens a closed approval dialog |
+| `tool.call` | The agent is about to run a tool | `on-flow-tools` (Bash), `on-approval-gate` (Write, Edit, MultiEdit, Bash), `on-pending-checkpoint` (every tool), `on-todo-tool` (the todo tools), `on-live-page` (see below) |
+| `agent.spawn` | The agent starts a `zeremai:step-executor` subagent | `on-step-brief`: puts the step brief in the prompt, and a Flavors section when Haiku finds flavors that fit the step |
+| `turn.complete` | The agent, or a subagent, ends a turn | `on-agent-stopping`: sends a re-prompt if the flow has work left. `on-step-brief` (any agent id): reads the result block of a step-executor |
+| `command.run` | `/zeremai:init` runs (any word except `help`, which prints a help text) | `on-live-page`: opens the site, and publishes it the first time. `on-flow-pane` listens to `zeremai` and `zeremai:zeremai` and passes the event on |
+| `ui.render` | Claude Code draws the line above the prompt | `on-flow-pane`: the button with the flow summary and **ZeremAI ↗**. `on-live-page`: draws nothing, and starts its timer if it is not running |
+| `session.receive` | The session receives an event | `on-live-page`: takes the click hint of the site (an event whose source is `artifact-room`), starts a read of the commands, and consumes the event, so the model never sees it |
+| a timer | Every second | `on-live-page`: reads the commands you pressed on the site (every 5 seconds, and every second while a click is likely), and writes the changed flow state and the heartbeat every 10 seconds. `on-flow-pane`: keeps the button current every 5 seconds |
+
+`on-live-page` listens to three groups of `tool.call`:
+
+- the tools `Edit`, `Write`, `Read`, `Grep`, `Glob`, `NotebookEdit`, `WebFetch`, `WebSearch` and `Agent`, to keep the line of what the agent does now;
+- `ArtifactData`, to refuse a write to the `commands` rows of the site from any call that does not come from this plugin;
+- `Bash`, to push the flow state after a flow script command.
+
+## One turn, as the mod sees it
+
+<Frame caption="One turn, as the mod sees it">
+  <img className="dark:hidden" src="/images/diagrams/mod-turn-light.svg" alt="Diagram: One turn, as the mod sees it" />
+  <img className="hidden dark:block" src="/images/diagrams/mod-turn-dark.svg" alt="Diagram: One turn, as the mod sees it" />
+</Frame>
+
+## How hooks combine
+
+Every hook receives the event and a function `next`. The hook can:
+
+- call `next(e)` to pass the event on, and use the answer;
+- return `{ deny: text }` for a tool call, so the call does not run and the agent reads `text`;
+- return `{ drop: text }` for a prompt, so it is not sent and you read `text`.
+
+Several rules listen to `tool.call`. A call must pass all of them. One deny is enough to stop it.
+
+A prompt the plugin sends itself (a re-prompt, or the answer of an approval dialog) has the origin `plugin`. `on-user-prompt` ignores it: it is not logged, and it does not start the re-prompt count again.
+
+## What a reload keeps and loses
+
+Claude Code loads the mod again when its files change. A load is fresh: `register` runs again and `session.start` fires again.
+
+| Kept | Lost |
+|---|---|
+| The mod store (`session:<id>`, `gate:<id>`, and the link of the site, `livePageUrl`) | Module variables: the re-prompt count, toast timers, the one-dialog-at-a-time set, the versions of the page documents |
+| Files in `~/.claude/zeremai/` | The last text sent for each page document (the next tick sends them again) |
+
+The kept state decides what matters. The bound flow and an open approval gate are in the store, so a reload does not lose them. A count or a timer can start again without harm.
+
+A resumed Claude Code session has a new session id, and so a new list of bound flows. You resume the flow with **Continue** on [the site](/design/live-site), and the mod binds it again. A running flow that no live session holds shows **Continue** too. If another live session holds it, the site shows **Take over**.
+
+## Faults
+
+A hook that throws is skipped by Claude Code, and the event goes on to the next rule. Only `on-approval-gate` has its own fault handler: a fault in its hand-edit check refuses the call, and a fault elsewhere in the approval path approves nothing. So the checks of `on-approval-gate` fail closed. The other checks do not: if the check of `on-pending-checkpoint` or of `on-todo-tool` throws, the hook is skipped and the call passes. A call that this plugin raises itself (the live site writes its database while a step waits) also passes `on-pending-checkpoint`.
+
+When a rule blocks or re-prompts the agent, it shows a toast, so you know why Claude changed course. The same text shows at most once in 30 seconds.
+
+## Source
+
+`hooks/register.ts` lists the rules. Each `hooks/on-*/on-*.ts` file registers one rule.

@@ -1,0 +1,547 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Mods Migration Progress</title>
+<style>
+:root{--bg:#faf8f3;--fg:#1c1b19;--mut:#6f6a5d;--card:#fff;--line:#ddd8cc;--ok:#1f7a52;--warn:#946410;--bad:#b3261e;--acc:#2b5fd9;--chip:#f1ede2}
+@media (prefers-color-scheme:dark){:root{--bg:#151412;--fg:#ece8dd;--mut:#9d978a;--card:#1e1d1a;--line:#34312b;--ok:#4cc38a;--warn:#e0b04c;--bad:#f0746b;--acc:#7aa2ff;--chip:#2a2824}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+main{max-width:1100px;margin:0 auto;padding:24px 16px 64px}h1{margin:0 0 4px;font-size:24px}.sub{color:var(--mut);margin:0 0 20px}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:18px}
+.tile{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px 14px}.tile b{display:block;font-size:24px}.tile span{color:var(--mut);font-size:12px}
+.bar{height:8px;background:var(--chip);border-radius:6px;overflow:hidden;margin-bottom:18px}.bar i{display:block;height:100%;background:var(--ok)}
+.filters{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}.filters button{border:1px solid var(--line);background:var(--card);color:var(--fg);border-radius:16px;padding:4px 12px;cursor:pointer;font:inherit;font-size:13px}.filters button[aria-pressed=true]{background:var(--fg);color:var(--bg)}
+.row{background:var(--card);border:1px solid var(--line);border-radius:10px;margin-bottom:8px}
+.row summary{list-style:none;cursor:pointer;display:grid;grid-template-columns:52px 1fr auto auto;gap:10px;align-items:center;padding:10px 14px}
+.row summary::-webkit-details-marker{display:none}.id{font:600 13px ui-monospace,Menlo,monospace}
+.chip{font-size:12px;padding:2px 9px;border-radius:12px;background:var(--chip);white-space:nowrap}
+.st-todo{color:var(--mut)}.st-researching{color:var(--warn)}.st-done{color:var(--ok)}.st-blocked{color:var(--bad)}
+.body{padding:2px 14px 14px 76px;font-size:14px}.body dt{font-weight:600;margin-top:8px;font-size:12px;color:var(--mut);text-transform:uppercase;letter-spacing:.03em}.body dd{margin:2px 0}
+code{font:12.5px ui-monospace,Menlo,monospace;background:var(--chip);padding:0 4px;border-radius:4px}
+a{color:var(--acc)}.how{background:var(--card);border:1px dashed var(--line);border-radius:10px;padding:12px 16px;margin:0 0 18px;font-size:14px}
+@media (max-width:600px){.row summary{grid-template-columns:44px 1fr}.row summary .chip{grid-column:2}.body{padding-left:14px}}
+</style>
+</head>
+<body>
+<main>
+<h1>Mods Migration Progress</h1>
+<p class="sub">Research only. One row for each file in <code>items/</code>. Open a row for details. Edit the data in the <code>ITEMS</code> block at the bottom of this file.</p>
+<details class="how"><summary><b>How to update this page</b></summary>
+<ol>
+<li>Finish the research in <code>items/&lt;ID&gt;-*.md</code> (section 7, Research result).</li>
+<li>In this file find the object with the same <code>id</code> between <code>/* ITEMS:START */</code> and <code>/* ITEMS:END */</code>.</li>
+<li>Set <code>status</code> to <code>"researching"</code>, <code>"done"</code> or <code>"blocked"</code>; <code>verdict</code> to <code>replace</code>, <code>improve</code>, <code>keep</code> or <code>later</code>; <code>summary</code> to 1–3 sentences; <code>open</code> to a list of open questions; <code>updated</code> to <code>YYYY-MM-DD</code>.</li>
+<li>Do not edit <code>firstGuess</code>, <code>file</code> or other entries. Reload the page and check your row.</li>
+</ol></details>
+<div class="tiles" id="tiles"></div>
+<div class="bar"><i id="barfill"></i></div>
+<div class="filters" id="filters"></div>
+<div id="list"></div>
+</main>
+<script>
+const ITEMS = /* ITEMS:START */ [
+  {
+    "id": "H01",
+    "group": "H",
+    "title": "block-stop-pending-steps (auto-advance)",
+    "file": "items/H01-block-stop-pending-steps.md",
+    "firstGuess": "replace",
+    "source": "scripts/block-stop-pending-steps.sh",
+    "status": "done",
+    "verdict": "improve",
+    "summary": "A mod can replace the script: classic.Stop returns { block: reason }, is main-agent only, and $.agent.list() can replace the 10 minute timer. Owner choices: no shell fallback, no loop guard. Several behaviours are from docs and types only and need spike S03.",
+    "open": ["Does classic.Stop never fire for subagents? (S03)","How are several Stop blocks merged, and is there an engine re-block cap? (S03)","Does agent.list() still show a crashed step-executor at Stop time? (S03)","Block or allow when a background step-executor is still running?"],
+    "updated": "2026-10-09"
+  },
+  {
+    "id": "H02",
+    "group": "H",
+    "title": "check-approval-stop",
+    "file": "items/H02-check-approval-stop.md",
+    "firstGuess": "replace",
+    "source": "scripts/check-approval-stop.sh, scripts/build_approval_block_message.py",
+    "status": "done",
+    "verdict": "improve / partial replace",
+    "summary": "Moved into hooks/on-agent-stopping/on-agent-stopping.ts as a turn.complete re-prompt (classic.Stop is skipped for user mods, see H01). Both scripts and both hook entries (Stop, SubagentStop) removed; no subagent guard; capped by the H01 3-turn limit.",
+    "open": ["Is dropping the SubagentStop guard right? (step-executor returns to parent, parent writes the checkpoint)", "Org-tier mod: switch to classic.Stop block (H01 TODO)"],
+    "updated": "2026-10-09"
+  },
+  {
+    "id": "H03",
+    "group": "H",
+    "title": "enforce-log-on-stop",
+    "file": "items/H03-enforce-log-on-stop.md",
+    "firstGuess": "replace",
+    "source": "scripts/enforce-log-on-stop.sh",
+    "status": "done",
+    "verdict": "improve",
+    "summary": "A mod replaces the script: the turn-end hook (native `turn.complete`, as H01) re-prompts the agent to log when the flag exists and a flow belongs to the session; log first, at most 3 in a row. The bit is in memory (no file); the log command clears it. The classic.Stop route is skipped by the built-in guard (see H01).",
+    "open": ["Does the turn-end log prompt work in a live run? (unit tests only)", "Skip slash commands and trivial prompts?"],
+    "updated": "2026-10-09"
+  },
+  {
+    "id": "H04",
+    "group": "H",
+    "title": "block-tools-on-pending",
+    "file": "items/H04-block-tools-on-pending.md",
+    "firstGuess": "replace",
+    "source": "scripts/block-tools-on-pending.sh",
+    "status": "done",
+    "verdict": "replace",
+    "summary": "Replaced by a tool.call mod handler. Only read and web tools plus exact flow_manager.py runs pass while an approval waits; subagents wait too; no direct Write/Edit of flow files (except the approve token).",
+    "open": ["Does a no-filter tool.call see MCP tools in a live run?", "Order against block-todo-tools.sh and block-approve-step.sh", "Chain gap: x; flow_manager.py ... still passes"],
+    "updated": "2026-10-09"
+  },
+  {
+    "id": "H05",
+    "group": "H",
+    "title": "block-todo-tools",
+    "file": "items/H05-block-todo-tools.md",
+    "firstGuess": "replace",
+    "source": "scripts/block-todo-tools.sh",
+    "status": "done",
+    "verdict": "replace",
+    "summary": "Replaced by a tool.call mod handler for TaskCreate, TaskUpdate, TaskGet, TaskList, TodoWrite. Refuses while the flow status is running (parsed JSON); a subagent passes. Dead names dropped, TodoWrite added.",
+    "open": ["Live run not done", "Order against block-approve-step.sh"],
+    "updated": "2026-10-09"
+  },
+  {
+    "id": "H06",
+    "group": "H",
+    "title": "enforce-log-first",
+    "file": "items/H06-enforce-log-first.md",
+    "firstGuess": "replace",
+    "source": "scripts/enforce-log-first.sh",
+    "status": "done",
+    "verdict": "replace",
+    "summary": "A mod replaces the script: `tool.call` on Write, Edit, MultiEdit, NotebookEdit, Agent and Task returns `{ deny: text }` while the log is owed (in-memory bit) and a flow belongs to the session; it also gates the Bash flow commands the Python check gated. Live test: the refusal reaches the agent as the tool error, and after `log-interaction` the edit works. A subagent's calls pass.",
+    "open": ["A subagent's edits pass while a log is owed (owner choice): keep?", "With mods off no log rule runs (see X01)"],
+    "updated": "2026-10-09"
+  },
+  {
+    "id": "H07",
+    "group": "H",
+    "title": "block-approve-step",
+    "file": "items/H07-block-approve-step.md",
+    "firstGuess": "replace",
+    "source": "scripts/block-approve-step.sh",
+    "status": "done",
+    "verdict": "replace",
+    "summary": "Replaced by a mod: the agent calls request_approval, the user clicks Approve in a dialog, the mod sets approved. No token, no approve command. A hand edit of flow.json is refused (Bash by a text rule).",
+    "open": ["Live run not done (S01): dialog, held tool call, store across restart", "Mods off: nothing guards approval (X01)", "A script file that edits flow.json still passes (P01)"],
+    "updated": "2026-10-10"
+  },
+  {
+    "id": "H08",
+    "group": "H",
+    "title": "bind-session-to-flow",
+    "file": "items/H08-bind-session-to-flow.md",
+    "firstGuess": "replace",
+    "source": "scripts/bind-session-to-flow.sh",
+    "status": "done",
+    "verdict": "replace",
+    "summary": "Replaced by a mod tool: bind_flow writes the session id (also over an old one) and create_flow uses the same function. The shell script and its hooks.json entry are deleted. The link later moved from the .session file to the mod store (C01).",
+    "open": ["Live run not done: skill calls bind_flow on a real resume (S01/S02)", "Is $.session.id() the same as the hook session_id, and does it change on /clear, /resume?", "No unbind when a session ends; a stale session:<id> store entry stays (C01)", "First prompt after /zeremai continue runs before the link (H10)"],
+    "updated": "2026-10-10"
+  },
+  {
+    "id": "H10",
+    "group": "H",
+    "title": "create-log-flag",
+    "file": "items/H10-create-log-flag.md",
+    "firstGuess": "replace",
+    "source": "scripts/create-log-flag.sh",
+    "status": "done",
+    "verdict": "replace",
+    "summary": "A mod replaces the script: the one `prompt.submit` hook marks the log as owed in an in-memory bit for each session, so a prompt the plugin sends owes no log. Live test confirmed it on a `claude -p` prompt. The first prompt of a session is still not covered (H08).",
+    "open": ["First prompt of a session has no flag until .session is bound (H08)", "Skip slash commands and trivial prompts?"],
+    "updated": "2026-10-09"
+  },
+  {
+    "id": "C01",
+    "group": "C",
+    "title": "Shared hook plumbing and session lookup",
+    "file": "items/C01-shared-hook-plumbing.md",
+    "firstGuess": "replace",
+    "source": "scripts/parse_hook_input.py, scripts/hook_extract_flow_dir.py",
+    "status": "done",
+    "verdict": "replace",
+    "summary": "Replaced: the session-to-flow link now lives in the mod store (key session:<id>), one function reads it, and a child flow answers before its parent. The .session file and parse_hook_input.py are gone.",
+    "open": ["Is $.session.id() the same as the hook session_id; does it change on /clear, /resume? (S02)", "Store list over a real restart not run", "A flow running during the upgrade is unlinked until bind_flow runs", "Old session:<id> keys are never removed"],
+    "updated": "2026-10-10"
+  },
+  {
+    "id": "P01",
+    "group": "P",
+    "title": "Python CLI flow_manager.py",
+    "file": "items/P01-python-cli-flow-manager.md",
+    "firstGuess": "improve",
+    "source": "scripts/flow_manager.py",
+    "status": "done",
+    "verdict": "replace",
+    "summary": "The Python flow manager is replaced by 15 mod tools (typed input, same rules, same answers), listed when the user starts or resumes a flow. One lock for each flow folder. Hooks match tool names. The agent cannot edit a state file with Write, Edit or a Bash write.",
+    "open": ["Live run not done (S01): skill run seen by the mod, tool listed mid-session", "Folder move on Windows (PowerShell) and macOS/Linux (mv) not run on a real machine", "A cut file after a crash in the middle of a write", "Mods off: no way to change flow state (X01)", "Resume still binds with the shell hook (H08)"],
+    "updated": "2026-10-10"
+  },
+  {
+    "id": "P02",
+    "group": "P",
+    "title": "Approval wait file (pending-interaction.json)",
+    "file": "items/P02-approval-wait-file.md",
+    "firstGuess": "improve",
+    "source": "scripts/flow_manager.py (write-pending)",
+    "status": "done",
+    "verdict": "replace",
+    "summary": "The pending file is gone. The gate is a record in the mod store. While it is open the agent can research, not write or act. A prompt reopens the dialog. No Reject option.",
+    "open": ["Live run not done (S01): dialog, held tool call, store across restart", "Mods off: nothing guards approval (X01)", "Step views (option data) go with the UI move"],
+    "updated": "2026-10-10"
+  },
+  {
+    "id": "P03",
+    "group": "P",
+    "title": "flow-approve skill",
+    "file": "items/P03-flow-approve-skill.md",
+    "firstGuess": "replace",
+    "source": "skills/flow-approve/SKILL.md",
+    "status": "done",
+    "verdict": "replace",
+    "summary": "The skill, the token and the approve command are removed. The mod tool and dialog replace them. The agent texts and docs are rewritten.",
+    "open": ["Live run not done (S01): dialog, held tool call, store across restart", "Mods off: nothing guards approval (X01)"],
+    "updated": "2026-10-10"
+  },
+  {
+    "id": "P04",
+    "group": "P",
+    "title": "flow-new and flow-continue skills",
+    "file": "items/P04-flow-new-and-continue-skills.md",
+    "firstGuess": "improve",
+    "source": "skills/zeremai new, skills/zeremai continue",
+    "status": "done",
+    "verdict": "replace",
+    "summary": "Replaced by a pane the mod draws: /zeremai has a New tab (template, fields, Create) and a Continue tab. The mod creates the files, binds the session and sends one message. One shared skill, flow-run, keeps the step loop, approvals and sub-flow text. The two old skills are deleted.",
+    "open": ["Live run not done: the pane in a real terminal and in the Desktop app", "Does the model read flow-run when the hand-off asks for it?", "Is $.session.id() the same as the hook session_id, and what changes after /clear, /resume? (S02)", "Sub-flow steps are still driven by the model; a start_sub_flow tool is a later option"],
+    "updated": "2026-10-10"
+  },
+  {
+    "id": "P05",
+    "group": "P",
+    "title": "Q&A session skill",
+    "file": "items/P05-qna-session-skill.md",
+    "firstGuess": "improve",
+    "source": "skills/flow-QnA-session/SKILL.md (deleted in 6bc5784)",
+    "status": "done",
+    "verdict": "remove",
+    "summary": "The Q&A session skill, its five CLI commands, the hook and the types were already deleted. Questions use the built-in AskUserQuestion dialog; answers are logged with log_interaction (one line in flow-run); a subagent step hands its questions back to the parent (step-executor.md).",
+    "open": ["Can a mod hook see the answer of AskUserQuestion, to log it without the model?", "Can a subagent open the question dialog itself?"],
+    "updated": "2026-10-10"
+  },
+  {
+    "id": "P06",
+    "group": "P",
+    "title": "Step executor agent and delegation",
+    "file": "items/P06-step-executor-agent.md",
+    "firstGuess": "keep",
+    "source": "agents/step-executor.md, agents/flow-spawner.md, skills/step-executor-delegation",
+    "status": "done",
+    "verdict": "keep",
+    "summary": "The step agent and its fork skill stay. A dead agent is found from the agent list, not a timer (already built). The unused flow-spawner agent is deleted.",
+    "open": ["Do hooks in a subagent see the parent's session id? The mod uses agentId, so it does not depend on it."],
+    "updated": "2026-10-10"
+  },
+  {
+    "id": "P07",
+    "group": "P",
+    "title": "Memory, log and findings files",
+    "file": "items/P07-memory-log-findings-files.md",
+    "firstGuess": "keep",
+    "source": "scripts/flow_manager.py, scripts/models.py",
+    "status": "done",
+    "verdict": "replace",
+    "summary": "Memory, log and findings are mod tools since P01 (typed input, one lock for each folder, atomic write kept in the tool). Repeated calls no longer add a decision or file twice.",
+    "open": ["Is a lock between two sessions on one folder needed? The lock is per mod flow."],
+    "updated": "2026-10-10"
+  },
+  {
+    "id": "P08",
+    "group": "P",
+    "title": "Continuous improvement and apply-improvements",
+    "file": "items/P08-continuous-improvement.md",
+    "firstGuess": "keep",
+    "source": "framework-steps/, skills/apply-improvements",
+    "status": "done",
+    "verdict": "improve",
+    "summary": "The improvement step and apply-improvements stay with the agent. The mod now shows one message at session start when findings wait.",
+    "open": ["Live check of the message in a real terminal not done.", "Marketplace-template findings stay out of mod scope."],
+    "updated": "2026-10-10"
+  },
+  {
+    "id": "P09",
+    "group": "P",
+    "title": "Template marketplaces",
+    "file": "items/P09-template-marketplaces.md",
+    "firstGuess": "keep",
+    "source": "scripts/template_manager.py",
+    "status": "done",
+    "verdict": "replace",
+    "summary": "The Python template manager is replaced by a TypeScript module and a Templates tab in /zeremai: refresh, install or update, remove. Adding a marketplace is an edit of marketplaces.json.",
+    "open": ["Live check with the real git repo not done (tests use a fake git).", "Template version is the git hash of the whole cache, as before: one new commit marks every template as updatable."],
+    "updated": "2026-10-10"
+  },
+  {
+    "id": "P10",
+    "group": "P",
+    "title": "Settings hooks in hooks.json (transition)",
+    "file": "items/P10-settings-hooks-transition.md",
+    "firstGuess": "keep, then remove",
+    "source": "hooks/hooks.json",
+    "status": "done",
+    "verdict": "replace",
+    "summary": "No settings hook and no Python is left in the plugin. hooks.json loads only the mod; version 3.0.0. With mods off the plugin cannot change a flow (P04 chose no fallback).",
+    "open": ["Policy for organisations that switch mods off: item X01.", "Older Claude Code builds ignore mods, so no rule is enforced there."],
+    "updated": "2026-10-10"
+  },
+  {
+    "id": "P11",
+    "group": "P",
+    "title": "Step status shown in the session",
+    "file": "items/P11-step-status-in-session.md",
+    "firstGuess": "improve",
+    "source": "(new)",
+    "status": "done",
+    "verdict": "improve",
+    "summary": "One line under the prompt shows the step and part, and \"waits for you\" at an approval. It refreshes after each flow tool call and clears when the flow finishes.",
+    "open": ["Live check in a real terminal and Desktop not done.", "Whether Claude Code adds its own warning prefix to the line.", "After a child flow finishes, the line clears until the next tool call."],
+    "updated": "2026-10-10"
+  },
+  {
+    "id": "P12",
+    "group": "P",
+    "title": "View widgets and the UI app",
+    "file": "items/P12-views-and-ui-app.md",
+    "firstGuess": "later",
+    "source": "../ZeremAI-marketplace (views), ../agentic-flows-ui",
+    "status": "done",
+    "verdict": "later",
+    "summary": "The UI app is not built for here. Its screens map to the mod as listed; HTML view widgets are dropped from the plugin because no gate uses them.",
+    "open": ["The answer-question call in the app (main.ts:524-530) looks outdated; the app is obsolete, so it is only recorded."],
+    "updated": "2026-10-10"
+  },
+  {
+    "id": "S01",
+    "group": "S",
+    "title": "Spike: tool guard as a mod",
+    "file": "items/S01-spike-guard.md",
+    "firstGuess": "spike",
+    "source": "(throwaway mod outside the repo)",
+    "status": "done",
+    "verdict": "replace",
+    "summary": "The tool guard is built as mod hooks with tests: a gate and a log owed refuse tools, subagent writes are refused at a gate, reads and flow tools pass. Live facts stay open.",
+    "open": ["Does the refusal text reach the model whole, including line breaks? Not run live.", "Only the approval-gate hook has a fail-closed handler; the other guards fail open if they throw or time out.", "Order against settings hooks is moot now: no settings hook is left."],
+    "updated": "2026-10-10"
+  },
+  {
+    "id": "S02",
+    "group": "S",
+    "title": "Spike: session to flow link",
+    "file": "items/S02-spike-session-link.md",
+    "firstGuess": "spike",
+    "source": "(throwaway mod outside the repo)",
+    "status": "done",
+    "verdict": "replace",
+    "summary": "The session-to-flow link is a record in the mod store, set by the pane and the bind_flow tool, read by one function. Whether the session id survives resume, continue, clear and branch is still open.",
+    "open": ["Is $.session.id() the same after --resume, --continue, /resume, /clear, /branch and compaction? Not run live.", "Does the mod load in the first launch of a new folder (trust prompt)? Docs: no mod loads until the user answers it."],
+    "updated": "2026-10-10"
+  },
+  {
+    "id": "S03",
+    "group": "S",
+    "title": "Spike: block a stop",
+    "file": "items/S03-spike-stop-block.md",
+    "firstGuess": "spike",
+    "source": "(throwaway mod outside the repo)",
+    "status": "done",
+    "verdict": "improve",
+    "summary": "A stop cannot be vetoed by this mod: classic.Stop is skipped for user mods by the built-in guard. The mod re-prompts at turn end instead, 3 times at most, with tests.",
+    "open": ["Does a re-prompt work in claude -p? Not run.", "A real stop veto needs the plugin to count as the organization's mod (managed appendPlugins)."],
+    "updated": "2026-10-10"
+  },
+  {
+    "id": "X01",
+    "group": "X",
+    "title": "Admin policy and fallback",
+    "file": "items/X01-admin-policy-and-fallback.md",
+    "firstGuess": "risk",
+    "source": "docs: mods/admin; hooks/hooks.json",
+    "status": "done",
+    "verdict": "improve",
+    "summary": "When mods are off, the flow skill finds no flow tool, tells the user and stops. The policy table comes from the admin and troubleshoot docs. Organization facts stay open.",
+    "open": ["Which managed settings are deployed at the organization, and how is the plugin installed? A copy from a git marketplace counts as a user mod.", "Is the baseline Claude Code version 2.1.287 or later?", "Does --safe-mode load plugin skills? The troubleshoot page says no installed plugin loads at all.", "--bare and trust: do skills load? Unproven."],
+    "updated": "2026-10-10"
+  },
+  {
+    "id": "U01",
+    "group": "U",
+    "title": "Look and feel of the mod UI",
+    "file": "items/U01-look-and-feel.md",
+    "firstGuess": "improve",
+    "source": "hooks/on-flow-pane (the current pane)",
+    "status": "done",
+    "verdict": "improve",
+    "summary": "Spike ui-look-spike run by the owner: works, looks good. Card = round Box, theme-key border color, hover, status symbol + word; Desktop gets an Svg icon rail; narrow mode below ~52 columns. A tree with a refused prop (key on Text) draws blank.",
+    "open": ["Light theme and per-prop terminal vs Desktop not checked", "60/100/144 column behaviour not tested"],
+    "updated": "2026-10-10"
+  },
+  {
+    "id": "U02",
+    "group": "U",
+    "title": "Shell: navigation, panes, project folders",
+    "file": "items/U02-shell-and-navigation.md",
+    "firstGuess": "replace",
+    "source": "../agentic-flows-ui/src/components/Layout/Sidebar.tsx, ../agentic-flows-ui/src/App.tsx",
+    "status": "done",
+    "verdict": "replace",
+    "summary": "One /zeremai pane: New, Continue, Templates before a flow is bound, that one flow after. Dashboard and overview not migrated. Waiting badge on Continue, step line, toast, and an always-on band button. Folder list becomes the session folder with an All folders switch. Desktop gets an Svg sidebar rail.",
+    "open": ["Does /clear keep the session id? (spike S02)", "Always-on band button costs one row in every session"],
+    "updated": "2026-10-10"
+  },
+  {
+    "id": "U03",
+    "group": "U",
+    "title": "Dashboard: flow list, filters, cards",
+    "file": "items/U03-dashboard.md",
+    "firstGuess": "replace",
+    "source": "../agentic-flows-ui/src/components/Dashboard",
+    "status": "done",
+    "verdict": "remove",
+    "summary": "Dashboard not migrated: the mod scopes to one flow. The list and badge are in U02.",
+    "open": [],
+    "updated": "2026-10-10"
+  },
+  {
+    "id": "U04",
+    "group": "U",
+    "title": "Flow diagram and step details",
+    "file": "items/U04-flow-diagram.md",
+    "firstGuess": "replace",
+    "source": "../agentic-flows-ui/src/components/DiagramView",
+    "status": "done",
+    "verdict": "replace",
+    "summary": "Bound flow = a step timeline with substeps of the active step and sub-flows under their step (press to open, parent row to go back). A press on a step opens a detail with Definition and Execution tabs. Desktop adds a graph in a Client (drag, + and - size, press a node), with a Timeline toggle. Built and tested.",
+    "open": ["The Client graph is not seen on a real Desktop yet (drawing of absolute boxes, drag, clipping)", "Zoom is two sizes, no minimap"],
+    "updated": "2026-10-10"
+  },
+  {
+    "id": "U05",
+    "group": "U",
+    "title": "Memory, logs and files views",
+    "file": "items/U05-memory-logs-files.md",
+    "firstGuess": "replace",
+    "source": "../agentic-flows-ui/src/components/DiagramView (RightPanel, MemoryView, MemoryExplorerModal, LogsView, FilesView), ../agentic-flows-ui/src/components/FileContentModal",
+    "status": "done",
+    "verdict": "replace",
+    "summary": "A bound flow has four tabs: Steps, Memory (Flow, Topics, History, Diffs), Logs (a row opens the step detail) and Files (output and framework files, a press hands the file to the editor (terminal) or the system opener (Desktop)). Built and tested.",
+    "open": ["Not seen in a real session yet", "The terminal needs the code command on the PATH", "Desktop uses the system opener: the mods API has no built-in file viewer call"],
+    "updated": "2026-10-10"
+  },
+  {
+    "id": "U06",
+    "group": "U",
+    "title": "Flows overview: tiles, tree, condensed diagrams",
+    "file": "items/U06-flows-overview.md",
+    "firstGuess": "later",
+    "source": "../agentic-flows-ui/src/components/FlowsOverview, ../agentic-flows-ui/overview-window.html",
+    "status": "done",
+    "verdict": "remove",
+    "summary": "Overview not migrated: out of scope with the dashboard.",
+    "open": [],
+    "updated": "2026-10-10"
+  },
+  {
+    "id": "U07",
+    "group": "U",
+    "title": "Templates browser and details",
+    "file": "items/U07-templates-browser.md",
+    "firstGuess": "replace",
+    "source": "../agentic-flows-ui/src/components/Templates",
+    "status": "done",
+    "verdict": "replace",
+    "summary": "One New list: every marketplace and installed template with a state (installed, update, not installed), search, a category chip row, favorites in the store that sort first. A template opens with Overview, Steps (a step expands), Memory flow and Raw (opens the file in the viewer). Install, Update, Remove and Start are on the list or the detail. The Templates tab is now a Marketplaces view behind a button. Built and tested.",
+    "open": ["Not seen in a real session yet", "A template step file is found by its id inside the template folder only", "Marketplaces view keeps the P09 form"],
+    "updated": "2026-10-10"
+  },
+  {
+    "id": "U08",
+    "group": "U",
+    "title": "Agent sessions and terminal",
+    "file": "items/U08-agent-sessions.md",
+    "firstGuess": "keep",
+    "source": "../agentic-flows-ui/electron/agentSessionManager.ts, ../agentic-flows-ui/electron/herdrClient.ts, ../agentic-flows-ui/src/components/AgentSessionPanel, AgentSessions, TerminalWindow",
+    "status": "done",
+    "verdict": "remove",
+    "summary": "Not migrated: the UI is the Claude mod, so it always runs inside a session with its agents. Starting sessions, the embedded terminal and session discovery have no job. The planned agent-status mark was dropped.",
+    "open": [],
+    "updated": "2026-10-10"
+  },
+  {
+    "id": "U09",
+    "group": "U",
+    "title": "Lazy prompts and gate shortcuts",
+    "file": "items/U09-lazy-prompts.md",
+    "firstGuess": "replace",
+    "source": "../agentic-flows-ui/src/components/LazyPromptModal, ../agentic-flows-ui/src/components/LazyPromptButton, ../agentic-flows-ui/src/services/lazyPromptsService.ts",
+    "status": "done",
+    "verdict": "remove",
+    "summary": "Not migrated: every lazy prompt already has a screen. Continue is a Resume button (U02), New is the Start button (U07), Select option is the approval dialog (P02). The UI is the session, so a copy-or-send step has no job. Closed without a plan page.",
+    "open": [],
+    "updated": "2026-10-10"
+  },
+  {
+    "id": "U10",
+    "group": "U",
+    "title": "Settings and operating principles",
+    "file": "items/U10-settings-and-principles.md",
+    "firstGuess": "replace",
+    "source": "../agentic-flows-ui/src/components/Settings, ../agentic-flows-ui/src/components/PrinciplesConfig",
+    "status": "done",
+    "verdict": "remove",
+    "summary": "Settings and principles removed. The other settings went with U08 and U09. The owner removed the operating principles feature from the framework: no editor, no config file, no load step in the step-executor, no principles field in the types.",
+    "open": ["The last framework step is now complete-flow: it deletes the artifact files (so the Files tab of a completed flow is empty), then marks the flow completed", "Running flows keep their old copy of the step"],
+    "updated": "2026-10-10"
+  },
+  {
+    "id": "U11",
+    "group": "U",
+    "title": "Toasts, errors, confirmations and update banner",
+    "file": "items/U11-small-parts.md",
+    "firstGuess": "replace",
+    "source": "../agentic-flows-ui/src/components/Toast, ErrorDisplay, ErrorBoundary, ConfirmationModal, Alert, UpdateBanner, ../agentic-flows-ui/src/hooks/useAutoUpdate.ts",
+    "status": "done",
+    "verdict": "replace",
+    "summary": "Every small part already has a mod equivalent, so nothing new was built. Toasts: $.ui.toast (waiting flow, findings). Errors: a red line in the pane. Confirmations: a two-press button and the approval dialog ($.ui.ask). The update banner is dropped: Claude Code updates plugins itself (no version line in the pane: /plugin shows it). One gap was built after the owner asked: a two-press Delete on a Continue card that moves the folder to deleted/.",
+    "open": [],
+    "updated": "2026-10-10"
+  }
+] /* ITEMS:END */;
+const GROUPS={H:"Hook scripts",C:"Shared plumbing",P:"Other plugin parts",S:"Spikes",X:"Cross-cutting",U:"UI app move"};
+let fg="all",fs="all";
+const $=s=>document.querySelector(s),esc=t=>String(t??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+function tiles(){const n=ITEMS.length,c=s=>ITEMS.filter(i=>i.status===s).length;
+ $("#tiles").innerHTML=[["Items",n],["Todo",c("todo")],["Researching",c("researching")],["Done",c("done")],["Blocked",c("blocked")],["Open questions",ITEMS.reduce((a,i)=>a+(i.open||[]).length,0)]].map(([l,v])=>`<div class="tile"><b>${v}</b><span>${l}</span></div>`).join("");
+ $("#barfill").style.width=(100*c("done")/n)+"%";}
+function filters(){const g=["all",...Object.keys(GROUPS)],s=["all","todo","researching","done","blocked"];
+ $("#filters").innerHTML=g.map(x=>`<button data-g="${x}" aria-pressed="${fg===x}">${x==="all"?"All groups":GROUPS[x]}</button>`).join("")+s.map(x=>`<button data-s="${x}" aria-pressed="${fs===x}">${x==="all"?"Any status":x}</button>`).join("");
+ document.querySelectorAll("#filters button").forEach(b=>b.onclick=()=>{if(b.dataset.g)fg=b.dataset.g;else fs=b.dataset.s;render()});}
+function list(){$("#list").innerHTML=ITEMS.filter(i=>(fg==="all"||i.group===fg)&&(fs==="all"||i.status===fs)).map(i=>`
+<details class="row"><summary><span class="id">${esc(i.id)}</span><span>${esc(i.title)}</span><span class="chip">first guess: ${esc(i.firstGuess)}</span><span class="chip st-${esc(i.status)}">${esc(i.status)}${i.verdict?" · "+esc(i.verdict):""}</span></summary>
+<dl class="body"><dt>Task file</dt><dd><a href="${esc(i.file)}">${esc(i.file)}</a></dd>
+<dt>Source in the repo</dt><dd><code>${esc(i.source)}</code></dd>
+<dt>Summary</dt><dd>${esc(i.summary)||"<i>not researched yet</i>"}</dd>
+<dt>Open questions</dt><dd>${(i.open||[]).length?"<ul>"+i.open.map(q=>`<li>${esc(q)}</li>`).join("")+"</ul>":"none recorded"}</dd>
+<dt>Updated</dt><dd>${esc(i.updated)||"—"}</dd></dl></details>`).join("");}
+function render(){tiles();filters();list();}
+render();
+</script>
+</body>
+</html>

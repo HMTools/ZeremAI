@@ -1,0 +1,19 @@
+{
+  "id": "RM-018",
+  "title": "Cost analysis of flows and steps",
+  "description": "Track token use and cost per flow and per step to show where optimization pays off.",
+  "type": "feature",
+  "status": "proposed",
+  "priority": "medium",
+  "category": "framework",
+  "milestone": "backlog",
+  "effort": "",
+  "tags": [],
+  "dependencies": [],
+  "created": "2026-05-29",
+  "updated": "2026-10-12",
+  "author": "m4t4ngm@gmail.com",
+  "notes": "",
+  "acceptance_criteria": [],
+  "illustration": "cost-analytics"
+}

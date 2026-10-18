@@ -1,0 +1,106 @@
+{
+ "schema_version": 1,
+ "diagram_type": "dataflow",
+ "meta": {
+  "title": "From marketplace to running flow",
+  "output": "template-path.html",
+  "quality_profile": "standard",
+  "viewBox": [
+   940,
+   600
+  ]
+ },
+ "stages": [
+  {
+   "label": "Remote"
+  },
+  {
+   "label": "Cache"
+  },
+  {
+   "label": "Installed"
+  },
+  {
+   "label": "Running"
+  }
+ ],
+ "nodes": [
+  {
+   "id": "git",
+   "type": "external",
+   "label": "Git marketplace",
+   "sublabel": "remote repository",
+   "stage": 0,
+   "row": 0,
+   "width": 140,
+   "height": 58
+  },
+  {
+   "id": "cache",
+   "type": "database",
+   "label": "Cache",
+   "sublabel": "cache/sources/{name}",
+   "stage": 1,
+   "row": 2,
+   "width": 168,
+   "height": 58
+  },
+  {
+   "id": "installed",
+   "type": "database",
+   "label": "Installed templates",
+   "sublabel": "templates/flows/{category}/{name}",
+   "stage": 2,
+   "row": 0,
+   "width": 168,
+   "height": 58
+  },
+  {
+   "id": "flow",
+   "type": "backend",
+   "label": "Flow",
+   "sublabel": "active/{flow}/flow.json",
+   "stage": 3,
+   "row": 2,
+   "width": 168,
+   "height": 58
+  }
+ ],
+ "flows": [
+  {
+   "from": "git",
+   "to": "cache",
+   "label": "refresh (mod)",
+   "classification": "git clone --depth 1 or pull",
+   "variant": "emphasis",
+   "route": "vertical-channel"
+  },
+  {
+   "from": "cache",
+   "to": "installed",
+   "label": "install (mod)",
+   "classification": "copy the folder",
+   "variant": "emphasis",
+   "route": "vertical-channel"
+  },
+  {
+   "from": "installed",
+   "to": "flow",
+   "label": "create-flow (script)",
+   "classification": "copy each step",
+   "variant": "default",
+   "route": "vertical-channel"
+  }
+ ],
+ "cards": [
+  {
+   "dot": "emerald",
+   "title": "Every stage is a copy",
+   "items": [
+    "Each arrow copies; nothing links back to where it came from",
+    "The mod does refresh and install",
+    "The flow script does create-flow, copying each step definition into the flow file and adding the framework steps"
+   ]
+  }
+ ]
+}

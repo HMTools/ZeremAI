@@ -1,0 +1,111 @@
+---
+title: "Memory and safe writes"
+description: "Where each kind of state lives, how long it lasts, and how the flow script keeps files safe."
+---
+
+ZeremAI keeps state in five places. Each one has a different life time.
+
+| Kind | Lives in | After a restart | Written by |
+|---|---|---|---|
+| **Flow memory**: what steps produced and decided | `memory/<topic>.json` in the flow folder | Stays | The flow script, for a step |
+| **Flow state and log**: step status, every prompt | `flow.json`, `log.json` | Stays | The flow script |
+| **Session links and open gate**: which flow, which dialog | The mod store: `session:<id>`, `gate:<id>` | Stays | The mod |
+| **Counters and timers**: re-prompt count, toast time | Module variables of the mod | Lost on reload | The mod |
+| **What a step knows**: its own context | One subagent for each step | Gone when the step ends | The model |
+
+## Flow memory
+
+Steps pass information to later steps through **topic files**. A topic is one JSON file in the flow's `memory/` folder.
+
+```json
+{
+  "type": "memory-topic-file",
+  "topic": "context",
+  "lastUpdated": "2026-01-01T10:00:00Z",
+  "entries": {
+    "<stepId>": {
+      "stepName": "Understand",
+      "informationProduced": { "...": "..." },
+      "decisionsMade": ["..."],
+      "filesModifiedCreated": ["..."],
+      "updatedAt": "2026-01-01T10:00:00Z"
+    }
+  }
+}
+```
+
+- Each step has **one entry** for each topic. A second write by the same step merges into it: new information overwrites the same key, and decisions and files are added without duplicates.
+- `_cross-references.json` gathers the decisions and files of every topic. The script fills only `keyDecisions` and `filesModified`. The fields `filesCreated` and `custom` stay empty. Any step can read it.
+- A step declares what it uses in `memoryFileUsage`: `readFrom` and `writeTo`, each a list of topics. The script refuses any other topic. An empty or missing list means no limit.
+
+```python
+# scripts/flow_manager.py: validate_topic_access
+allowed = (((step or {}).get('stepDefinition') or {}).get('memoryFileUsage') or {}).get(access)
+if not isinstance(allowed, list) or len(allowed) == 0:
+    return                       # no list: no limit
+if topic + '.json' in allowed or topic in allowed:
+    return
+fail('Step "%s" is not allowed to %s topic ...')
+```
+
+Small, declared memory keeps each step's context small and predictable. A step reads only what it needs.
+
+## What a step knows
+
+A regular step runs in a `step-executor` subagent. The subagent starts with nothing from the main conversation. The mod gives it one prompt, the **brief**, that it builds with the flow script command `get-step-brief`:
+
+1. the step `stepDefinition`;
+2. the flow `parameters`;
+3. the full content of the memory topics in its `readFrom` list (a step with no list gets none);
+4. on a re-run: the short summary of its earlier run and your corrections.
+
+The mod finds the step: it is the one `in_progress` in the newest flow of the session. The subagent reads no flow file to find its job.
+
+When the step ends, the subagent's last words are one result block (a summary, the memory entries and the log). The mod reads it and saves it with the flow script. The summary also goes to a private topic, `rerun-summary`, that only a re-run of the same step reads. If the block is missing or wrong, the mod asks the subagent to fix it (2 tries), then tells the main agent. A step can also have verifier scripts (below).
+
+A step can also have verifier scripts that check its result before the mod saves it. See [Deterministic Verifiers](/authoring/verifiers).
+
+When the step ends, its context is gone. Anything a later step needs must be in a memory topic or a deliverable file. If you ask for changes, the step runs again as a new subagent, with the brief above.
+
+## What the mod remembers
+
+The mod keeps two kinds of state.
+
+- **The store** is kept across reloads and restarts. It holds the list of flow folders bound to a session (`session:<id>`, newest last) and the open approval gate (`gate:<id>`).
+- **Module variables** are lost when the mod reloads. They hold the re-prompt count, the time of the last toast, the set of sessions with a dialog open, and the versions of the documents that the mod wrote to the site. Losing them is safe: a count starts again, a dialog is opened again by the gate in the store, and the mod learns the versions again with one read.
+
+The rule: if losing it would break a flow, it must be in a file or in the store.
+
+## One writer, one change at a time
+
+Only `flow_manager.py` writes flow files. Two protections make its writes safe.
+
+**Atomic writes.** `write_json` writes a temporary file in the same folder, flushes it to disk, and then renames it over the target. A crash leaves either the old file or the new one, never half of a file.
+
+**A lock for each folder.** A command that reads and then writes takes an exclusive lock first, so a second process waits and then reads what the first one wrote. The lock files live under `~/.claude/zeremai/locks/` (named by a hash of the path), not in the flow folder, so moving a flow leaves no lock behind. It uses `fcntl` on macOS and Linux and `msvcrt` on Windows.
+
+```python
+# scripts/flow_manager.py: write_json (abridged)
+fd, tmp = tempfile.mkstemp(dir=folder, prefix='.tmp-', suffix='.json')
+...
+f.flush(); os.fsync(f.fileno())
+os.replace(tmp, path)            # atomic
+```
+
+If the lock folder cannot be written, the script goes on without a lock and the last write wins. This is a known limit.
+
+### Who may call the script
+
+The agent does not run the script directly. It runs a Bash command, and the mod checks it first (`checkCall` in `hooks/infra/flow-manager/script.ts`):
+
+- the command has one form, and runs this plugin's script;
+- the input matches the schema of the subcommand;
+- `flowDir` is a folder bound to this session;
+- the moment allows it: no approval dialog is open for the commands that change a flow;
+- `approve-step` is refused for the agent. Only the mod runs it, after your click.
+
+A second guard in `on-approval-gate` refuses Write, Edit and Bash commands that change `flow.json`, `log.json`, memory files, findings or flavors by hand.
+
+## Source
+
+`scripts/flow_manager.py`: `write_json`, `locked`, `add_memory_entry`, `validate_topic_access`. `hooks/infra/flow-manager/script.ts`: `checkCall`. `hooks/on-step-brief/on-step-brief.ts`, `hooks/infra/step-brief/`, `agents/step-executor.md`.

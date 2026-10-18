@@ -1,0 +1,31 @@
+---
+title: "/zeremai:marketplace"
+description: "List, add, edit, switch on or off, remove and refresh template marketplaces from the prompt."
+---
+
+## Run it
+
+```
+/zeremai:marketplace <verb> [words]
+```
+
+| Command | What it does |
+|---|---|
+| `list` | Shows each marketplace: name, state (`Ready`, `Not cloned` or `Off`), branch, priority and git address. |
+| `add <name> <git address> [--branch b] [--priority n]` | Saves the marketplace and clones it at once. A failed clone keeps the entry and prints the reason. |
+| `edit <name> [--url u] [--branch b] [--priority n] [--rename n]` | Changes only the fields you name. A new address or branch deletes the saved copy: run `refresh` to clone it again. |
+| `on <name>` / `off <name>` | Switches it on or off. Refresh skips a marketplace that is off. Run twice, it gives the same result. |
+| `remove <name> [--yes]` | Asks first, then deletes the entry and its saved copy. `--yes` skips the question. Installed templates stay. |
+| `refresh` | Gets the latest catalog of each marketplace that is on. |
+
+Any other word shows this list.
+
+## What it does
+
+1. The mod answers the command. It does not go to the model.
+2. It uses the same code and the same checks as the [Marketplaces screen](/ui/marketplaces), and writes the same file.
+3. If the [ZeremAI site](/guide/live-site) is open, it shows the change at once.
+
+## Related
+
+[Marketplaces](/guide/marketplaces), [`/zeremai:create-marketplace`](/commands/create-marketplace).

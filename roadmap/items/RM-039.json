@@ -1,0 +1,23 @@
+{
+  "id": "RM-039",
+  "title": "Full template details before install",
+  "description": "The Templates tab shows a short summary until a template is installed. Show all fields, parameters and steps on click, before installing.",
+  "type": "feature",
+  "status": "proposed",
+  "priority": "medium",
+  "category": "ui",
+  "milestone": "backlog",
+  "effort": "",
+  "tags": [
+    "marketplace",
+    "templates",
+    "ux"
+  ],
+  "dependencies": [],
+  "created": "2026-06-14",
+  "updated": "2026-10-12",
+  "author": "m4t4ngm@gmail.com",
+  "notes": "",
+  "acceptance_criteria": [],
+  "illustration": "marketplace"
+}

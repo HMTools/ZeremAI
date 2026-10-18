@@ -1,0 +1,1266 @@
+<title>ZeremAI</title>
+<script>try{var zt=localStorage.getItem('zf-theme');if(zt==='light'||zt==='dark')document.documentElement.setAttribute('data-theme',zt)}catch(e){}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;600;700&family=Fragment+Mono&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,600;1,6..72,400&display=swap">
+<style>
+  /* Layout: a bar (name, session, freshness, three sections), then one section at a time. Flows: chips, the picked flow with its actions, steps (runbook or two lanes) and a side panel. New flow: templates beside a form. Templates: installed first, then each marketplace. Same look as the view-template page, with a status colour on every step. */
+  :root {
+    --bg: #ffffff; --surface: #ffffff; --fg: #141413; --muted: #6b6a63; --line: #ecebe6; --line2: #d6d4cc; --hover: #f8f7f3; --sel: #fdf0e9;
+    --accent: #d97757; --accent-text: #b4532f; --accent-bg: #fdeee6; --ink: #141413; --on-ink: #ffffff;
+    --k-waiting: #8a5200; --k-waiting-bg: #fff1d6; --k-running: #1b6e49; --k-running-bg: #e3f3eb; --k-done: #6b6a63; --k-done-bg: #f1f0ec;
+    --k-failed: #b3261e; --k-failed-bg: #fdeae8; --k-paused: #5546a8; --k-paused-bg: #eceaf9; --k-pending: #6b6a63; --k-pending-bg: #f6f5f1; --vm-bg: #ffffff; --vm-pend: #f6f5f1; --vm-done: #e3f3eb; --vm-muted: #5c5b54; --vm-pn: #3d3c37; --vm-ph: #b9b7ae; --vm-pl: #8d8b82;
+    --fl-muted: #5f5e57; --fl-line: #e6e4dc; --fl-line2: #cfccc2; --fl-dash: #bdb9ad; --fl-chip: #f1f0ec; --fl-chip-tx: #3d3c37; --fl-grp: #f8f7f3; --fl-amber: #fff8e8; --fl-amber-hd: #fff1d6; --fl-amber-line: #ecd29a; --fl-amber-tx: #4d2f00; --fl-amber-sub: #6b4300; --fl-new: #1b6e49; --fl-chg: #7a4700; --fl-del: #b3382c; --fl-ok-bg: #e3f3eb; --fl-ok-tx: #14583a; --fl-strike: #6b6a63; --fl-edit-bg: #fbfaf7; --fl-pre-bg: #141413; --fl-pre-tx: #f0eee6; --fl-toast-bg: #141413; --fl-toast-tx: #ffffff;
+    --font-body: "Schibsted Grotesk", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --font-mono: "Fragment Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+    --bg: #1f1e1d; --surface: #2a2927; --fg: #f0eee6; --muted: #a8a69c; --line: #3a3834; --line2: #55524b; --hover: #32302d; --sel: #3a3834;
+    --accent: #e8845f; --accent-text: #e8845f; --accent-bg: #4a2e23; --ink: #f0eee6; --on-ink: #1f1e1d;
+    --k-waiting: #f0b84d; --k-waiting-bg: #3d3017; --k-running: #5fd39b; --k-running-bg: #17332a; --k-done: #a8a69c; --k-done-bg: #2f2e2b;
+    --k-failed: #ff8a80; --k-failed-bg: #432220; --k-paused: #b3a8ff; --k-paused-bg: #2b2850; --k-pending: #a8a69c; --k-pending-bg: #302f2c; --vm-bg: #262523; --vm-pend: #2a2927; --vm-done: #1d2b25; --vm-muted: #b8b5aa; --vm-pn: #d6d3c8; --vm-ph: #4a4741; --vm-pl: #55524b; --fl-muted: #a8a69c; --fl-line: #3a3834; --fl-line2: #77746b; --fl-dash: #55524b; --fl-chip: #2f2e2b; --fl-chip-tx: #d6d3c8; --fl-grp: #262523; --fl-amber: #2b2418; --fl-amber-hd: #3d3017; --fl-amber-line: #6a5421; --fl-amber-tx: #f6d58f; --fl-amber-sub: #e0b865; --fl-new: #5fd39b; --fl-chg: #f0b84d; --fl-del: #ff8a80; --fl-ok-bg: #17332a; --fl-ok-tx: #8fe3bc; --fl-strike: #a8a69c; --fl-edit-bg: #262523; --fl-pre-bg: #151413; --fl-pre-tx: #f0eee6; --fl-toast-bg: #f0eee6; --fl-toast-tx: #141413; color-scheme: dark; } }
+  :root[data-theme="dark"] {
+    --bg: #1f1e1d; --surface: #2a2927; --fg: #f0eee6; --muted: #a8a69c; --line: #3a3834; --line2: #55524b; --hover: #32302d; --sel: #3a3834;
+    --accent: #e8845f; --accent-text: #e8845f; --accent-bg: #4a2e23; --ink: #f0eee6; --on-ink: #1f1e1d;
+    --k-waiting: #f0b84d; --k-waiting-bg: #3d3017; --k-running: #5fd39b; --k-running-bg: #17332a; --k-done: #a8a69c; --k-done-bg: #2f2e2b;
+    --k-failed: #ff8a80; --k-failed-bg: #432220; --k-paused: #b3a8ff; --k-paused-bg: #2b2850; --k-pending: #a8a69c; --k-pending-bg: #302f2c; --vm-bg: #262523; --vm-pend: #2a2927; --vm-done: #1d2b25; --vm-muted: #b8b5aa; --vm-pn: #d6d3c8; --vm-ph: #4a4741; --vm-pl: #55524b; --fl-muted: #a8a69c; --fl-line: #3a3834; --fl-line2: #77746b; --fl-dash: #55524b; --fl-chip: #2f2e2b; --fl-chip-tx: #d6d3c8; --fl-grp: #262523; --fl-amber: #2b2418; --fl-amber-hd: #3d3017; --fl-amber-line: #6a5421; --fl-amber-tx: #f6d58f; --fl-amber-sub: #e0b865; --fl-new: #5fd39b; --fl-chg: #f0b84d; --fl-del: #ff8a80; --fl-ok-bg: #17332a; --fl-ok-tx: #8fe3bc; --fl-strike: #a8a69c; --fl-edit-bg: #262523; --fl-pre-bg: #151413; --fl-pre-tx: #f0eee6; --fl-toast-bg: #f0eee6; --fl-toast-tx: #141413; color-scheme: dark; }
+
+  body { background: var(--bg); color: var(--fg); font: 15px/1.55 var(--font-body); padding-inline: 16px; padding-block: 20px 48px; }
+  .wrap { max-width: 1180px; margin-inline: auto; display: grid; gap: 18px; }
+  h1, h2, h3, h4, p { margin: 0; } h1 { font-size: 22px; line-height: 1.15; letter-spacing: -.015em; font-weight: 650; } h2 { font-size: 22px; line-height: 1.2; letter-spacing: -.01em; font-weight: 650; text-wrap: balance; }
+  h4 { font-size: 13px; font-weight: 600; color: var(--muted); margin-bottom: 6px; }
+  code, .mono { font-family: var(--font-mono); font-size: 12.5px; }
+  button { font: inherit; color: inherit; cursor: pointer; } :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; } [tabindex="-1"]:focus { outline: none; }
+  .muted { color: var(--muted); } .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .link { background: none; border: 0; padding: 0; color: var(--accent-text); font-weight: 550; text-align: left; } .link:hover { text-decoration: underline; }
+  .k { color: var(--k); } .k-waiting, .k-blocked { --k: var(--k-waiting); --kb: var(--k-waiting-bg); } .k-running { --k: var(--k-running); --kb: var(--k-running-bg); } .k-done { --k: var(--k-done); --kb: var(--k-done-bg); }
+  .k-failed { --k: var(--k-failed); --kb: var(--k-failed-bg); } .k-paused { --k: var(--k-paused); --kb: var(--k-paused-bg); } .k-pending { --k: var(--k-pending); --kb: var(--k-pending-bg); }
+  .pill { display: inline-flex; gap: 5px; align-items: center; font-size: 12.5px; font-weight: 600; padding: 1px 9px; border-radius: 999px; background: var(--kb); color: var(--k); white-space: nowrap; }
+
+  /* bar */
+  .bar { display: grid; gap: 12px; }
+  #theme:empty { display: none; } .tbtn { width: 36px; height: 36px; border-radius: 50%; border: 1.5px solid var(--line2); background: transparent; display: grid; place-items: center; font-size: 17px; line-height: 1; color: var(--fg); padding: 0; } .tbtn:hover { border-color: var(--muted); background: var(--hover); }
+  .back-steps { display: none; padding: 4px 2px; } @media (max-width: 979px) { .back-steps { display: block; } }
+  .brand { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; }
+  .sess { font-size: 13px; font-weight: 600; display: inline-flex; gap: 6px; align-items: center; padding: 2px 10px; border-radius: 999px; background: var(--kb); color: var(--k); max-width: 100%; overflow-wrap: anywhere; }
+  .fresh { margin-left: auto; font-size: 13px; font-weight: 600; display: inline-flex; gap: 7px; align-items: center; color: var(--muted); }
+  .fresh i { width: 9px; height: 9px; border-radius: 50%; background: var(--muted); display: inline-block; } .fresh.live { color: var(--k-running); } .fresh.live i { background: var(--k-running); animation: beat 2.4s ease-in-out infinite; }
+  .fresh.slow { color: var(--k-waiting); } .fresh.slow i { background: var(--k-waiting); } .fresh.off i { background: transparent; border: 2px solid var(--muted); }
+  @keyframes beat { 50% { opacity: .35; } }
+  .nav { display: flex; gap: 4px; border-bottom: 1px solid var(--line); overflow-x: auto; }
+  .nav button { background: none; border: 0; padding: 10px 12px 9px; font-weight: 600; font-size: 15px; color: var(--muted); border-bottom: 2px solid transparent; white-space: nowrap; display: inline-flex; gap: 7px; align-items: center; }
+  .nav button[aria-current="page"] { color: var(--fg); border-bottom-color: var(--accent); } .nav button:hover { color: var(--fg); }
+  .badge { font-size: 12px; font-weight: 700; min-width: 20px; text-align: center; padding: 0 6px; border-radius: 999px; background: var(--k-waiting-bg); color: var(--k-waiting); }
+
+  /* buttons, fields, cards */
+  .btn { border: 1px solid var(--line2); background: var(--surface); border-radius: 10px; padding: 7px 14px; font-weight: 600; font-size: 14px; min-height: 38px; display: inline-flex; gap: 6px; align-items: center; justify-content: center; }
+  .btn:hover:not([aria-disabled="true"]) { background: var(--hover); } .btn.pri { background: var(--ink); color: var(--on-ink); border-color: var(--ink); } .btn.pri:hover:not([aria-disabled="true"]) { background: var(--ink); opacity: .9; }
+  .btn.quiet-danger { color: var(--k-failed); border-color: transparent; background: transparent; } .cf { display: inline-flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; }
+  .btn.danger { color: var(--k-failed); border-color: var(--k-failed); background: transparent; } .btn.small { min-height: 32px; padding: 4px 11px; font-size: 13px; }
+  .btn[aria-disabled="true"] { opacity: .55; cursor: default; } .btn[aria-busy="true"] { cursor: progress; }
+  .row { display: flex; flex-wrap: wrap; gap: 8px 10px; align-items: center; } .row > * { min-width: 0; }
+  .fld { display: grid; gap: 4px; } .fld > label, .lbl { font-size: 13.5px; font-weight: 600; } .fld small { color: var(--muted); font-size: 13px; } .req { color: var(--accent-text); }
+  .in { box-sizing: border-box; width: 100%; font: inherit; color: var(--fg); background: var(--bg); border: 1px solid var(--line2); border-radius: 10px; padding: 8px 11px; min-height: 38px; } textarea.in { min-height: 84px; resize: vertical; }
+  .in:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; border-color: var(--accent); } .in[aria-invalid="true"] { border-color: var(--k-failed); }
+  .err { color: var(--k-failed); font-size: 13.5px; font-weight: 550; }
+  .card { border: 1px solid var(--line); background: var(--surface); border-radius: 14px; padding: 16px; display: grid; gap: 12px; min-width: 0; }
+  .ban { border: 1px solid var(--line2); background: var(--hover); border-radius: 12px; padding: 10px 14px; font-size: 14px; display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; }
+  .cmd { display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: baseline; font-size: 13.5px; margin: 0; color: var(--muted); } .cmd.done { color: var(--k-running); } .cmd.error { color: var(--k-failed); font-weight: 550; } .cmd.busy { color: var(--fg); }
+  .spin { width: 11px; height: 11px; border-radius: 50%; border: 2px solid var(--line2); border-top-color: var(--accent); display: inline-block; animation: turn .8s linear infinite; align-self: center; } @keyframes turn { to { transform: rotate(360deg); } }
+  .boot { display: grid; justify-items: center; gap: 6px; text-align: center; padding: 64px 16px; } .boot h2 { margin: 14px 0 0; font-size: 18px; } .boot p { margin: 0; }
+  .orbit { width: 72px; height: 72px; position: relative; } .orbit svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+  .orbit .o1 { transform-origin: 50% 50%; animation: turn 1.1s cubic-bezier(.5, .1, .5, .9) infinite; } .orbit .o2 { transform-origin: 50% 50%; animation: turn 2.4s linear infinite reverse; } .orbit .core { transform-origin: 50% 50%; animation: pulse 1.4s ease-in-out infinite; }
+  @keyframes pulse { 50% { transform: scale(.55); opacity: .5; } }
+  .skel { background: linear-gradient(90deg, var(--hover), var(--line), var(--hover)); background-size: 200% 100%; animation: shim 1.4s ease-in-out infinite; border-radius: 12px; } @keyframes shim { to { background-position: -200% 0; } }
+
+  /* chips */
+  .here { font-size: 12px; font-weight: 600; padding: 1px 8px; border-radius: 999px; background: var(--kb); color: var(--k); }
+
+  /* the picked flow */
+  .fhead { display: grid; gap: 8px; } .facts { color: var(--muted); font-size: 14px; display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; }
+  .vt { margin-left: auto; display: inline-flex; border: 1px solid var(--line2); border-radius: 8px; overflow: hidden; } .vt button { background: none; border: 0; padding: 3px 12px; font-size: 13px; font-weight: 550; color: var(--muted); }
+  .vt button + button { border-left: 1px solid var(--line2); } .vt button[aria-pressed="true"] { background: var(--sel); color: var(--fg); }
+  .need-card { border: 1px solid var(--k-waiting); background: var(--k-waiting-bg); border-radius: 14px; padding: 14px 16px; display: grid; gap: 8px; } .need-card b { font-size: 16.5px; color: var(--fg); }
+  .need-card small { color: var(--muted); font-size: 13.5px; } .need-card .in { background: var(--surface); }
+  .shell { display: grid; gap: 22px; grid-template-columns: minmax(0, 1fr); align-items: start; }
+  @media (min-width: 980px) { .shell { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 28px; } .side { position: sticky; top: 12px; max-height: calc(100vh - 40px); overflow: auto; } }
+  .list { min-width: 0; }
+
+  /* runbook */
+  .rb { font-family: "Newsreader", Georgia, serif; max-width: 600px; }
+  .rb .part { margin: 22px 0 2px; font: 700 11px/1.2 var(--font-body); letter-spacing: .12em; text-transform: uppercase; color: var(--accent-text); border-bottom: 1px solid var(--ink); padding-bottom: 6px; } .rb .part:first-child { margin-top: 0; }
+  .rb .st { display: grid; grid-template-columns: 32px minmax(0, 1fr); padding: 8px 10px 3px 0; cursor: pointer; border-radius: 8px; } .rb .st:hover { background: var(--hover); } .rb .st[aria-pressed="true"] { background: var(--sel); }
+  .rb .no { text-align: right; padding-right: 10px; font-size: 16px; line-height: 1.4; color: var(--k); font-family: var(--font-body); }
+  .rb .st b { font-size: 16.5px; font-weight: 600; line-height: 1.3; display: flex; flex-wrap: wrap; gap: 2px 10px; align-items: baseline; } .rb .st b .pill { font-family: var(--font-body); font-size: 12px; }
+  .rb .st p { font-size: 14.5px; line-height: 1.4; color: var(--muted); margin-top: 1px; }
+  .rb .stop { margin: 5px 0 2px 32px; border: 1px solid var(--accent-text); color: var(--accent-text); padding: 3px 9px; font: 700 10.5px var(--font-body); letter-spacing: .06em; text-transform: uppercase; display: inline-block; }
+  .rb .nt { margin: 3px 0 0 32px; font-style: italic; color: var(--muted); font-size: 14px; line-height: 1.4; }
+  .rb .nt button { font: inherit; font-style: italic; background: none; border: 0; padding: 0; color: var(--accent-text); text-decoration: underline; cursor: pointer; }
+  /* overview of all flows */
+  .stats { display: flex; flex-wrap: wrap; gap: 12px; } .stat { flex: 1 1 150px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); padding: 12px 16px; display: grid; }
+  .stat b { font-size: 28px; line-height: 1.1; color: var(--k, var(--fg)); } .stat span { color: var(--muted); font-size: 13px; } .stat.need { border-color: var(--k-waiting); }
+  .sec { font: 700 12px/1.2 var(--font-body); letter-spacing: .12em; text-transform: uppercase; color: var(--muted); display: flex; gap: 10px; align-items: center; margin: 10px 0 -4px; }
+  .ov-need { display: grid; gap: 8px; } .ov-need .nm, .fcard .nm { font-size: 16.5px; overflow-wrap: anywhere; }
+  .need-card.k-blocked, .need-card.k-failed { border-color: var(--k-failed); background: var(--k-failed-bg); }
+  .fcards { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr)); }
+  .fcard { border: 1px solid var(--line); background: var(--surface); border-radius: 14px; padding: 16px; display: grid; gap: 12px; text-align: left; min-width: 0; } .fcard:hover { border-color: var(--line2); background: var(--hover); }
+  .orow { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; padding: 10px 14px; border-top: 1px solid var(--line); } .orow:first-child { border-top: 0; } .orow > .muted { flex: 1 1 200px; font-size: 14px; } .orow .row { margin-left: auto; }
+  .segs { display: flex; gap: 3px; } .seg { flex: 1; height: 8px; border-radius: 3px; background: var(--line); min-width: 3px; }
+  .seg.k-done { background: var(--k-running); opacity: .55; } .seg.k-running { background: var(--k-running); box-shadow: 0 0 8px var(--k-running); animation: beat 1.6s ease-in-out infinite; }
+  .seg.k-waiting, .seg.k-blocked { background: var(--k-waiting); box-shadow: 0 0 8px var(--k-waiting); animation: beat 1.2s ease-in-out infinite; } .seg.k-failed { background: var(--k-failed); } .seg.k-paused { background: var(--k-paused); }
+  .rail { display: flex; flex-wrap: wrap; gap: 6px 14px; } .rail .ph { display: grid; gap: 6px; min-width: 0; } .rail .ph small { font: 700 11px/1.2 var(--font-body); letter-spacing: .12em; text-transform: uppercase; color: var(--muted); } .rail .seg { height: 10px; }
+  .fold { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; width: 100%; text-align: left; margin: 6px 0; padding: 8px 12px; border: 1px dashed var(--line2); border-radius: 10px; background: none; font-family: var(--font-body); font-size: 14px; } .fold:hover { background: var(--hover); }
+  .rb .st.k-pending { opacity: .72; } .rb .st.cur { box-shadow: inset 3px 0 0 var(--k); }
+  /* diagram: one horizontal map, lanes for Claude, you and child flows */
+  .act { display: flex; flex-wrap: wrap; gap: 2px 8px; align-items: baseline; font: 12.5px var(--font-mono, ui-monospace, Menlo, monospace); color: var(--muted); background: var(--hover); border-radius: 8px; padding: 6px 10px; overflow-wrap: anywhere; } .act b { color: var(--k-running); font-weight: 400; } .act.quiet { color: var(--k-waiting); background: var(--k-waiting-bg); } .act.quiet b { color: inherit; }
+  .vmap { position: relative; border: 1px solid var(--line); border-radius: 14px; background: var(--vm-bg); overflow: hidden; min-width: 0; }
+  .vm-lines { position: absolute; left: 0; top: 0; width: 100%; pointer-events: none; } .vm-loop { position: absolute; right: 0; pointer-events: none; }
+  .vm-e { fill: none; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; } .vm-e.done { stroke: var(--k-running); } .vm-e.wait { stroke: var(--k-waiting); stroke-dasharray: 5 6; } .vm-e.pend { stroke: var(--vm-pl); stroke-dasharray: 5 6; }
+  .vm-e.kid { stroke: var(--k-paused); stroke-width: 2; stroke-dasharray: 5 5; } .vm-e.loop { stroke: var(--vm-muted); stroke-dasharray: 5 6; }
+  .vm-ph { position: absolute; left: 12px; right: 32px; box-sizing: border-box; border: 1.5px dashed var(--vm-ph); border-radius: 18px; }
+  .vm-ph span { position: absolute; left: 64px; top: 10px; font: 700 11px var(--font-mono); letter-spacing: .14em; text-transform: uppercase; color: var(--vm-muted); }
+  .vm-card { position: absolute; left: 24px; right: 44px; height: 64px; box-sizing: border-box; padding: 0 14px; display: flex; align-items: center; gap: 14px; border-radius: 13px; border: 2px solid var(--c); background: var(--cb); cursor: pointer; --c: var(--vm-pl); --cb: var(--vm-pend); }
+  .vm-card.k-done, .vm-card.k-running { --c: var(--k-running); --cb: var(--vm-done); } .vm-card.k-running { --cb: var(--k-running-bg); } .vm-card.k-waiting, .vm-card.k-blocked { --c: var(--k-waiting); --cb: var(--k-waiting-bg); }
+  .vm-card.k-failed { --c: var(--k-failed); --cb: var(--k-failed-bg); } .vm-card.k-paused { --c: var(--k-paused); --cb: var(--k-paused-bg); }
+  .vm-card:hover { border-color: var(--muted); } .vm-card.k-done:hover, .vm-card.k-running:hover, .vm-card.k-waiting:hover, .vm-card.k-blocked:hover, .vm-card.k-failed:hover, .vm-card.k-paused:hover { border-color: var(--c); filter: brightness(1.08); }
+  .vm-card[aria-pressed="true"] { outline: 2.5px solid var(--accent); outline-offset: 2.5px; } .vm-card:focus-visible { outline: 3px solid var(--accent); outline-offset: 2.5px; }
+  .vm-dot { flex: none; width: 40px; height: 40px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; border: 2px solid var(--c); background: var(--bg); color: var(--c); border-radius: 50%; font: 600 14px var(--font-mono); }
+  .vm-card.k-done .vm-dot { font-size: 18px; } .vm-card.k-pending .vm-dot { color: var(--vm-muted); } .vm-card.ap .vm-dot { border-radius: 11px; }
+  .vm-t { flex: 1; min-width: 0; } .vm-n { display: block; font-size: 14.5px; line-height: 1.3; font-weight: 400; overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; } .vm-card.k-pending .vm-n { color: var(--vm-pn); } .vm-card:not(.k-pending) .vm-n { font-weight: 700; } .vm-card.k-waiting .vm-n, .vm-card.k-blocked .vm-n { color: var(--k-waiting); }
+  .vm-s { display: block; font-size: 12px; line-height: 1.3; color: var(--vm-muted); } .vm-card.k-waiting .vm-s, .vm-card.k-blocked .vm-s { color: var(--k-waiting); }
+  .vm-tag { flex: none; border: 1.5px solid var(--vm-pl); color: var(--vm-muted); border-radius: 6px; padding: 1px 7px; font: 700 10.5px var(--font-mono); letter-spacing: .06em; text-transform: uppercase; } .vm-card.k-waiting .vm-tag, .vm-card.k-blocked .vm-tag { border-color: var(--k-waiting); color: var(--k-waiting); }
+  .vm-kid { position: absolute; left: 88px; right: 44px; height: 62px; box-sizing: border-box; padding: 8px 12px; border: 1.5px solid var(--k-paused); background: var(--k-paused-bg); border-radius: 12px; cursor: pointer; text-align: left; font: inherit; color: inherit; display: block; }
+  .vm-kid.none { cursor: default; border-style: dashed; } .vm-kid:hover:not(.none) { filter: brightness(1.1); } .vm-kid:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+  .vm-kid .row { justify-content: space-between; flex-wrap: nowrap; gap: 8px; } .vm-kid b { font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; } .vm-kid .segs { margin: 6px 0 4px; } .vm-kid .row { line-height: 1.3; } .vm-kid .seg { box-shadow: none; animation: none; opacity: 1; background: var(--line2); } .vm-kid .seg.k-done { background: var(--k-running); opacity: .7; } .vm-kid .seg.k-running, .vm-kid .seg.k-waiting, .vm-kid .seg.k-blocked, .vm-kid .seg.k-paused, .vm-kid .seg.k-failed { background: var(--k); } .vm-kid .seg { height: 6px; }
+  .vm-kp { flex: none; font: 600 11px var(--font-body); color: var(--k); white-space: nowrap; } .vm-more { position: absolute; left: 88px; height: 30px; } .vm-more::after { content: ""; position: absolute; inset: -7px -6px; }
+  @media (max-width: 560px) { .vm-tag { display: none; } }
+  .flash { animation: flash 2.6s ease-out; }
+  @keyframes flash { 0%, 25% { background: var(--accent-bg); box-shadow: 0 0 0 2px var(--accent); } 100% { box-shadow: 0 0 0 2px transparent; } }
+
+  /* side panel */
+  .side { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; min-width: 0; }
+  .tabs { display: flex; border-bottom: 1px solid var(--line); padding: 0 10px; gap: 4px; overflow-x: auto; }
+  .tabs button { background: none; border: 0; padding: 14px 8px 11px; font-weight: 550; font-size: 14px; color: var(--muted); border-bottom: 2px solid transparent; white-space: nowrap; }
+  .tabs button[aria-selected="true"] { color: var(--fg); border-bottom-color: var(--accent); }
+  .pane { padding: 18px; display: grid; gap: 16px; min-width: 0; } .pane > * { min-width: 0; }
+  .pnav { display: flex; align-items: center; gap: 8px; } .pnav .arrows { margin-left: auto; display: inline-flex; gap: 4px; }
+  .pnav .arrows button { width: 32px; height: 32px; padding: 0; border: 1px solid var(--line2); border-radius: 8px; background: none; font-size: 17px; line-height: 1; }
+  .pnav .arrows button:hover:not(:disabled) { background: var(--hover); } .pnav .arrows button:disabled { opacity: .4; cursor: default; }
+  .sthead { display: grid; gap: 6px; } .sthead h3 { font-size: 19px; line-height: 1.25; font-weight: 650; overflow-wrap: anywhere; } .sub { color: var(--muted); font-size: 13.5px; }
+  .pane ul { margin: 0; padding-left: 18px; display: grid; gap: 4px; } .pane li { overflow-wrap: anywhere; }
+  .note { border-left: 2px solid var(--line2); padding: 2px 0 2px 12px; display: grid; gap: 4px; } .note.warn { border-left-color: var(--k-failed); } .note b { font-weight: 600; }
+  .lg, .tp { border-top: 1px solid var(--line); padding-top: 10px; } .lg:first-child, .tp:first-child { border-top: 0; padding-top: 0; }
+  details > summary { cursor: pointer; font-weight: 600; display: flex; flex-wrap: wrap; gap: 2px 10px; align-items: baseline; } details > summary .sub { font-weight: 400; } details[open] > summary { margin-bottom: 8px; }
+  .kv { display: grid; grid-template-columns: minmax(0, auto) minmax(0, 1fr); gap: 2px 12px; margin: 0; font-size: 14px; } .kv dt { color: var(--muted); font-family: var(--font-mono); font-size: 12.5px; } .kv dd { margin: 0; overflow-wrap: anywhere; }
+  .ent { display: grid; gap: 6px; padding: 8px 0 8px 12px; border-left: 2px solid var(--line2); margin-bottom: 6px; }
+  pre.df { margin: 0; font: 12.5px/1.6 var(--font-mono); overflow-x: auto; background: var(--hover); border-radius: 8px; padding: 8px 10px; } .df .a { color: var(--k-running); } .df .d { color: var(--k-failed); } .df .c { color: var(--k-waiting); }
+  .frow { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 10px; padding: 6px 0; border-top: 1px solid var(--line); align-items: baseline; } .frow:first-child { border-top: 0; } .frow .mono { overflow-wrap: anywhere; }
+  .empty { border: 1px dashed var(--line2); border-radius: 14px; padding: 36px 20px; text-align: center; display: grid; gap: 10px; justify-items: center; } .empty h2 { font-size: 20px; }
+  .none { color: var(--muted); }
+
+  /* new flow and templates */
+  .split { display: grid; gap: 20px; grid-template-columns: minmax(0, 1fr); align-items: start; } @media (min-width: 900px) { .split { grid-template-columns: 300px minmax(0, 1fr); } }
+  .tl { display: grid; gap: 4px; } .tl h4 { margin: 10px 0 2px; } .tl h4:first-child { margin-top: 0; }
+  .trow { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; border: 1px solid transparent; border-radius: 10px; }
+  .trow:hover { background: var(--hover); } .trow.on { background: var(--sel); border-color: var(--accent); }
+  .trow .pick { background: none; border: 0; text-align: left; padding: 8px 10px; display: grid; gap: 0; min-width: 0; border-radius: 10px; } .trow .pick b { font-weight: 600; overflow-wrap: anywhere; } .trow .pick span { font-size: 13px; color: var(--muted); overflow-wrap: anywhere; }
+  .star { background: none; border: 0; width: 38px; height: 38px; font-size: 18px; color: var(--muted); } .star[aria-pressed="true"] { color: var(--accent); }
+  .form { display: grid; gap: 14px; } .form h3 { font-size: 19px; font-weight: 650; }
+  .mk { display: grid; gap: 0; } .mk .hd { display: flex; flex-wrap: wrap; gap: 2px 12px; align-items: baseline; }
+  .btn.sw { display: inline-flex; align-items: center; gap: 8px; } .sw .trk { width: 30px; height: 18px; border-radius: 999px; background: var(--line2); display: inline-flex; align-items: center; padding: 2px; box-sizing: border-box; } .sw .knob { width: 14px; height: 14px; border-radius: 50%; background: var(--bg); transition: transform .15s; }
+  .sw[aria-checked="true"] .trk { background: var(--k-running); } .sw[aria-checked="true"] .knob { transform: translateX(12px); } @media (prefers-reduced-motion: reduce) { .sw .knob { transition: none; } }
+  .trw { display: grid; gap: 6px 14px; padding: 12px 0; border-top: 1px solid var(--line); grid-template-columns: minmax(0, 1fr) auto; align-items: center; } .trw:first-of-type { border-top: 0; }
+  .trw .nm { min-width: 0; display: grid; gap: 2px; } .trw .nm b { overflow-wrap: anywhere; } .trw .ac { display: grid; gap: 6px; justify-items: end; } .trw .full { grid-column: 1 / -1; }
+  @media (max-width: 560px) { .trw { grid-template-columns: minmax(0, 1fr); } .trw .ac { justify-items: start; } .btn { min-height: 42px; } .btn.small { min-height: 38px; } }
+  /* flavors screen: values from the Flavors UX design canvas */
+  .fl { display: flex; flex-direction: column; gap: 28px; line-height: 1.5; } .fl h2, .fl h3, .fl p { margin: 0; }
+  .fl-title { display: flex; justify-content: space-between; align-items: flex-end; gap: 24px; } .fl-title > div { display: flex; flex-direction: column; gap: 4px; max-width: 640px; }
+  .fl-title h2 { font-size: 28px; line-height: 1.2; font-weight: 700; letter-spacing: 0; } .fl-title p { color: var(--fl-muted); }
+  .flb { font: 600 14px var(--font-body); min-height: 40px; padding: 0 16px; border-radius: 10px; border: 1px solid var(--fl-line2); background: var(--surface); color: var(--fg); display: inline-flex; gap: 6px; align-items: center; justify-content: center; cursor: pointer; }
+  .flb:hover:not([aria-disabled="true"]) { background: var(--hover); } .flb[aria-disabled="true"] { opacity: .6; cursor: default; }
+  .flb.pri { background: var(--ink); color: var(--on-ink); border-color: var(--ink); } .flb.pri:hover:not([aria-disabled="true"]) { background: var(--ink); opacity: .9; }
+  .flb.big { min-height: 44px; padding: 0 22px; font-size: 15px; } .fl-form .fl-save .flb:not(.pri) { padding: 0 18px; } .fl-row.edit .flb { min-height: 44px; } .fl-row > .fl-acts { gap: 16px; } .fl-row.edit > .fl-acts { gap: 8px; } .flb.del { border-color: transparent; background: transparent; color: var(--fl-del); }
+  .fl-inbox { border: 1px solid var(--fl-amber-line); background: var(--fl-amber); border-radius: 14px; overflow: hidden; }
+  .fl-inbox-hd { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 16px 20px; background: var(--fl-amber-hd); } .fl-inbox-hd > div { display: flex; flex-direction: column; }
+  .fl-inbox-hd h3 { font-size: 17px; line-height: 1.5; font-weight: 700; color: var(--fl-amber-tx); } .fl-inbox-hd span { font-size: 14px; color: var(--fl-amber-sub); }
+  .fl-prop { display: flex; align-items: center; gap: 16px; padding: 16px 20px; border-top: 1px solid var(--fl-amber-line); }
+  .fl-kind { width: 72px; flex: none; font-size: 12px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; } .fl-kind.k-add { color: var(--fl-new); } .fl-kind.k-update { color: var(--fl-chg); } .fl-kind.k-remove { color: var(--fl-del); }
+  .fl-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; } .fl-line { display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; }
+  .fl-topic { font-size: 13px; font-weight: 600; padding: 1px 10px; border-radius: 999px; background: var(--fl-chip); color: var(--fl-chip-tx); } .fl-text { font-size: 16px; overflow-wrap: anywhere; } .fl-strike { color: var(--fl-strike); }
+  .fl-meta { font-size: 13px; color: var(--fl-muted); } .fl-prop .fl-meta { color: var(--fl-amber-sub); } .fl-acts { display: flex; gap: 8px; align-items: center; }
+  .fl-more { display: block; width: 100%; box-sizing: border-box; text-align: left; font: 600 14px var(--font-body); min-height: 48px; padding: 0 16px; border: 0; border-top: 1px solid var(--fl-amber-line); background: var(--fl-amber); color: var(--fl-amber-tx); cursor: pointer; }
+  .fl-list { display: flex; flex-direction: column; gap: 16px; } .fl-bar { display: flex; justify-content: space-between; align-items: center; gap: 24px; flex-wrap: wrap; } .fl-bar h3 { font-size: 17px; line-height: 1.5; font-weight: 700; }
+  .fl-chips { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; } .fl-chip { font: 500 14px/1.5 var(--font-body); padding: 7px 14px; border-radius: 999px; border: 1px solid var(--fl-line2); background: transparent; color: var(--fg); cursor: pointer; }
+  .fl-chip[aria-pressed="true"] { background: var(--ink); color: var(--on-ink); border-width: 0; padding: 7px 14px; font-weight: 600; }
+  .fl-q { box-sizing: border-box; width: 280px; min-height: 40px; padding: 0 14px; font: 400 15px var(--font-body); color: var(--fg); background: var(--bg); border: 1px solid var(--fl-line2); border-radius: 10px; }
+  .fl-box { border: 1px solid var(--fl-line); border-radius: 14px; overflow: hidden; } .fl-grp { padding: 10px 20px; background: var(--fl-grp); font-size: 13px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--fl-muted); } .fl-grp + .fl-row, .fl-row + .fl-grp { border-top: 1px solid var(--fl-line); }
+  .fl-row { display: flex; align-items: center; gap: 16px; padding: 14px 20px; border-top: 1px solid var(--fl-line); } .fl-row .fl-body { gap: 0; } .fl-grp + .fl-row { border-top: 1px solid var(--fl-line); } .fl-row.saved { background: var(--fl-ok-bg); } .fl-row.edit { align-items: flex-start; background: var(--fl-edit-bg); }
+  .fl-row .fl-meta.ok { color: var(--fl-ok-tx); font-weight: 600; } .fl-row .fl-lab { font-size: 13px; color: var(--fl-muted); } .fl-note { font-size: 13px; color: var(--fl-muted); }
+  .fl-in { box-sizing: border-box; width: 100%; min-height: 44px; padding: 0 14px; font: 400 16px var(--font-body); color: var(--fg); background: var(--bg); border: 1px solid var(--fl-line2); border-radius: 10px; } textarea.fl-in { min-height: 0; padding: 12px 14px; line-height: 1.5; border: 2px solid var(--ink); resize: none; } .fl-in.edit { border: 2px solid var(--ink); }
+  .fl-form { border: 2px solid var(--ink); border-radius: 16px; padding: 24px; display: flex; gap: 32px; } .fl-form h3 { font-size: 20px; line-height: 1.5; font-weight: 700; } .fl-form > .l { flex: 1.2; display: flex; flex-direction: column; gap: 20px; min-width: 0; } .fl-form > .r { flex: 1; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+  .fl-fld { display: flex; flex-direction: column; gap: 8px; } .fl-fld > label { font-weight: 600; } .fl-hint { display: flex; justify-content: space-between; gap: 12px; font-size: 13px; color: var(--fl-muted); }
+  .fl-tchips { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; } .fl-tchips > span { font-size: 13px; color: var(--fl-muted); } .fl-tchip { font: 500 13px var(--font-body); min-height: 32px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--fl-line2); background: var(--surface); color: var(--fg); cursor: pointer; } .fl-tchip[aria-pressed="true"] { font-weight: 600; border-color: var(--ink); background: var(--fl-chip); }
+  .fl-pre { margin: 0; padding: 16px; border-radius: 12px; background: var(--fl-pre-bg); color: var(--fl-pre-tx); font: 400 13px/1.6 var(--font-mono); white-space: pre-wrap; } .fl-form .cap { font-size: 13px; color: var(--fl-muted); } .fl-form .r > b { font-weight: 600; } .fl-save { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; } .fl-save span { font-size: 13px; color: var(--fl-muted); }
+  .fl-empty { border: 1px dashed var(--fl-dash); border-radius: 16px; padding: 32px 40px; display: flex; gap: 48px; align-items: center; } .fl-empty > div { flex: 1; display: flex; flex-direction: column; gap: 14px; min-width: 0; } .fl-empty h3 { font-size: 22px; line-height: 1.3; font-weight: 700; } .fl-empty p { font-size: 16px; color: var(--fl-chip-tx); } .fl-empty p.s { font-size: 14px; color: var(--fl-muted); } .fl-empty .fl-save span { font-size: 14px; } .fl-empty .ex .flb { padding: 0 14px; } .fl-note-s { font-size: 14px; color: var(--fl-muted); }
+  .fl-empty .ex { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border: 1px solid var(--fl-line); border-radius: 12px; } .fl-empty .ex > div { flex: 1; display: flex; flex-direction: column; } .fl-empty .ex small { font-size: 13px; color: var(--fl-muted); } .fl-empty .eh { font-size: 13px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--fl-muted); }
+  .fl-toast { position: fixed; left: 40px; bottom: 40px; z-index: 30; display: flex; align-items: center; gap: 20px; padding: 14px 20px; border-radius: 12px; background: var(--fl-toast-bg); color: var(--fl-toast-tx); box-shadow: 0 8px 24px rgba(20, 20, 19, .25); }
+  .fl-undo { font: 700 14px var(--font-body); min-height: 36px; padding: 0 14px; border-radius: 8px; border: 1px solid currentColor; background: transparent; color: inherit; cursor: pointer; }
+  .fl-addbar { display: none; }
+  @media (max-width: 640px) {
+    .fl { gap: 20px; padding-bottom: 96px; } .fl-title h2 { font-size: 26px; } .fl-title .flb { display: none; } .fl-title p { display: none; }
+    .fl-inbox-hd { flex-direction: column; align-items: flex-start; padding: 14px 16px; gap: 2px; } .fl-inbox-hd h3 { font-size: 16px; line-height: 1.5; } .fl-inbox-hd span { font-size: 13px; } .fl-inbox-hd .flb { display: none; }
+    .fl-prop { flex-direction: column; align-items: stretch; gap: 12px; padding: 16px; } .fl-kind { width: auto; } .fl-prop .fl-topic { display: none; } .fl-prop .fl-acts .flb { flex: 1; min-height: 48px; font-size: 15px; } .fl-acts { gap: 10px; }
+    .fl-bar { flex-direction: column; align-items: stretch; gap: 10px; } .fl-bar h3 { display: none; } .fl-chips { order: 2; flex-wrap: nowrap; overflow-x: auto; } .fl-chip, .fl-chip[aria-pressed="true"] { flex: none; padding: 8px 14px; } .fl-prop .fl-body { gap: 6px; } .fl-q { width: 100%; min-height: 48px; font-size: 16px; }
+    .fl-grp { padding: 8px 16px; font-size: 12px; } .fl-row { flex-direction: column; align-items: stretch; gap: 8px; padding: 14px 16px; } .fl-row .fl-acts { gap: 8px; } .fl-row .flb { min-height: 44px; padding: 0 18px; }
+    .fl-form { flex-direction: column; padding: 16px; gap: 20px; } .fl-empty { flex-direction: column; align-items: stretch; padding: 24px 20px; gap: 24px; }
+    .fl-toast { left: 16px; right: 16px; bottom: 96px; justify-content: space-between; gap: 12px; }
+    .fl-addbar { display: block; position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; padding: 12px 16px 20px; background: var(--bg); border-top: 1px solid var(--fl-line); } .fl-addbar .flb { display: block; width: 100%; min-height: 52px; font-size: 16px; border-radius: 12px; }
+  }
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; scroll-behavior: auto !important; } }
+</style>
+
+<div class="wrap">
+  <header class="bar">
+    <div class="brand"><h1>ZeremAI</h1><span class="sess k-pending" id="sess"></span><span class="fresh" id="fresh" role="group" aria-label="Data freshness"><i aria-hidden="true"></i><span id="freshTx">Connecting…</span></span><span id="theme"></span></div>
+    <nav class="nav" id="nav" aria-label="Sections"></nav>
+  </header>
+  <div id="ban"></div>
+  <main id="main" tabindex="-1"></main>
+  <div class="sr" id="say" role="status" aria-live="polite"></div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+  /* ---- the six states: same symbols and words as hooks/infra/flow-pane/status-look.ts ---- */
+  var LOOK = { waiting: ['▲', 'waits for you'], blocked: ['▲', 'blocked'], running: ['●', 'running'], done: ['✓', 'done'], failed: ['✕', 'failed'], paused: ['‖', 'paused'], pending: ['○', 'pending'] };
+  var NEEDS = { waiting: 1, blocked: 1, failed: 1, paused: 1 };
+  var $ = function (id) { return document.getElementById(id); };
+  function arr(x) { return Array.isArray(x) ? x : []; }
+  function str(x) { return typeof x === 'string' ? x : x == null ? '' : typeof x === 'object' ? JSON.stringify(x) : String(x); }
+  function kind(x) { return LOOK[x] ? x : 'pending'; }
+  function el(tag, attrs) {
+    var e = document.createElement(tag), k, kids = Array.prototype.slice.call(arguments, 2);
+    for (k in attrs || {}) { var v = attrs[k]; if (v == null || v === false) continue; if (k === 'class') e.className = v; else if (k === 'value') e.value = v; else if (k.slice(0, 2) === 'on') e[k] = v; else e.setAttribute(k, v === true ? '' : v); }
+    (function add(list) { list.forEach(function (c) { if (Array.isArray(c)) return add(c); if (c == null || c === false) return; e.append(c.nodeType ? c : document.createTextNode(String(c))); }); })(kids);
+    return e;
+  }
+  // The theme: auto follows the computer, light and dark are fixed. The file in the config folder is the truth; zf-theme is a copy for the first paint.
+  var THEME_NEXT = { auto: 'light', light: 'dark', dark: 'auto' }, THEME_ICON = { auto: '◐', light: '☀', dark: '☾' };
+  function themeOf(v) { return v === 'light' || v === 'dark' ? v : 'auto'; }
+  function applyTheme(mode) {
+    mode = themeOf(mode); S.theme = mode;
+    try { if (mode === 'auto') document.documentElement.removeAttribute('data-theme'); else document.documentElement.setAttribute('data-theme', mode); } catch (e) { /* no document root */ }
+    store('zf-theme', mode); render();
+  }
+  function renderTheme() {
+    var box = $('theme'); box.textContent = '';
+    if (S.ownerKnown && !S.owner) return; // a viewer sees the pick of the owner and cannot change it
+    var next = THEME_NEXT[S.theme], text = 'Theme: ' + S.theme + '. Press for ' + next + '.';
+    box.append(el('button', { type: 'button', class: 'tbtn', 'data-key': 'theme', title: text, 'aria-label': text, onclick: function () {
+      applyTheme(next); S.focusKey = 'theme'; // the pick shows at once; the mod saves it when it can
+      if (!cantAct(null, 'session')) send('set-theme', { mode: next }, { scope: 'session' });
+    } }, THEME_ICON[S.theme]));
+  }
+  function setOpen(b) { S.open = b; store('zf-open', b ? '1' : '0', 's'); } // the open flow survives a reload of the tab
+  function store(k, v, area) { try { var s = area === 's' ? sessionStorage : localStorage; if (v === undefined) return s.getItem(k); s.setItem(k, v); } catch (e) { return null; } }
+  function ms(iso) { var t = Date.parse(iso); return isNaN(t) ? null : t; }
+  function old(t) { return !!t && Date.now() - t > 86400000; } // a flow nobody touched for a day
+  function when(t) { return new Date(t).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }); }
+  function hhmm(t) { return new Date(t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); }
+  function ago(t) { var s = Math.max(0, Math.round((Date.now() - t) / 1000)); return s < 60 ? s + ' s ago' : s < 3600 ? Math.round(s / 60) + ' min ago' : s < 86400 ? Math.round(s / 3600) + ' h ago' : Math.round(s / 86400) + ' d ago'; }
+  function pill(k) { k = kind(k); return el('span', { class: 'pill k-' + k }, LOOK[k][0], ' ', LOOK[k][1]); }
+  function uid() { return window.crypto && crypto.randomUUID ? crypto.randomUUID() : 'c' + Date.now().toString(36) + Math.random().toString(36).slice(2, 10); }
+  function words(n, one, many) { return n + ' ' + (n === 1 ? one : many); }
+
+  /* ---- state ---- */
+  var HASH = decodeURIComponent((location.hash || '').slice(1)).replace(/^s=/, '') || new URLSearchParams(location.search).get('s') || ''; // a page link carries only a bare token after #
+  var PREVIEW = /^preview/.test(HASH);
+  if (HASH && !PREVIEW) store('zf-session', HASH, 's');
+  var S = { upd: null, updLater: false, tplLater: false, flows: {}, details: {}, sessions: {}, templates: [], markets: {}, flavors: {}, flForm: '', flTopic: '', flEdit: '', flSeen: {}, flAll: false, cmds: [], sent: {}, beat: null, ready: false, offline: !navigator.onLine, owner: false, ownerKnown: false, noDb: false,
+    bad: {}, session: PREVIEW ? 'demo' : (HASH || store('zf-session', undefined, 's') || ''), route: store('zf-route', undefined, 's') || 'flows', theme: themeOf(store('zf-theme')), sel: store('zf-flow'), open: store('zf-open', undefined, 's') === '1', fold: {}, stepSel: {}, view: store('zf-view') || (window.innerWidth < 720 ? 'runbook' : 'lanes'),
+    tab: 'step', flash: {}, draft: {}, errs: {}, confirm: '', editOpen: '', mkForm: '', reasonOpen: '', pick: store('zf-tpl'), dismiss: {}, applied: {}, seen: {}, awaitNew: null, focusMain: false, tq: '', nq: '', born: Date.now() };
+  if (/^previewflavors/.test(HASH)) S.route = 'flavors'; // the demo states of the Flavors screen (docs and the design review)
+  var WAIT = 45000; // the first run opens the page before the session writes its row: show a loader this long, then say what is missing
+  var DB = null;
+  var say = function (t) { $('say').textContent = ''; setTimeout(function () { $('say').textContent = t; }, 30); };
+  var pending = 0;
+  function render() { if (pending) return; pending = setTimeout(function () { pending = 0; draw(); }, 16); } // one redraw for a burst of changes; a timer, because a hidden tab never gets animation frames
+
+  /* ---- data in: one subscription each, never from render ---- */
+  // Steps are numbered from 1 by their place in the flow, on every screen. The data may count from 0.
+  function stepPos(steps, id, fallback) { for (var i = 0; i < steps.length; i++) if (steps[i].id === id) return i + 1; return fallback == null ? null : Number(fallback) + 1; }
+  function flowDoc(id, d) {
+    var steps = arr(d.steps).map(function (s, i) { s = s || {}; return { id: str(s.id) || String(i + 1), number: i + 1, name: str(s.name), phase: str(s.phase), status: kind(s.status), approval: !!s.approval, loopBackTo: s.loopBackTo == null ? '' : str(s.loopBackTo), routes: arr(s.routes).map(function (r) { return { label: str(r && r.label), to: str(r && (r.goTo || r.to)) }; }), onVerifierFail: s.onVerifierFail == null ? '' : str(s.onVerifierFail), kids: (Array.isArray(s.childFlowIds) ? s.childFlowIds : s.childFlowId ? [s.childFlowId] : []).map(str), summary: str(s.summary) }; });
+    var n = d.needsYou && typeof d.needsYou === 'object' ? d.needsYou : null;
+    return { id: id, name: str(d.name) || id, template: str(d.template), status: kind(d.status), activeStepId: str(d.activeStepId), updatedAt: ms(d.updatedAt), parentFlowId: str(d.parentFlowId), folders: arr(d.folders).map(str), counts: d.counts || {}, steps: steps, activity: d.activity && d.activity.text ? { text: str(d.activity.text), at: ms(d.activity.at) } : null,
+      needsYou: n ? { stepId: str(n.stepId), stepNumber: stepPos(steps, n.stepId, n.stepNumber), stepName: str(n.stepName), waitsFor: str(n.waitsFor), command: str(n.command), blocked: !!n.blocked, since: ms(n.since), routes: arr(n.routes).map(function (r) { return { label: str(r && r.label), to: str(r && r.to) }; }) } : null };
+  }
+  function takeFlows(docs) {
+    var next = {}, before = S.flows;
+    docs.forEach(function (d) {
+      var f = flowDoc(d.id, d.data() || {}), old = before[d.id];
+      next[d.id] = f;
+      if (!old || !S.ready) return;
+      f.steps.forEach(function (s) {
+        var o = old.steps.filter(function (x) { return x.id === s.id; })[0];
+        if (o && o.status !== s.status) { S.flash[d.id + ':' + s.id] = 1; say(f.name + ', step ' + s.number + ' ' + s.name + ': ' + LOOK[s.status][1]); }
+      });
+      if (old.status !== f.status) { S.flash[d.id] = 1; if (NEEDS[f.status]) say(f.name + ' ' + LOOK[f.status][1]); }
+    });
+    S.flows = next;
+    if (S.awaitNew) {
+      var fresh = Object.keys(next).filter(function (id) { return S.awaitNew.before.indexOf(id) < 0; })[0];
+      if (fresh) { S.awaitNew = null; S.sel = fresh; setOpen(true); store('zf-flow', fresh); go('flows'); say('Started ' + next[fresh].name + '.'); }
+    }
+    S.ready = true;
+    setTimeout(function () { S.flash = {}; }, 2700);
+    render();
+  }
+  function sessDoc(id, d) { return { id: id, folder: str(d.folder), name: str(d.name), title: str(d.title), beat: ms(d.beat), opened: ms(d.openedAt), flows: arr(d.flows).map(str) }; }
+  function tplDoc(id, d) {
+    return { id: id, name: str(d.name) || id, category: str(d.category), description: str(d.description), installed: !!d.installed, edited: !!d.edited, state: str(d.state), marketplace: str(d.marketplace), version: str(d.version), installedVersion: str(d.installedVersion), changes: arr(d.changes).map(function (c) { c = c || {}; return { version: str(c.version), changes: arr(c.changes).map(str) }; }), steps: arr(d.steps),
+      fields: arr(d.fields).map(function (f) { f = f || {}; return { name: str(f.name), required: !!f.required, type: str(f.type) || 'text', description: str(f.description), example: str(f.example), options: arr(f.options).map(str), allowOther: !!f.allowOther }; }).filter(function (f) { return f.name; }) };
+  }
+  function cmdDoc(id, d) {
+    var a = {}; if (d.args && typeof d.args === 'object') Object.keys(d.args).forEach(function (k) { a[k] = str(d.args[k]); });
+    return { id: id, session: str(d.session), at: str(d.at), t: ms(d.at) || 0, action: str(d.action), args: a, status: str(d.status) || 'new', result: str(d.result), picked: ms(d.pickedAt), handed: ms(d.handedAt), doneAt: ms(d.doneAt) };
+  }
+  function takeCmds(docs) {
+    S.cmds = docs.map(function (d) { return cmdDoc(d.id, d.data() || {}); }).sort(function (a, b) { return b.t - a.t; });
+    S.cmds.forEach(function (c) {
+      var key = ck(c.action, c.args);
+      if (S.sent[key] && S.sent[key].id === c.id) delete S.sent[key];
+      var was = S.seen[c.id]; S.seen[c.id] = c.status;
+      if (was !== undefined && was !== c.status && (c.status === 'done' || c.status === 'error')) say(label(c) + ': ' + resultText(c));
+      if (c.status === 'error' && c.action === 'new-flow' && S.awaitNew && was !== 'error' && Date.now() - c.t < 120000) { S.awaitNew = null; go('new'); } // the grey card goes, and the reason shows on the form
+      if (c.status === 'done' && was !== undefined && was !== 'done' && /^(add|update)-marketplace$/.test(c.action)) S.mkForm = '';
+      if (c.status === 'done' && c.action === 'fill-fields' && !S.applied[c.id] && Date.now() - c.t < 600000) applyFill(c);
+    });
+    render();
+  }
+  function connect(db) {
+    var bad = function (name) { return function () { if (name === 'flows') { S.offline = true; S.ready = true; } else S.bad[name] = true; render(); }; };
+    db.collection('flows').onSnapshot(function (q) { S.offline = false; takeFlows(q.docs); }, bad('flows'));
+    db.collection('details').onSnapshot(function (q) { var m = {}; q.docs.forEach(function (d) { m[d.id] = d.data() || {}; }); S.details = m; render(); }, bad('details'));
+    db.collection('sessions').onSnapshot(function (q) { var m = {}; q.docs.forEach(function (d) { m[d.id] = sessDoc(d.id, d.data() || {}); }); S.sessions = m; render(); }, bad('sessions'));
+    db.collection('templates').onSnapshot(function (q) { S.templates = q.docs.map(function (d) { return tplDoc(d.id, d.data() || {}); }).sort(function (a, b) { return a.category.localeCompare(b.category) || a.name.localeCompare(b.name); }); render(); }, bad('templates'));
+    db.collection('marketplaces').onSnapshot(function (q) { var m = {}; q.docs.forEach(function (d) { m[d.id] = d.data() || {}; }); S.markets = m; render(); }, bad('marketplaces'));
+    db.collection('flavors').onSnapshot(function (q) { var m = {}; q.docs.forEach(function (d) { m[d.id] = d.data() || {}; }); S.flavors = m; render(); }, bad('flavors'));
+    db.collection('commands').orderBy('at', 'desc').limit(50).onSnapshot(function (q) { takeCmds(q.docs); }, bad('commands'));
+    db.doc('meta/ui').onSnapshot(function (d) { var v = d.data(); if (v && themeOf(v.theme) !== S.theme) applyTheme(v.theme); }, function () {});
+    db.doc('meta/update').onSnapshot(function (d) { S.upd = d.data() || null; render(); }, function () {});
+    db.doc('meta/mod').onSnapshot(function (d) { var v = d.data(); S.beat = v ? ms(v.beat) : null; renderFresh(); }, function () {});
+  }
+  window.addEventListener('offline', function () { S.offline = true; renderFresh(); render(); });
+  window.addEventListener('online', function () { S.offline = false; renderFresh(); render(); });
+  window.addEventListener('hashchange', function () { var h = decodeURIComponent((location.hash || '').slice(1)).replace(/^s=/, ''); if (h && !/^preview/.test(h)) { S.session = h; store('zf-session', h, 's'); render(); } });
+
+  /* ---- sessions: which session runs an action ---- */
+  function isOpen(s) { return !!(s && s.beat && Date.now() - s.beat < 180000); }
+  // The session of this page: the one in its link. A host may not pass the link to the page: then the live session that opened it in the last 10 minutes, newest first.
+  function sid() {
+    if (S.session) return S.session;
+    var best = null, ids = Object.keys(S.sessions);
+    if (ids.length === 1) return ids[0]; // each page has its own database: one session
+    Object.keys(S.sessions).forEach(function (id) { var s = S.sessions[id]; if (isOpen(s) && s.opened && Date.now() - s.opened < 600000 && (!best || s.opened > best.opened)) best = s; });
+    return best ? best.id : '';
+  }
+  // True in the first seconds after the page opens, while no session is known: the page is still loading, not broken.
+  function starting() { return !S.noDb && !S.offline && !sid() && !S.beat && !Object.keys(S.sessions).length && Date.now() - S.born < WAIT; }
+  function holderOf(flowId) {
+    var holder = null;
+    Object.keys(S.sessions).forEach(function (id) { var s = S.sessions[id]; if (s.flows.indexOf(flowId) >= 0 && (!holder || (isOpen(s) && !isOpen(holder)))) holder = s; });
+    return holder;
+  }
+  function sessName(s) { return s.title || s.name || (s.folder ? s.folder.split('/').filter(Boolean).pop() : '') || 'Session'; }
+  function here(flowId) { var h = holderOf(flowId), me = sid(); return !!(h && me && h.id === me); }
+  function sessionFor(flowId, scope) {
+    var holder = flowId && scope !== 'session' ? holderOf(flowId) : null;
+    var me = sid(); return holder || (me ? (S.sessions[me] || { id: me, beat: null, flows: [] }) : null);
+  }
+  function cantAct(flowId, scope) {
+    if (S.offline) return 'Offline. This is the last data it got.';
+    if (S.bad.commands) return 'Actions are not available to you.';
+    if (S.ownerKnown && !S.owner) return 'Only the owner of this page can use actions.';
+    var s = sessionFor(flowId, scope);
+    if (!s) return 'This page has no session. Press ZeremAI in the session you want.';
+    if (!isOpen(s)) return 'Session closed. Press ZeremAI in a live session.';
+    return '';
+  }
+  function sessText() {
+    var me = sid(), s = me && (S.sessions[me] || { id: me });
+    if (!s) return starting() ? ['Starting…', 'pending'] : ['No session', 'pending'];
+    var name = sessName(s) + ' · ' + s.id.slice(0, 8);
+    return isOpen(s) ? [name + ' · live', 'running'] : [name + ' · closed', 'paused'];
+  }
+
+  /* ---- commands: written as rows, read back as progress ---- */
+  function ck(action, a) {
+    a = a || {};
+    if (action === 'approve' || action === 'request-changes') return action + ':' + a.flowId + ':' + a.stepId;
+    if (action === 'route') return action + ':' + a.flowId + ':' + a.stepId + ':' + a.label;
+    if (action === 'continue' || action === 'close' || action === 'delete') return action + ':' + a.flowId;
+    if (action === 'new-flow' || action === 'fill-fields') return action + ':' + a.template;
+    if (/^(install|remove|view|edit|send)-template$/.test(action)) return action + ':' + a.category + '/' + a.name;
+    if (/^(add|update|toggle|remove)-marketplace$/.test(action)) return action + ':' + a.name;
+    if (/^(save|accept|remove)-flavor$/.test(action)) return action + ':' + (a.id || 'new:' + str(a.topic) + ':' + str(a.text).slice(0, 40));
+    return action;
+  }
+  var VERB = { 'set-theme': 'Save the theme', approve: 'Approve', route: 'Go back', 'request-changes': 'Request changes', continue: 'Continue', close: 'Close flow', delete: 'Delete flow', 'new-flow': 'Create flow', 'fill-fields': 'Fill fields', 'install-template': 'Install', 'remove-template': 'Remove', 'view-template': 'View', 'edit-template': 'Edit', 'send-template': 'Send as PR', 'add-marketplace': 'Add marketplace', 'update-marketplace': 'Save marketplace', 'toggle-marketplace': 'Switch marketplace', 'remove-marketplace': 'Remove marketplace', 'refresh-marketplaces': 'Refresh marketplaces', 'update-plugin': 'Update ZeremAI', 'save-flavor': 'Save the flavor', 'accept-flavor': 'Accept the flavor', 'remove-flavor': 'Remove the flavor', 'accept-all-flavors': 'Accept all flavors' };
+  function label(c) { return (VERB[c.action] || c.action) + (c.args.name && c.action.indexOf('template') > 0 ? ' ' + c.args.name : ''); }
+  function resultText(c) {
+    if (c.action === 'fill-fields' && c.status === 'done') { try { var n = Object.keys(JSON.parse(c.result)).length; return n ? 'Filled ' + words(n, 'field', 'fields') + '. Check them before you create the flow.' : 'Nothing to fill from that text.'; } catch (e) { return 'Done.'; } }
+    return c.result || (c.status === 'done' ? 'Done.' : 'It did not work. Try again.');
+  }
+  function secs2(ms) { return Math.max(0, Math.round(ms / 100) / 10) + 's'; }
+  function secs(t) { return Math.max(0, Math.round((Date.now() - t) / 1000)) + 's'; }
+  // Is ZeremAI listening? The heartbeat comes every 30 seconds; a click that waits longer than that says how long ZeremAI has been quiet.
+  function seen() { return S.beat ? ' ZeremAI last seen ' + secs(S.beat) + ' ago.' : ''; }
+  function cmdState(key) {
+    var row = null, loc = S.sent[key];
+    S.cmds.forEach(function (c) { if (!row && ck(c.action, c.args) === key) row = c; });
+    if (loc && loc.error) return { phase: 'error', text: loc.error, busy: false, loc: true };
+    if (loc && (!row || row.id !== loc.id)) return { phase: 'sending', text: 'Sending…', busy: true };
+    if (!row || S.dismiss[row.id] || Date.now() - row.t > 600000) return { phase: 'idle', busy: false };
+    if (row.status === 'new') return { phase: 'waiting', text: 'Sent · waiting for ZeremAI ' + secs(row.t), busy: true, row: row, stale: Date.now() - row.t > 15000 };
+    if (row.status === 'running') return { phase: 'running', text: 'ZeremAI took it · running ' + secs(row.picked || row.t), busy: true, row: row };
+    if (row.status === 'error') return { phase: 'error', text: resultText(row), busy: false, row: row };
+    return { phase: 'done', text: resultText(row), busy: false, row: row };
+  }
+  function hasPending() { return Object.keys(S.sent).length > 0 || S.cmds.some(function (c) { return c.status === 'new' || c.status === 'running'; }); }
+  // A hint on the room wakes ZeremAI at once. It only says "look"; the click is the row above. No room, no error: the timer reads the row within a second.
+  function hint(id) { try { if (window.claude && window.claude.use) window.claude.use('room').then(function (r) { if (r) r.emit('zerem_click', { id: id }).catch(function () {}); }).catch(function () {}); } catch (e) {} }
+  function send(action, args, o) {
+    var key = ck(action, args), st = cmdState(key), why = cantAct(o.flowId, o.scope);
+    if (st.busy) return;
+    if (why) return say(why);
+    if (o.validate) { var m = o.validate(); if (m) { S.errs[o.errKey] = m; S.focusKey = o.errKey; render(); return say(m); } delete S.errs[o.errKey]; }
+    var s = sessionFor(o.flowId, o.scope), id = uid(), clean = {};
+    Object.keys(args).forEach(function (k) { if (args[k] !== '' && args[k] != null) clean[k] = str(args[k]); });
+    S.sent[key] = { id: id, t: Date.now() }; S.confirm = ''; if (o.onSend) o.onSend();
+    if (action === 'new-flow') { S.awaitNew = { before: Object.keys(S.flows), name: clean.name || String(clean.template || '').split('/').pop(), t: Date.now() }; S.open = false; go('flows'); setTimeout(render, 60500); }
+    render(); say('Sending ' + (VERB[action] || action).toLowerCase() + '.');
+    DB.doc('commands/' + id).set({ id: id, session: s.id, at: new Date().toISOString(), action: action, args: clean, status: 'new' }).then(function () { hint(id); }).catch(function (e) {
+      S.sent[key] = { id: id, t: Date.now(), error: 'Could not send: ' + (e && e.message ? e.message : 'the database refused it.') }; if (action === 'new-flow') { S.awaitNew = null; go('new'); } render(); say(S.sent[key].error);
+    });
+  }
+  function actBtn(text, action, argf, o) {
+    o = o || {}; var args = typeof argf === 'function' ? argf() : argf, key = ck(action, args), st = cmdState(key), why = cantAct(o.flowId, o.scope), off = st.busy || !!why; // argf as a function: what you typed after the last redraw still goes
+    return el('button', { type: 'button', class: o.cls || ('btn' + (o.primary ? ' pri' : '') + (o.danger ? ' danger' : '') + (o.small ? ' small' : '')), 'aria-disabled': off ? 'true' : null, 'aria-busy': st.busy ? 'true' : null, 'aria-label': o.label || null, 'data-key': 'b:' + key, title: why || null,
+      onclick: function () { if (!off) { send(action, typeof argf === 'function' ? argf() : argf, o); if (o.then) o.then(); } } }, st.busy ? [el('span', { class: 'spin', 'aria-hidden': 'true' }), st.text] : text);
+  }
+  function statusLine(action, args) { return statusKey(ck(action, args)); }
+  function flowStatus(f) {
+    var keys = Object.keys(S.sent).filter(function (k) { return k.split(':')[1] === f.id; });
+    S.cmds.forEach(function (c) { var k = ck(c.action, c.args); if (c.args.flowId === f.id && keys.length < 2 && keys.indexOf(k) < 0) keys.push(k); });
+    return keys.map(statusKey);
+  }
+  function statusKey(key) {
+    var st = cmdState(key); if (st.phase === 'idle') return null;
+    var icon = st.phase === 'done' ? '✓' : st.phase === 'error' ? '✕' : null;
+    return el('p', { class: 'cmd ' + st.phase + (st.busy ? ' busy' : ''), role: st.phase === 'error' ? 'alert' : null },
+      icon ? el('span', { 'aria-hidden': 'true' }, icon) : null, el('span', null, st.text + (st.stale ? ' ZeremAI has not picked this up yet.' + seen() : '') + (st.phase === 'done' && st.row && st.row.handed ? ' Handed to Claude at ' + hhmm(st.row.handed) + (st.row.doneAt ? ' · ' + secs2(st.row.doneAt - st.row.t) + ' from your click' : '') + '.' : '')),
+      !st.busy ? el('button', { class: 'link', type: 'button', onclick: function () { if (st.row) S.dismiss[st.row.id] = 1; delete S.sent[key]; render(); } }, 'Dismiss') : null);
+  }
+  function whyLine(why) { return why && why !== S.bannerWhy ? el('p', { class: 'sub' }, why) : null; } // the banner already says it once
+
+  /* ---- drafts: what you type survives a redraw ---- */
+  function input(key, o) {
+    o = o || {}; var tag = o.area ? 'textarea' : 'input', err = S.errs[key];
+    return [el(tag, { class: 'in', id: key, 'data-key': key, type: o.area ? null : (o.type || 'text'), inputmode: o.type === 'number' ? 'numeric' : null, rows: o.area ? (o.rows || 3) : null, placeholder: o.placeholder || null, value: S.draft[key] || '', 'aria-required': o.required ? 'true' : null,
+      'aria-invalid': err ? 'true' : null, 'aria-describedby': err ? key + '-e' : null, autocomplete: 'off', oninput: function (e) { S.draft[key] = e.target.value; if (S.errs[key]) { delete S.errs[key]; var m = $(key + '-e'); if (m) m.remove(); e.target.removeAttribute('aria-invalid'); } if (o.live) render(); } }),
+      err ? el('p', { class: 'err', id: key + '-e', role: 'alert' }, err) : null];
+  }
+
+  /* ---- helpers on the data ---- */
+  function ordered() {
+    var rank = function (f) { return NEEDS[f.status] ? 0 : f.status === 'running' ? 1 : f.status === 'pending' ? 2 : 3; };
+    return Object.keys(S.flows).map(function (k) { return S.flows[k]; }).sort(function (a, b) { return rank(a) - rank(b) || (b.updatedAt || 0) - (a.updatedAt || 0) || a.name.localeCompare(b.name); });
+  }
+  function current(list) { return S.flows[S.sel] || list[0]; }
+  function activeIdx(f) {
+    var i = f.steps.map(function (s) { return s.id; }).indexOf(S.stepSel[f.id] || '');
+    if (i >= 0) return i;
+    i = f.steps.map(function (s) { return s.id; }).indexOf(f.activeStepId);
+    if (i >= 0) return i;
+    for (i = 0; i < f.steps.length; i++) if (f.steps[i].status !== 'done') return i;
+    return Math.max(0, f.steps.length - 1);
+  }
+  function stepNo(f) { var i = f.steps.map(function (s) { return s.id; }).indexOf(f.activeStepId); if (i < 0) i = f.steps.filter(function (s) { return s.status === 'done'; }).length; return Math.min(f.steps.length, i + 1); }
+  function showDetails() { return !S.bad.details && (S.owner || Object.keys(S.details).length > 0); }
+  function det(f, kindName) { return S.details[f.id + '~' + kindName]; }
+  function pick(f, id, tab) { S.sel = f.id; setOpen(true); store('zf-flow', f.id); S.stepSel[f.id] = id; if (tab) { S.tab = tab; if (window.innerWidth < 980) S.scrollSide = true; } render(); }
+  function go(route) { if (S.route !== route) S.focusMain = true; S.route = route; store('zf-route', route, 's'); render(); }
+  function needCount() { return Object.keys(S.flows).filter(function (k) { return NEEDS[S.flows[k].status]; }).length; }
+
+  /* ---- freshness: from the heartbeat, checked on a timer, never written ---- */
+  function lastChange() { var m = null; Object.keys(S.flows).forEach(function (k) { var t = S.flows[k].updatedAt; if (t && (!m || t > m)) m = t; }); return m; }
+  function renderFresh() {
+    var box = $('fresh'), tx = $('freshTx'), cls = '', text, last = lastChange(), ref = S.beat || last, st = sessText(), se = $('sess');
+    se.className = 'sess k-' + st[1]; se.textContent = st[0]; se.title = sid() ? 'The session that runs your actions. Session id: ' + sid() : 'Press ZeremAI in a session to link this page to it';
+    if (S.noDb) { box.className = 'fresh off'; tx.textContent = 'No page database'; return; }
+    if (S.offline) { cls = 'off'; text = 'Offline. This is the last data it got.'; }
+    else if (starting()) text = 'Starting…';
+    else if (!S.ready) text = 'Connecting…';
+    else if (!ref) text = 'Waiting for ZeremAI';
+    else {
+      var age = (Date.now() - ref) / 1000;
+      if (age < 60) { cls = 'live'; text = 'Live' + (last ? ' · last change ' + ago(last) : ''); }
+      else if (age < 180) { cls = 'slow'; text = 'Updating…'; }
+      else { cls = 'off'; text = 'Paused. The session may be closed.' + (last ? ' Last change at ' + hhmm(last) + '.' : ''); }
+    }
+    box.className = 'fresh ' + cls; tx.textContent = text;
+  }
+  setTimeout(function () { render(); renderFresh(); }, WAIT + 100); // the loader gives way to the real message
+  setInterval(function () { renderFresh(); if (hasPending()) render(); }, 5000);
+  setInterval(function () { if (hasPending()) render(); }, 1000); // the timer on a waiting button
+  setInterval(function () { if (Object.keys(S.flows).length) render(); }, 30000); // the ages must not freeze
+
+  /* ---- draw ---- */
+  var SVGNS = 'http://www.w3.org/2000/svg';
+  function sv(tag, attrs) {
+    var e = document.createElementNS(SVGNS, tag), k, kids = Array.prototype.slice.call(arguments, 2);
+    for (k in attrs || {}) if (attrs[k] != null) e.setAttribute(k, attrs[k]);
+    kids.forEach(function (c) { if (c != null && c !== false) e.append(c.nodeType ? c : document.createTextNode(String(c))); });
+    return e;
+  }
+  /* ---- a new version of the plugin: the mod writes meta/update. Later hides it until the page opens again; Skip hides that version for good. ---- */
+  var CHANGELOG = 'https://zerem-ai.mintlify.app/changelog'; // the docs page; same site as the README links
+  function updBanner() {
+    var u = S.upd; if (!u || !u.latest || u.state === 'current' || S.updLater || store('zf-skip') === u.latest) return null;
+    var st = u.state, title = st === 'restart' ? 'Updated to ' + u.latest : st === 'failed' ? 'The update did not work' : st === 'updating' ? 'Updating ZeremAI…' : 'ZeremAI ' + u.latest + ' is out';
+    var sub = st === 'restart' ? 'Restart Claude Code to use it. Your flows are safe.' : st === 'failed' ? (u.error || 'Claude Code could not update the plugin.') : st === 'updating' ? 'Your flows keep running.' : 'You have ' + u.current + '.';
+    var acts = [];
+    if (st === 'available' || st === 'failed') acts.push(actBtn(st === 'failed' ? 'Try again' : 'Update now', 'update-plugin', {}, { primary: true, scope: 'session' }));
+    if (st === 'available') acts.push(el('button', { type: 'button', class: 'btn', onclick: function () { S.updLater = true; render(); } }, 'Later'), el('button', { type: 'button', class: 'link', onclick: function () { store('zf-skip', u.latest); render(); } }, 'Skip this version'));
+    return el('div', { class: 'need-card', role: 'status', style: 'margin-bottom:12px' }, el('b', null, title), el('span', { class: 'muted' }, sub, st === 'available' || st === 'restart' ? [' ', el('a', { class: 'link', href: CHANGELOG, target: '_blank', rel: 'noopener' }, 'What changed')] : null), acts.length ? el('div', { class: 'row' }, acts) : null);
+  }
+  /* ---- templates with an update: counted from the template documents, no record of their own. Later hides it until the page opens again; Skip hides this set of versions. ---- */
+  function tplUps() { return S.templates.filter(function (t) { return t.installed && t.state === 'update'; }); }
+  function verStep(t) { return t.version ? (t.installedVersion ? 'v' + t.installedVersion + ' → v' + t.version : '→ v' + t.version) : ''; }
+  function tplBanner() {
+    var ups = tplUps(), sig = ups.map(function (t) { return t.id + '@' + t.version; }).join(',');
+    if (!ups.length || S.tplLater || store('zf-tskip') === sig) return null;
+    var first = ups.slice(0, 2).map(function (t) { return (t.name) + ' ' + verStep(t); }).join(', ') + (ups.length > 2 ? ', …' : '');
+    return el('div', { class: 'need-card', role: 'status', style: 'margin-bottom:12px' }, el('b', null, words(ups.length, 'template has an update', 'templates have updates')), el('span', { class: 'muted' }, first),
+      el('div', { class: 'row' }, el('button', { type: 'button', class: 'btn pri', onclick: function () { go('templates'); } }, 'Review'), el('button', { type: 'button', class: 'btn', onclick: function () { S.tplLater = true; render(); } }, 'Later'),
+        el('button', { type: 'button', class: 'link', onclick: function () { store('zf-tskip', sig); render(); } }, 'Skip these versions')));
+  }
+  function draw() {
+    var act = document.activeElement, keep = act && act.getAttribute && act.getAttribute('data-key'), caret = act && typeof act.selectionStart === 'number' ? [act.selectionStart, act.selectionEnd] : null;
+    var main = $('main'), nav = $('nav'), ban = $('ban'), want = S.focusKey || keep;
+    main.textContent = ''; nav.textContent = ''; ban.textContent = '';
+    renderFresh(); renderTheme();
+    var ub = updBanner(); if (ub) ban.append(ub);
+    var tb = tplBanner(); if (tb) ban.append(tb);
+    var nc = needCount();
+    [['flows', 'Flows', nc], ['new', 'New flow', 0], ['templates', 'Templates', tplUps().length, 'have updates'], ['markets', 'Marketplaces', 0], ['flavors', 'Flavors', flPending().length, 'wait for you']].forEach(function (r) {
+      nav.append(el('button', { type: 'button', 'aria-current': S.route === r[0] ? 'page' : null, onclick: function () { go(r[0]); } }, r[1], r[2] ? el('span', { class: 'badge', 'aria-label': r[2] + ' ' + (r[3] || 'need you') }, String(r[2])) : null));
+    });
+    if (S.noDb) { main.append(el('div', { class: 'empty' }, el('h2', null, 'The page database is not available'), el('p', { class: 'muted' }, 'Sign in to Claude and open this page again.'))); return; }
+    if (starting()) {
+      main.append(el('div', { class: 'boot', role: 'status', 'aria-busy': 'true' },
+        el('div', { class: 'orbit', 'aria-hidden': 'true' }, sv('svg', { viewBox: '0 0 72 72' },
+          sv('defs', null, sv('linearGradient', { id: 'og', x1: '0', y1: '0', x2: '1', y2: '1' }, sv('stop', { offset: '0', 'stop-color': 'var(--accent)' }), sv('stop', { offset: '1', 'stop-color': 'var(--accent)', 'stop-opacity': '0' }))),
+          sv('circle', { cx: 36, cy: 36, r: 32, fill: 'none', stroke: 'var(--line)', 'stroke-width': 3 }),
+          sv('circle', { class: 'o1', cx: 36, cy: 36, r: 32, fill: 'none', stroke: 'url(#og)', 'stroke-width': 3, 'stroke-linecap': 'round', 'stroke-dasharray': '70 132' }),
+          sv('circle', { class: 'o2', cx: 36, cy: 36, r: 22, fill: 'none', stroke: 'var(--muted)', 'stroke-width': 2, 'stroke-linecap': 'round', 'stroke-dasharray': '3 11', opacity: '.6' }),
+          sv('circle', { class: 'core', cx: 36, cy: 36, r: 7, fill: 'var(--accent)' }))),
+        el('h2', null, 'Starting your session'), el('p', { class: 'muted' }, 'Loading your flows. This takes a few seconds.')));
+      return;
+    }
+    if (!S.ready) { main.append(el('div', { style: 'display:grid;gap:14px', 'aria-busy': 'true' }, el('div', { class: 'row' }, [0, 1, 2].map(function () { return el('div', { class: 'skel', style: 'height:42px;width:180px' }); })), el('div', { class: 'skel', style: 'height:30px;width:55%' }), el('div', { class: 'skel', style: 'height:260px' }))); return; }
+    var pageWhy = cantAct(null, 'session'); S.bannerWhy = pageWhy;
+    if (pageWhy) ban.append(el('div', { class: 'ban', role: 'note' }, el('b', null, 'Actions are off.'), el('span', null, pageWhy)));
+    if (S.route === 'new') newView(main); else if (S.route === 'templates') tplView(main); else if (S.route === 'markets') mkView(main); else if (S.route === 'flavors') flavorsView(main); else flowsView(main);
+    if (S.focusMain) { S.focusMain = false; var h = main.querySelector('h2'); if (h) { h.setAttribute('tabindex', '-1'); h.focus({ preventScroll: true }); } }
+    else if (want) {
+      var again = document.querySelector('[data-key="' + String(want).replace(/"/g, '') + '"]');
+      if (again) { again.focus({ preventScroll: !S.focusKey }); if (caret && again === document.getElementById(keep) && typeof again.setSelectionRange === 'function') try { again.setSelectionRange(caret[0], caret[1]); } catch (e) {} }
+    }
+    S.focusKey = '';
+    if (S.scrollSide) { // on a phone the panel is below the steps: a tap on a step brings it into view
+      S.scrollSide = false; var side_ = document.querySelector('.side'), calm = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+      if (side_ && side_.scrollIntoView) side_.scrollIntoView({ block: 'start', behavior: calm ? 'auto' : 'smooth' });
+    }
+  }
+
+  /* ---- flows ---- */
+  function flowsView(main) {
+    var list = ordered(), f = S.open && S.flows[S.sel];
+    if (!list.length && ghost()) { main.append(el('div', { style: 'display:grid;gap:18px' }, el('div', { class: 'sec' }, 'Starting'), ghost())); return; }
+    if (!list.length) { main.append(el('div', { class: 'empty' }, el('h2', null, 'No flows yet'), el('p', { class: 'muted' }, 'Start one here, or run ', el('code', null, '/zeremai:init'), ' in Claude. It shows up as soon as it starts.'), el('button', { class: 'btn pri', type: 'button', onclick: function () { go('new'); } }, 'Start a flow'))); return; }
+    if (!f) { S.open = false; main.append(overview(list)); return; }
+    main.append(el('div', { style: 'display:grid;gap:18px' }, head(f), needCard(f), flowActions(f), el('div', { class: 'shell' }, el('div', { class: 'list', id: 'list', role: 'group', 'aria-label': 'Steps' }, S.view === 'lanes' ? lanes(f) : runbook(f)), side(f))));
+  }
+  function openFlow(id) { S.sel = id; setOpen(true); S.focusMain = true; store('zf-flow', id); render(); }
+  // One bar for a flow: a segment for each step, the colour of its state.
+  function segs(f) { return el('div', { class: 'segs', 'aria-hidden': 'true' }, f.steps.map(function (s) { return el('span', { class: 'seg k-' + s.status, title: s.number + '. ' + s.name }); })); }
+  function stepLine(f) { var s = f.steps[activeIdx(f)]; return 'Step ' + stepNo(f) + ' of ' + f.steps.length + (s ? ' · ' + s.name : ''); }
+  // The line under a running flow: the last thing the agent did, or a warning when nothing happened for 10 minutes.
+  function actLine(f) {
+    if (f.status !== 'running') return null;
+    var at = f.activity ? f.activity.at : f.updatedAt, quiet = at && Date.now() - at > 600000;
+    if (quiet) return el('div', { class: 'act quiet' }, el('b', null, '⚠ No activity for ' + ago(at).replace(' ago', '')), f.activity ? el('span', null, 'Last: ' + f.activity.text) : null);
+    return f.activity ? el('div', { class: 'act' }, el('b', null, '▸'), el('span', null, f.activity.text), at ? el('span', null, '· ' + ago(at)) : null) : null;
+  }
+  // The child flows a step starts, as the flows that exist now.
+  function kidsOf(s) { return s.kids.map(function (id) { return S.flows[id]; }).filter(Boolean); }
+  function kidLinks(s) { var k = kidsOf(s); return k.length ? k.map(function (c) { return el('button', { type: 'button', class: 'link', onclick: function (e) { e.stopPropagation(); openFlow(c.id); } }, 'Open “' + c.name + '”'); }) : [el('span', null, 'It has not started yet.')]; }
+  // A grey card for a flow that was just sent: it shows at once, and the real card replaces it. It goes after an error (see takeCmds) or after 60 seconds.
+  function ghost() {
+    if (!S.awaitNew || !S.awaitNew.t || Date.now() - S.awaitNew.t > 60000) return null;
+    return el('div', { class: 'fcard k-pending', 'aria-busy': 'true' }, el('span', { class: 'row' }, el('b', { class: 'nm' }, S.awaitNew.name || 'New flow'), el('span', { class: 'spin', 'aria-hidden': 'true' })), el('b', null, 'Starting… ' + secs(S.awaitNew.t)), el('span', { class: 'muted sub' }, 'ZeremAI is making the flow. The real card replaces this one.'));
+  }
+  // All flows at once: what needs you first (with its buttons), then what runs, then the rest.
+  function overview(list) {
+    var by = function (ks) { return list.filter(function (f) { return ks.indexOf(f.status) >= 0; }); };
+    var need = by(['waiting', 'blocked', 'failed']), run = by(['running', 'pending']), rest = by(['paused', 'done']);
+    var open = function (f) { return el('button', { class: 'btn small', type: 'button', 'data-key': 'o:' + f.id, onclick: function () { openFlow(f.id); } }, 'Open flow'); };
+    var out = [el('h2', { class: 'sr' }, 'Flows'), el('div', { class: 'stats' }, [['need you now', need.length, 'waiting'], ['running', run.length, 'running'], ['paused', by(['paused']).length, 'paused'], ['done', by(['done']).length, 'done']].map(function (x) {
+      return el('div', { class: 'stat k-' + x[2] + (x[0] === 'need you now' && x[1] ? ' need' : '') }, el('b', null, String(x[1])), el('span', null, x[0]));
+    }))];
+    if (need.length) out.push(el('div', { class: 'sec' }, 'Needs you'), need.map(function (f) {
+      return el('section', { class: 'ov-need', 'aria-label': f.name }, el('div', { class: 'row' }, el('b', { class: 'nm' }, f.name), pill(f.status), el('span', { class: 'muted' }, stepLine(f)), here(f.id) ? el('span', { class: 'here', title: 'Runs in this session' }, 'here') : null, open(f)),
+        f.needsYou ? [needCard(f), f.needsYou.blocked ? el('div', { class: 'row' }, actBtn('Continue', 'continue', { flowId: f.id }, { flowId: f.id, primary: true })) : null] : el('div', { class: 'need-card k-failed' }, el('b', null, LOOK.failed[0] + ' ' + stepLine(f) + ' failed'), el('div', { class: 'row' }, actBtn('Continue', 'continue', { flowId: f.id }, { flowId: f.id, primary: true }))), flowStatus(f));
+    }));
+    var gh = ghost(); if (gh) out.push(el('div', { class: 'sec' }, 'Starting'), gh);
+    if (run.length) out.push(el('div', { class: 'sec' }, 'Running'), el('div', { class: 'fcards' }, run.map(function (f) {
+      return el('button', { type: 'button', class: 'fcard k-' + f.status + (S.flash[f.id] ? ' flash' : ''), 'data-key': 'o:' + f.id, onclick: function () { openFlow(f.id); } },
+        el('span', { class: 'row', style: 'justify-content:space-between;flex-wrap:nowrap' }, el('span', { style: 'min-width:0' }, el('b', { class: 'nm' }, f.name), f.template ? el('span', { class: 'mono muted', style: 'display:block' }, f.template) : null), pill(f.status)),
+        segs(f), el('b', null, stepLine(f)), actLine(f), f.updatedAt ? el('span', { class: 'muted sub' }, 'updated ' + ago(f.updatedAt)) : null);
+    })));
+    if (rest.length) out.push(el('div', { class: 'sec' }, 'Paused and done'), el('div', { class: 'card', style: 'padding:4px' }, rest.map(function (f) {
+      return el('div', { class: 'orow' }, el('b', null, f.name), pill(f.status), el('span', { class: 'muted' }, stepLine(f) + (f.updatedAt ? ' · ' + ago(f.updatedAt) : '')),
+        el('span', { class: 'row' }, f.status === 'paused' ? actBtn('Continue', 'continue', { flowId: f.id }, { flowId: f.id, small: true }) : null, open(f)));
+    })));
+    return el('div', { style: 'display:grid;gap:18px' }, out);
+  }
+  // Which session holds the flow: name, folder, short id (tap to copy the full id), live or closed, and a tag when it is the session of this page.
+  function runsIn(f) {
+    var h = holderOf(f.id);
+    if (!h) return el('p', { class: 'facts' }, el('span', null, 'Runs in: not held by this session'));
+    var folder = h.folder ? h.folder.split('/').filter(Boolean).pop() : '';
+    return el('p', { class: 'facts' }, el('span', null, 'Runs in: ', el('b', null, sessName(h))), folder && folder !== sessName(h) ? el('span', null, folder) : null,
+      el('button', { class: 'link', type: 'button', title: 'Copy the session id ' + h.id, onclick: function (e) { var b = e.currentTarget; try { navigator.clipboard.writeText(h.id).then(function () { b.textContent = 'copied'; }, function () { b.textContent = h.id; }); } catch (x) { b.textContent = h.id; } } }, h.id.slice(0, 8)),
+      el('span', null, isOpen(h) ? 'live' : 'closed'));
+  }
+  // The phases of a flow as one bar: a block for each phase, a segment for each step.
+  function rail(f) {
+    var groups = [];
+    f.steps.forEach(function (s) { var g = groups[groups.length - 1]; if (g && g.name === s.phase) g.steps.push(s); else groups.push({ name: s.phase, steps: [s] }); });
+    return el('div', { class: 'rail', role: 'img', 'aria-label': words(f.steps.filter(function (s) { return s.status === 'done'; }).length, 'step', 'steps') + ' done of ' + f.steps.length }, groups.map(function (g) {
+      return el('div', { class: 'ph', style: 'flex:' + g.steps.length + ' 1 ' + g.steps.length * 36 + 'px' }, el('small', null, g.name || ' '), el('div', { class: 'segs' }, g.steps.map(function (s) { return el('span', { class: 'seg k-' + s.status, title: s.number + '. ' + s.name }); })));
+    }));
+  }
+  function head(f) {
+    var parent = f.parentFlowId && S.flows[f.parentFlowId], done = f.steps.filter(function (s) { return s.status === 'done'; }).length;
+    return el('div', { class: 'fhead' }, el('button', { class: 'link', type: 'button', 'data-key': 'back', onclick: function () { setOpen(false); S.focusMain = true; render(); } }, '← All flows'), el('h2', null, f.name), runsIn(f),
+      el('p', { class: 'facts' }, pill(f.status), el('span', null, 'step ' + stepNo(f) + ' of ' + f.steps.length), f.template && f.template !== f.name ? el('span', null, f.template) : null, f.updatedAt ? el('span', { class: old(f.updatedAt) ? 'age old' : null }, 'Last updated ' + ago(f.updatedAt) + ' · ' + when(f.updatedAt)) : null,
+        parent ? el('span', null, 'child of ', el('button', { class: 'link', type: 'button', onclick: function () { openFlow(parent.id); } }, parent.name)) : null,
+        el('span', { class: 'vt', role: 'group', 'aria-label': 'View' },
+          el('button', { type: 'button', 'aria-pressed': String(S.view === 'runbook'), onclick: function () { S.view = 'runbook'; store('zf-view', 'runbook'); render(); } }, 'List'),
+          el('button', { type: 'button', 'aria-pressed': String(S.view === 'lanes'), onclick: function () { S.view = 'lanes'; store('zf-view', 'lanes'); render(); } }, 'Diagram'))),
+      rail(f), actLine(f), el('p', { class: 'facts' }, words(done, 'step', 'steps') + ' done · ' + (f.steps.length - done) + ' to go'));
+  }
+  // A running flow can restart when nobody runs it: no session lists it, its session is closed, or the agent of this session is silent for 10 minutes.
+  // A flow of another live session gets Take over instead, behind a confirm, so two agents never drive one flow by accident.
+  function resumable(f) {
+    if (f.status !== 'running' && f.status !== 'waiting') return false;
+    var h = holderOf(f.id), at = f.activity ? f.activity.at : f.updatedAt;
+    return !(h && isOpen(h)) || (h.id === sid() && f.status === 'running' && !!at && Date.now() - at > 600000);
+  }
+  function liveOther(f) { var h = holderOf(f.id); return h && isOpen(h) && h.id !== sid() ? h : null; }
+  // The folder of the session that would run the flow, when the flow ran in another one. Empty when they match or are unknown.
+  function wrongFolder(f, scope) {
+    var s = sessionFor(f.id, scope), tr = function (p) { return String(p || '').replace(/\/+$/, ''); };
+    return s && s.folder && f.folders.length && f.folders.map(tr).indexOf(tr(s.folder)) < 0 ? s.folder : '';
+  }
+  function flowActions(f) {
+    var why = cantAct(f.id), whyAny = cantAct(f.id, 'session'), delKey = 'delete:' + f.id, cont = f.status === 'paused' || f.status === 'failed' || f.status === 'pending' || f.status === 'blocked' || resumable(f), nk = 'note:' + f.id, closeKey = 'close:' + f.id, btns = [], bits = [];
+    var other = liveOther(f), sc = other ? undefined : 'session', fol = wrongFolder(f, sc), contKey = 'cwd:' + f.id, takeKey = 'take:' + f.id;
+    var keep = function (key) { return el('button', { class: 'btn small', type: 'button', 'data-key': 'keep:' + key, onclick: function () { S.confirm = ''; S.focusKey = 'x:' + key; render(); } }, 'Keep it'); };
+    var ran = function () { return 'This flow ran in ' + f.folders.join(', ') + '. This session is in ' + fol + '.'; };
+    if (cont) {
+      var a = function () { return { flowId: f.id, note: S.draft[nk] || '' }; }, cwhy = cantAct(f.id, sc);
+      if (S.confirm === contKey) btns.push(el('span', { class: 'cf', role: 'group', 'aria-label': 'Confirm continue' }, el('span', null, ran()), actBtn('Continue anyway', 'continue', a, { flowId: f.id, scope: sc, primary: true, small: true }), keep(contKey)));
+      else if (fol) btns.push(el('button', { class: 'btn pri', type: 'button', 'data-key': 'x:' + contKey, 'aria-disabled': cwhy ? 'true' : null, title: cwhy || null, onclick: function () { if (!cwhy) { S.confirm = contKey; S.focusKey = 'keep:' + contKey; render(); } } }, 'Continue'));
+      else btns.push(actBtn('Continue', 'continue', a, { flowId: f.id, scope: sc, primary: true }));
+    }
+    // Take over: this session binds the flow, and the live session that held it lets go (the server drops the folder from its list).
+    if (other && (f.status === 'running' || f.status === 'waiting')) {
+      var ta = { flowId: f.id, from: other.id };
+      if (S.confirm === takeKey) btns.push(el('span', { class: 'cf', role: 'group', 'aria-label': 'Confirm take over' }, el('span', null, 'Take “' + f.name + '” from ' + sessName(other) + '? That session stops working on it.' + (fol ? ' ' + ran() : '')), actBtn('Yes, take over', 'continue', ta, { flowId: f.id, scope: 'session', danger: true, small: true }), keep(takeKey)));
+      else btns.push(el('button', { class: 'btn small', type: 'button', 'data-key': 'x:' + takeKey, 'aria-disabled': whyAny ? 'true' : null, title: whyAny || null, onclick: function () { if (!whyAny) { S.confirm = takeKey; S.focusKey = 'keep:' + takeKey; render(); } } }, 'Take over'));
+    }
+    // Continue, Close and Delete share one row. A confirm question takes the place of its own button.
+    if (S.confirm === closeKey) btns.push(el('span', { class: 'cf', role: 'group', 'aria-label': 'Confirm close' }, el('span', null, 'Close “' + f.name + '”? It leaves the list of running flows.'), actBtn('Yes, close it', 'close', { flowId: f.id }, { flowId: f.id, danger: true, small: true }), el('button', { class: 'btn small', type: 'button', 'data-key': 'keep:' + f.id, onclick: function () { S.confirm = ''; S.focusKey = 'x:' + closeKey; render(); } }, 'Keep it')));
+    else btns.push(el('button', { class: 'btn small', type: 'button', 'data-key': 'x:' + closeKey, 'aria-disabled': why ? 'true' : null, title: why || null, onclick: function () { if (!why) { S.confirm = closeKey; S.focusKey = 'keep:' + f.id; render(); } } }, 'Close flow'));
+    // Delete runs in the session of this page, so a flow of another (even closed) session can go too. The folder is removed for good.
+    if (S.confirm === delKey) btns.push(el('span', { class: 'cf', role: 'group', 'aria-label': 'Confirm delete' }, el('span', null, 'Delete “' + f.name + '”? Its folder is removed for good.'), actBtn('Yes, delete it', 'delete', { flowId: f.id }, { flowId: f.id, scope: 'session', danger: true, small: true }), el('button', { class: 'btn small', type: 'button', 'data-key': 'keepdel:' + f.id, onclick: function () { S.confirm = ''; S.focusKey = 'x:' + delKey; render(); } }, 'Keep it')));
+    else btns.push(el('button', { class: 'btn small quiet-danger', type: 'button', 'data-key': 'x:' + delKey, 'aria-disabled': whyAny ? 'true' : null, title: whyAny || null, onclick: function () { if (!whyAny) { S.confirm = delKey; S.focusKey = 'keepdel:' + f.id; render(); } } }, 'Delete flow'));
+    bits.push(el('div', { class: 'row' }, btns));
+    if (cont) bits.push(el('details', { open: S.draft[nk] ? true : null }, el('summary', { class: 'sub' }, 'Add a note for the agent'), el('div', { class: 'fld', style: 'margin-top:6px' }, el('label', { for: nk, class: 'sr' }, 'Note for the agent'), input(nk, { area: true, rows: 2, placeholder: 'What should it do next? (optional)' }))));
+    return el('div', { class: 'fhead' }, bits, flowStatus(f), whyLine(why));
+  }
+  function needCard(f) {
+    var n = f.needsYou; if (!n) return null;
+    if (n.blocked) return el('section', { class: 'need-card k-blocked', 'aria-label': 'Blocked' }, // nothing to approve: the reason, the command, and the Continue button of the flow
+      el('b', null, LOOK.blocked[0] + ' ' + (n.stepNumber != null ? 'Step ' + n.stepNumber + ' · ' : '') + (n.stepName || 'A step') + ' is blocked'),
+      n.waitsFor ? el('p', null, n.waitsFor) : null,
+      n.command ? el('pre', { class: 'df' }, n.command) : null,
+      el('p', null, el('small', null, 'Do this, then press Continue.' + (n.since ? ' Blocked since ' + hhmm(n.since) + ' (' + ago(n.since) + ').' : ''))));
+    var rk = 'reason:' + f.id + ':' + n.stepId, aargs = { flowId: f.id, stepId: n.stepId }, why = n.stepId ? cantAct(f.id) : 'The step is not known yet.', open = S.reasonOpen === rk;
+    var routes = n.routes || [], bk = function (i) { return 'back:' + f.id + ':' + n.stepId + ':' + i; }, backAt = -1;
+    routes.forEach(function (r, i) { if (S.reasonOpen === bk(i)) backAt = i; });
+    var backBtns = routes.map(function (r, i) { // a Back button asks why first: a reason is required
+      return el('button', { class: 'btn', type: 'button', 'data-key': 'bk:' + f.id + ':' + i, 'aria-disabled': why ? 'true' : null, title: why || null, onclick: function () { if (!why) { S.reasonOpen = bk(i); S.focusKey = bk(i); render(); } } }, '↩ ' + r.label);
+    });
+    var backForm = function () {
+      var k = bk(backAt), r = routes[backAt];
+      return el('div', { class: 'fld' }, el('label', { for: k }, 'Why do you go back to “' + (r.to || r.label) + '”? ', el('span', { class: 'req', 'aria-hidden': 'true' }, '*')), input(k, { area: true, rows: 3, required: true, placeholder: 'Tell the agent what is wrong. It reads this when it starts that step again.' }),
+        el('div', { class: 'row' }, actBtn('Go back', 'route', function () { return { flowId: f.id, stepId: n.stepId, label: r.label, reason: S.draft[k] || '' }; }, { flowId: f.id, primary: true, errKey: k, validate: function () { return (S.draft[k] || '').trim() ? '' : 'Say why you go back.'; }, onSend: function () { S.reasonOpen = ''; delete S.draft[k]; } }),
+          el('button', { class: 'btn', type: 'button', onclick: function () { S.reasonOpen = ''; S.focusKey = 'bk:' + f.id + ':' + backAt; render(); } }, 'Cancel')));
+    };
+    return el('section', { class: 'need-card k-waiting', 'aria-label': 'Needs you' },
+      el('b', null, LOOK.waiting[0] + ' ' + (n.stepNumber != null ? 'Step ' + n.stepNumber + ' · ' : '') + (n.stepName || 'A step') + ' waits for you'),
+      n.waitsFor ? el('p', null, n.waitsFor) : null,
+      el('p', null, el('small', null, (n.since ? 'Waiting since ' + hhmm(n.since) + ' (' + ago(n.since) + '). ' : '')), n.stepId ? el('button', { class: 'link', type: 'button', onclick: function () { pick(f, n.stepId, 'step'); } }, 'Show the step') : null),
+      backAt >= 0 ? backForm() : open ? el('div', { class: 'fld' }, el('label', { for: rk }, 'What should change? ', el('span', { class: 'req', 'aria-hidden': 'true' }, '*')), input(rk, { area: true, rows: 3, required: true, placeholder: 'Tell the agent what to fix before you approve.' }),
+        el('div', { class: 'row' }, actBtn('Send changes', 'request-changes', function () { return { flowId: f.id, stepId: n.stepId, reason: S.draft[rk] || '' }; }, { flowId: f.id, primary: true, errKey: rk, validate: function () { return (S.draft[rk] || '').trim() ? '' : 'Say what should change.'; }, onSend: function () { S.reasonOpen = ''; delete S.draft[rk]; } }),
+          el('button', { class: 'btn', type: 'button', onclick: function () { S.reasonOpen = ''; S.focusKey = 'rc:' + f.id; render(); } }, 'Cancel')))
+      : el('div', { class: 'row' }, actBtn('Approve', 'approve', aargs, { flowId: f.id, primary: true }), backBtns,
+          el('button', { class: 'btn', type: 'button', 'data-key': 'rc:' + f.id, 'aria-disabled': why ? 'true' : null, title: why || null, onclick: function () { if (!why) { S.reasonOpen = rk; S.focusKey = rk; render(); } } }, 'Request changes')),
+      whyLine(why));
+  }
+  function stepNote(f, s) {
+    var out = [];
+    if (s.approval) out.push(el('div', { class: 'stop' }, 'Stop · you approve before you go on'));
+    if (s.routes.length) out.push(el('div', { class: 'nt' }, 'You can send the flow back: ' + s.routes.map(function (r) { return r.label; }).join(', ') + '.'));
+    if (s.onVerifierFail) out.push(el('div', { class: 'nt' }, 'If a check fails, the flow goes back to ' + s.onVerifierFail + ' by itself.'));
+    if (s.loopBackTo && !s.approval) out.push(el('div', { class: 'nt' }, 'If this fails, go back to step ' + s.loopBackTo + '.'));
+    if (s.kids.length) out.push(el('div', { class: 'nt' }, s.kids.length > 1 ? 'Runs ' + s.kids.length + ' child flows. ' : 'Runs a child flow. ', kidLinks(s)));
+    return out;
+  }
+  function runbook(f) {
+    var rb = el('div', { class: 'rb' }), cur = null, part = 0, sel = activeIdx(f), live = f.steps.map(function (s) { return s.id; }).indexOf(f.activeStepId), i = 0;
+    var plain = function (s) { return s.status === 'done' && !s.approval && !s.kids.length; };
+    while (i < f.steps.length) {
+      var s = f.steps[i];
+      if (s.phase && s.phase !== cur) { cur = s.phase; part++; rb.append(el('div', { class: 'part' }, 'Part ' + part + ' · ' + s.phase)); }
+      let j = i, fk ='fold:' + f.id + ':' + s.id;
+      while (j < f.steps.length && plain(f.steps[j]) && f.steps[j].phase === s.phase) j++;
+      if (j - i >= 2 && !S.fold[fk] && (sel < i || sel >= j)) { // a run of finished steps folds into one line
+        rb.append(el('button', { type: 'button', class: 'fold k-done', 'data-key': fk, onclick: function () { S.fold[fk] = 1; S.focusKey = fk; render(); } }, el('span', { 'aria-hidden': 'true' }, LOOK.done[0]), el('b', null, words(j - i, 'step', 'steps') + ' done'), el('span', { class: 'sub' }, f.steps.slice(i, j).map(function (x) { return x.name; }).join(' · ')), el('span', { class: 'link' }, 'Show')));
+        i = j; continue;
+      }
+      (function (s, i) {
+        rb.append(el('div', { class: 'st k-' + s.status + (i === live && s.status !== 'done' ? ' cur' : '') + (S.flash[f.id + ':' + s.id] ? ' flash' : ''), role: 'button', tabindex: '0', 'data-key': 's:' + s.id, 'aria-pressed': String(i === sel), 'aria-label': 'Step ' + s.number + ', ' + s.name + ', ' + LOOK[s.status][1] + (s.approval ? ', you approve' : ''),
+          onclick: function () { pick(f, s.id, 'step'); }, onkeydown: function (e) { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); pick(f, s.id, 'step'); } } },
+          el('div', { class: 'no', 'aria-hidden': 'true' }, LOOK[s.status][0]), el('div', null, el('b', null, s.name, pill(s.status)), s.summary ? el('p', null, s.summary) : null)));
+        stepNote(f, s).forEach(function (x) { rb.append(x); });
+      })(s, i);
+      i++;
+    }
+    return rb;
+  }
+  // The diagram: one column, a box for each step and an arrow to the next. A phase is a dashed group. Child flows hang under the step that starts them.
+  // Every box has a fixed height, so the picture is laid out by sums, not measured: the map grows down with the steps and never shrinks.
+  function lanes(f) {
+    if (!f.steps.length) return el('p', { class: 'none' }, 'This flow has no steps yet.');
+    var X0 = 24, SX = 58, TX = 72, KX = 88, CH = 64, GAP = 30, KH = 62, KG = 8, MORE = 30, steps = f.steps, n = steps.length, sel = activeIdx(f);
+    var y = 12, i = 0, pos = [], phs = [];
+    while (i < n) {
+      var name = steps[i].phase, j = i, top = y;
+      while (j < n && steps[j].phase === name) j++;
+      if (name) y += 38;
+      for (var k = i; k < j; k++) {
+        var s = steps[k], ks = s.kids.map(function (id) { return S.flows[id] || null; }), key = 'kids:' + f.id + ':' + s.id, more = ks.length > 6 && !S.fold[key], p = { top: y, cb: y + CH, mid: y + CH / 2, kids: [], moreTop: 0, key: key, total: ks.length }, bottom = y + CH;
+        p.after = more && ks[6] ? 'k:' + s.id + ':' + ks[6].id : 'l:' + s.id; // where focus goes when the rest shows
+        if (more) ks = ks.slice(0, 6);
+        ks.forEach(function (c, q) { p.kids.push({ c: c, top: bottom + 12 + q * (KH + KG) }); });
+        if (ks.length) bottom += 12 + ks.length * (KH + KG) - KG;
+        if (more) { p.moreTop = bottom + KG; bottom = p.moreTop + MORE; }
+        pos.push(p);
+        y = bottom + GAP;
+      }
+      y -= GAP;
+      var gb = y + (name ? 14 : 0);
+      if (name) phs.push({ name: name, top: top, h: gb - top });
+      y = gb + GAP - (name ? 6 : 0);
+      i = j;
+    }
+    var H = y - GAP + 20, lines = sv('svg', { class: 'vm-lines', height: H, 'aria-hidden': 'true' }), box = el('div', { class: 'vmap', role: 'group', 'aria-label': 'Steps of ' + f.name + ' as a diagram', style: 'height:' + H + 'px' });
+    var loopOf = function (s, q) { var t = -1; steps.forEach(function (x, m) { if (String(x.number) === s.loopBackTo || x.id === s.loopBackTo) t = m; }); return t >= 0 && t < q ? t : -1; };
+    var chev = function (x, yy) { return 'M' + (x - 6) + ' ' + (yy - 9) + ' L' + x + ' ' + yy + ' L' + (x + 6) + ' ' + (yy - 9); };
+    phs.forEach(function (g) { box.append(el('div', { class: 'vm-ph', style: 'top:' + g.top + 'px;height:' + g.h + 'px' }, el('span', null, g.name))); });
+    steps.forEach(function (s, q) {
+      if (q) { // the arrow from the step before: green when it is done, amber dashed when it waits for you
+        var a = pos[q - 1], src = steps[q - 1].status, cls = 'vm-e ' + (src === 'done' ? 'done' : src === 'waiting' || src === 'blocked' ? 'wait' : 'pend');
+        lines.append(sv('path', { class: cls, d: 'M' + SX + ' ' + a.cb + ' L' + SX + ' ' + pos[q].top }), sv('path', { class: cls, d: chev(SX, pos[q].top) }));
+      }
+      pos[q].kids.forEach(function (kd, r) { // the dashed branch to each child flow
+        var from = r ? pos[q].kids[r - 1].top + KH / 2 : pos[q].cb, mid = kd.top + KH / 2;
+        lines.append(sv('path', { class: 'vm-e kid', d: 'M' + TX + ' ' + from + ' L' + TX + ' ' + mid + ' L' + KX + ' ' + mid }));
+      });
+      if (s.loopBackTo) { // an arc on the right edge back to the step it returns to
+        var t = loopOf(s, q);
+        if (t >= 0) {
+          var ya = pos[q].mid, yb = pos[t].mid, la = ya - yb + 16;
+          box.append(sv('svg', { class: 'vm-loop', style: 'top:' + (yb - 8) + 'px', height: la, width: 44, 'aria-hidden': 'true' },
+            sv('path', { class: 'vm-e loop', d: 'M0 ' + (la - 8) + ' C30 ' + (la - 8) + ' 30 8 2 8' }), sv('path', { class: 'vm-e loop', d: 'M10 2 L2 8 L10 14' })));
+        }
+      }
+    });
+    box.append(lines);
+    steps.forEach(function (s, q) {
+      var p = pos[q], flash = S.flash[f.id + ':' + s.id], extra = s.kids.length ? 'Starts ' + words(s.kids.length, 'child flow', 'child flows') : s.loopBackTo && loopOf(s, q) >= 0 ? 'Can loop back to step ' + s.loopBackTo : '';
+      var base = s.status === 'pending' ? '' : LOOK[s.status][1].charAt(0).toUpperCase() + LOOK[s.status][1].slice(1), sub = [base, extra].filter(Boolean).join(' · ');
+      var glyph = s.status === 'pending' || s.status === 'running' ? String(s.number) : LOOK[s.status][0];
+      box.append(el('div', { class: 'vm-card k-' + s.status + (s.approval ? ' ap' : '') + (flash ? ' flash' : ''), style: 'top:' + p.top + 'px', tabindex: '0', role: 'button', 'data-key': 'l:' + s.id, 'aria-pressed': String(q === sel),
+        title: s.name, 'aria-label': (s.phase ? s.phase + ', ' : '') + 'Step ' + s.number + ', ' + s.name + ', ' + LOOK[s.status][1] + (s.approval ? ', you approve' : ''),
+        onclick: function () { pick(f, s.id, 'step'); }, onkeydown: function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pick(f, s.id, 'step'); } } },
+        el('div', { class: 'vm-dot', 'aria-hidden': 'true' }, glyph), el('div', { class: 'vm-t' }, el('b', { class: 'vm-n' }, s.name), sub ? el('span', { class: 'vm-s' }, sub) : null),
+        s.approval ? el('span', { class: 'vm-tag' }, 'You approve') : null));
+      p.kids.forEach(function (kd) {
+        var c = kd.c;
+        box.append(c ? el('button', { type: 'button', class: 'vm-kid', style: 'top:' + kd.top + 'px', 'data-key': 'k:' + s.id + ':' + c.id, 'aria-label': 'Open child flow ' + c.name + ', ' + LOOK[c.status][1], onclick: function () { openFlow(c.id); } },
+          el('span', { class: 'row' }, el('b', null, c.name), el('span', { class: 'vm-kp k-' + c.status }, LOOK[c.status][0] + ' ' + LOOK[c.status][1])), segs(c), el('span', { class: 'vm-s' }, stepLine(c)))
+          : el('div', { class: 'vm-kid none', style: 'top:' + kd.top + 'px' }, el('b', null, 'Child flow'), el('span', { class: 'vm-s' }, 'It has not started yet.')));
+      });
+      if (p.moreTop) box.append(el('button', { type: 'button', class: 'btn small vm-more', style: 'top:' + p.moreTop + 'px', 'data-key': 'more:' + p.key, onclick: function () { S.fold[p.key] = 1; S.focusKey = p.after; render(); } }, 'Show all ' + p.total));
+    });
+    return box;
+  }
+
+  /* ---- side panel ---- */
+  function side(f) {
+    var tabs = [['step', 'Step']], logs = det(f, 'logs'), mem = det(f, 'memory'), files = det(f, 'files');
+    if (showDetails()) tabs.push(['logs', 'Logs' + (logs ? ' ' + arr(logs.rows).length : '')], ['memory', 'Memory' + (f.counts.topics ? ' ' + f.counts.topics : mem ? ' ' + arr(mem.topics).length : '')], ['files', 'Files' + (f.counts.files ? ' ' + f.counts.files : files ? ' ' + arr(files.rows).length : '')]);
+    if (!tabs.some(function (t) { return t[0] === S.tab; })) S.tab = 'step';
+    var body = S.tab === 'logs' ? logPane(logs, f) : S.tab === 'memory' ? memPane(mem) : S.tab === 'files' ? filePane(files) : stepPane(f, logs);
+    return el('aside', { class: 'side', 'aria-label': 'Details' },
+      el('button', { type: 'button', class: 'link back-steps', onclick: function () { var l = document.getElementById('list'); if (l) l.scrollIntoView({ block: 'start', behavior: 'smooth' }); } }, '↑ Back to the steps'),
+      el('div', { class: 'tabs', role: 'tablist' }, tabs.map(function (t) { return el('button', { type: 'button', role: 'tab', id: 'tab-' + t[0], 'aria-selected': String(S.tab === t[0]), 'aria-controls': 'pane', 'data-key': 't:' + t[0], onclick: function () { S.tab = t[0]; render(); } }, t[1]); })),
+      el('div', { class: 'pane', id: 'pane', role: 'tabpanel', 'aria-labelledby': 'tab-' + S.tab }, body));
+  }
+  function stepPane(f, logs) {
+    var i = activeIdx(f), s = f.steps[i]; if (!s) return [el('p', { class: 'none' }, 'This flow has no steps yet.')];
+    var row = logs && arr(logs.rows).filter(function (r) { return str(r.id) === s.id; })[0];
+    return [
+      el('div', { class: 'pnav' }, pill(s.status), el('span', { class: 'sub' }, 'Step ' + (i + 1) + ' of ' + f.steps.length), el('span', { class: 'arrows' },
+        el('button', { type: 'button', 'aria-label': 'Previous step', disabled: i === 0, onclick: function () { pick(f, f.steps[i - 1].id); } }, '‹'),
+        el('button', { type: 'button', 'aria-label': 'Next step', disabled: i === f.steps.length - 1, onclick: function () { pick(f, f.steps[i + 1].id); } }, '›'))),
+      el('div', { class: 'sthead' }, el('h3', null, s.name), s.phase ? el('p', { class: 'sub' }, s.phase) : null),
+      s.summary ? el('p', null, s.summary) : null,
+      s.approval ? el('div', { class: 'note' }, el('b', null, 'You approve this step'), el('span', null, 'The flow stops here until you approve it, on this page or in Claude.')) : null,
+      s.routes.length || (s.loopBackTo && s.approval) ? el('div', { class: 'note' }, el('b', null, 'You can send the flow back'), el('span', null, 'Use the Back button ' + (s.routes.length ? s.routes.map(function (r) { return '“' + r.label + '”'; }).join(', ') : '“Back to ' + s.loopBackTo + '”') + ' when this step waits for you. It has no limit.')) : null,
+      s.onVerifierFail ? el('div', { class: 'note' }, el('b', null, 'Goes back by itself'), el('span', null, 'If a check still fails after the fix tries, the flow goes back to ' + s.onVerifierFail + '.')) : null,
+      s.loopBackTo && !s.approval ? el('div', { class: 'note' }, el('b', null, 'Can loop back'), el('span', null, 'If this step fails, the flow goes back to step ' + s.loopBackTo + '.')) : null,
+      s.kids.length ? el('div', { class: 'note' }, el('b', null, s.kids.length > 1 ? 'Starts ' + s.kids.length + ' child flows' : 'Starts a child flow'), kidLinks(s)) : null,
+      row ? [el('div', null, el('h4', null, 'What it did'), list(row.actions, 'Nothing logged yet.'))] : null,
+      row && arr(row.problems).length ? el('div', { class: 'note warn' }, el('b', null, 'Problems'), list(row.problems)) : null,
+    ];
+  }
+  function list(items, none) { items = arr(items); return items.length ? el('ul', null, items.map(function (x) { return el('li', null, str(x)); })) : none ? el('p', { class: 'none' }, none) : null; }
+  function logPane(d, f) {
+    if (!d || !arr(d.rows).length) return [el('p', { class: 'none' }, 'No log entries yet.')];
+    return arr(d.rows).map(function (r) {
+      var k = kind(r.kind), t = r.started ? ms(r.started) : null, c = r.completed ? ms(r.completed) : null;
+      return el('details', { class: 'lg k-' + k }, el('summary', null, el('span', { class: 'k', 'aria-hidden': 'true' }, LOOK[k][0]), el('span', null, (f ? stepPos(f.steps, r.id, r.number) : str(r.number)) + '. ' + str(r.name)), el('span', { class: 'sub' }, LOOK[k][1] + (t ? ' · ' + hhmm(t) : '') + (c ? ' to ' + hhmm(c) : ''))),
+        el('div', { style: 'display:grid;gap:10px' }, arr(r.actions).length ? el('div', null, el('h4', null, 'Actions'), list(r.actions)) : null, arr(r.reasoning).length ? el('div', null, el('h4', null, 'Reasoning'), list(r.reasoning)) : null,
+          arr(r.problems).length ? el('div', { class: 'note warn' }, el('b', null, 'Problems'), list(r.problems)) : null, !arr(r.actions).length && !arr(r.reasoning).length && !arr(r.problems).length ? el('p', { class: 'none' }, 'Nothing logged for this step.') : null));
+    });
+  }
+  function memPane(d) {
+    if (!d || !arr(d.topics).length) return [el('p', { class: 'none' }, 'No memory written yet.')];
+    var out = arr(d.topics).map(function (t) {
+      return el('details', { class: 'tp' }, el('summary', null, el('span', null, str(t.topic)), el('span', { class: 'sub' }, arr(t.entries).length + ' entries' + (arr(t.writtenBy).length ? ' · written by ' + arr(t.writtenBy).join(', ') : '') + (arr(t.readBy).length ? ' · read by ' + arr(t.readBy).join(', ') : ''))),
+        arr(t.entries).map(function (e) {
+          return el('div', { class: 'ent' }, el('b', null, 'Step ' + str(e.step) + ' · ' + str(e.stepName)), arr(e.values).length ? el('dl', { class: 'kv' }, arr(e.values).map(function (kv) { return [el('dt', null, str(arr(kv)[0])), el('dd', null, str(arr(kv)[1]))]; })) : null,
+            arr(e.decisions).length ? el('div', null, el('h4', null, 'Decisions'), list(e.decisions)) : null, arr(e.files).length ? el('div', null, el('h4', null, 'Files'), list(e.files)) : null, arr(e.notes).length ? el('div', null, el('h4', null, 'Notes'), list(e.notes)) : null, e.updated ? el('span', { class: 'sub' }, str(e.updated)) : null);
+        }));
+    });
+    var diffs = arr(d.diffs);
+    if (diffs.length) out.push(el('div', null, el('h4', null, 'What changed between entries'), diffs.map(function (x) {
+      return el('div', { style: 'margin-bottom:8px' }, el('p', { class: 'sub' }, str(x.topic) + ' · step ' + str(x.from) + ' → ' + str(x.to)), el('pre', { class: 'df' }, arr(x.lines).map(function (l) { l = str(l); return el('span', { class: l[0] === '+' ? 'a' : l[0] === '-' ? 'd' : 'c' }, l + '\n'); })));
+    })));
+    return out;
+  }
+  function filePane(d) {
+    var rows = d ? arr(d.rows) : []; if (!rows.length) return [el('p', { class: 'none' }, 'No files yet.')];
+    return [el('div', null, rows.map(function (r) { return el('div', { class: 'frow', title: str(r.path) }, el('span', { class: 'mono' }, str(r.name)), el('span', { class: 'sub' }, (r.step != null ? 'step ' + str(r.step) + ' · ' : '') + (r.output ? 'output' : 'flow file'))); }))];
+  }
+
+  /* ---- new flow ---- */
+  function favs() { try { return JSON.parse(store('zf-fav') || '[]'); } catch (e) { return []; } }
+  function toggleFav(id) { var f = favs(), i = f.indexOf(id); if (i < 0) f.push(id); else f.splice(i, 1); store('zf-fav', JSON.stringify(f)); render(); }
+  function tid(t) { return t.category ? t.category + '/' + t.name : t.name; }
+  function applyFill(c) {
+    S.applied[c.id] = 1; var v; try { v = JSON.parse(c.result); } catch (e) { return; }
+    if (!v || typeof v !== 'object') return;
+    var n = 0; Object.keys(v).forEach(function (k) { if (str(v[k])) { S.draft['fld:' + c.args.template + ':' + k] = str(v[k]); n++; } });
+    if (n) say('Filled ' + words(n, 'field', 'fields') + '. Check them before you create the flow.');
+  }
+  function newView(main) {
+    if (S.bad.templates) { main.append(el('div', { class: 'empty' }, el('h2', null, 'New flow'), el('p', { class: 'muted' }, 'Templates are not available to you.'))); return; }
+    var all = S.templates.filter(function (t) { return t.installed; }), q = S.nq.toLowerCase(), fv = favs();
+    if (!all.length) { main.append(el('div', { class: 'empty' }, el('h2', null, 'No templates installed'), el('p', { class: 'muted' }, 'A flow starts from a template. Install one first.'), el('button', { class: 'btn pri', type: 'button', onclick: function () { go('templates'); } }, 'Open templates'))); return; }
+    var shown = all.filter(function (t) { return !q || (t.name + ' ' + t.category + ' ' + t.description).toLowerCase().indexOf(q) >= 0; });
+    var cur = all.filter(function (t) { return tid(t) === S.pick; })[0] || shown[0] || all[0];
+    var groups = {}; shown.forEach(function (t) { var g = fv.indexOf(tid(t)) >= 0 ? 'Favorites' : t.category || 'Other'; (groups[g] = groups[g] || []).push(t); });
+    var names = Object.keys(groups).sort(function (a, b) { return a === 'Favorites' ? -1 : b === 'Favorites' ? 1 : a.localeCompare(b); });
+    var lst = el('div', { class: 'tl', role: 'group', 'aria-label': 'Templates' }, el('div', { class: 'fld' }, el('label', { for: 'q:new', class: 'sr' }, 'Search templates'), input('q:new', { placeholder: 'Search templates', type: 'search' })),
+      names.length ? names.map(function (g) { return [el('h4', null, g), groups[g].map(function (t) { var id = tid(t), on = cur && id === tid(cur);
+        return el('div', { class: 'trow' + (on ? ' on' : '') }, el('button', { type: 'button', class: 'pick', 'aria-pressed': String(on), 'data-key': 'p:' + id, onclick: function () { S.pick = id; store('zf-tpl', id); S.focusKey = 'fld-first'; render(); } }, el('b', null, t.name), el('span', null, t.description || t.category)),
+          el('button', { type: 'button', class: 'star', 'aria-pressed': String(fv.indexOf(id) >= 0), 'aria-label': (fv.indexOf(id) >= 0 ? 'Remove ' : 'Add ') + t.name + ' ' + (fv.indexOf(id) >= 0 ? 'from' : 'to') + ' favorites', 'data-key': 'f:' + id, onclick: function () { toggleFav(id); } }, fv.indexOf(id) >= 0 ? '★' : '☆')); })]; })
+        : el('p', { class: 'none' }, 'No template matches “' + S.nq + '”.'));
+    main.append(el('div', { style: 'display:grid;gap:16px' }, el('h2', null, 'New flow'), el('div', { class: 'split' }, lst, formView(cur))));
+    S.nqLive = true;
+  }
+  // A field with options: a dropdown, or with allowOther a text box that suggests them.
+  function choice(k, f) {
+    var err = S.errs[k], opts = f.options.map(function (o) { return el('option', { value: o, selected: S.draft[k] === o }, o); });
+    if (f.allowOther) { var box = input(k, { required: f.required, placeholder: 'Pick or type' }); box[0].setAttribute('list', k + '-l'); return [box, el('datalist', { id: k + '-l' }, f.options.map(function (o) { return el('option', { value: o }); }))]; }
+    return [el('select', { class: 'in', id: k, 'data-key': k, 'aria-required': f.required ? 'true' : null, 'aria-invalid': err ? 'true' : null, 'aria-describedby': err ? k + '-e' : null,
+      onchange: function (e) { S.draft[k] = e.target.value; if (S.errs[k]) { delete S.errs[k]; render(); } } }, el('option', { value: '' }, 'Choose…'), opts),
+      err ? el('p', { class: 'err', id: k + '-e', role: 'alert' }, err) : null];
+  }
+  function formView(t) {
+    var id = tid(t), why = cantAct(null, 'session'), fk = function (n) { return 'fld:' + id + ':' + n; }, bits = [];
+    var nameKey = 'fname:' + id, fillKey = 'fill:' + id;
+    t.fields.forEach(function (f, i) {
+      var k = fk(f.name), long = f.type === 'textarea' || f.type === 'longtext' || f.example.length > 60;
+      bits.push(el('div', { class: 'fld' }, el('label', { for: k }, f.name, f.required ? [' ', el('span', { class: 'req', 'aria-hidden': 'true' }, '*'), el('span', { class: 'sr' }, ' (required)')] : el('span', { class: 'sub' }, ' (optional)')),
+        f.description ? el('small', { id: k + '-d' }, f.description) : null, f.options.length ? choice(k, f) : input(k, { area: long, rows: 3, type: f.type === 'number' ? 'number' : 'text', required: f.required, placeholder: f.example ? 'For example: ' + f.example : null })));
+      if (i === 0) S.firstField = k;
+    });
+    var valsNow = function () { var v = {}; t.fields.forEach(function (f) { v[f.name] = S.draft[fk(f.name)] || ''; }); return v; };
+    return el('section', { class: 'card form', 'aria-label': 'Start ' + t.name },
+      el('h3', null, t.name), t.description ? el('p', { class: 'muted' }, t.description) : null,
+      t.fields.length ? el('div', { class: 'fld', style: 'background:var(--hover);border-radius:12px;padding:12px' }, el('label', { for: fillKey }, 'Describe it in your own words'), el('small', null, 'ZeremAI fills the fields below from your text. You can edit them after.'), input(fillKey, { area: true, rows: 2, placeholder: 'For example: the refund fails when the amount is 0' }),
+        el('div', { class: 'row' }, actBtn('Fill the fields', 'fill-fields', function () { return { template: id, text: S.draft[fillKey] || '', values: JSON.stringify(valsNow()) }; }, { scope: 'session', small: true, errKey: fillKey, validate: function () { return (S.draft[fillKey] || '').trim() ? '' : 'Write a few words first.'; } })), statusLine('fill-fields', { template: id })) : null,
+      bits,
+      el('div', { class: 'fld' }, el('label', { for: nameKey }, 'Flow name ', el('span', { class: 'sub' }, '(optional)')), input(nameKey, { placeholder: t.name })),
+      el('div', { class: 'row' }, actBtn('Create flow', 'new-flow', function () { var a = { template: id, name: S.draft[nameKey] || '' }; t.fields.forEach(function (f) { a[f.name] = S.draft[fk(f.name)] || ''; }); return a; }, { scope: 'session', primary: true, errKey: 'create:' + id, validate: function () {
+        var miss = t.fields.filter(function (f) { return f.required && !(S.draft[fk(f.name)] || '').trim(); });
+        if (!miss.length) return ''; miss.forEach(function (f) { S.errs[fk(f.name)] = 'This field is required.'; }); S.focusKey = fk(miss[0].name); return 'Fill the required fields: ' + miss.map(function (f) { return f.name; }).join(', ') + '.'; } })),
+      statusLine('new-flow', { template: id }), whyLine(why));
+  }
+
+  /* ---- templates ---- */
+  function tplView(main) {
+    if (S.bad.templates) { main.append(el('div', { class: 'empty' }, el('h2', null, 'Templates'), el('p', { class: 'muted' }, 'Templates are not available to you.'))); return; }
+    var q = S.tq.toLowerCase(), why = cantAct(null, 'session'), match = function (t) { return !q || (t.name + ' ' + t.category + ' ' + t.description + ' ' + t.marketplace).toLowerCase().indexOf(q) >= 0; };
+    var inst = S.templates.filter(function (t) { return t.installed && match(t); }).sort(function (a, b) { return (b.state === 'update') - (a.state === 'update'); }), mk = Object.keys(S.markets).sort();
+    var head = el('div', { class: 'row', style: 'justify-content:space-between' }, el('h2', null, 'Templates'), el('div', { class: 'row' }, actBtn('Refresh marketplaces', 'refresh-marketplaces', {}, { scope: 'session' })));
+    var box = [head, statusLine('refresh-marketplaces', {}), whyLine(why), el('div', { class: 'fld' }, el('label', { for: 'q:tpl', class: 'sr' }, 'Search templates'), input('q:tpl', { placeholder: 'Search templates', type: 'search' }))];
+    box.push(el('section', { class: 'card', 'aria-label': 'Installed' }, el('div', { class: 'hd', style: 'display:flex;gap:2px 12px;flex-wrap:wrap;align-items:baseline' }, el('h3', { style: 'font-size:18px' }, 'Installed'), el('span', { class: 'sub' }, words(inst.length, 'template', 'templates'))),
+      inst.length ? el('div', null, inst.map(function (t) { return tplRow(t); })) : el('p', { class: 'none' }, q ? 'Nothing installed matches.' : 'Nothing installed yet. Install one below.')));
+    var seen = {};
+    mk.forEach(function (name) {
+      var m = S.markets[name], av = S.templates.filter(function (t) { return !t.installed && t.marketplace === name && match(t); }); av.forEach(function (t) { seen[t.id] = 1; });
+      var count = Array.isArray(m.templates) ? m.templates.length : Number(m.templates) || av.length, when = ms(m.refreshedAt);
+      box.push(el('section', { class: 'card', 'aria-label': name }, el('div', { class: 'hd', style: 'display:flex;gap:2px 12px;flex-wrap:wrap;align-items:baseline' }, el('h3', { style: 'font-size:18px' }, name), el('span', { class: 'sub' }, words(count, 'template', 'templates') + (when ? ' · refreshed ' + ago(when) : ''))),
+        av.length ? el('div', null, av.map(function (t) { return tplRow(t); })) : el('p', { class: 'none' }, q ? 'Nothing here matches.' : 'Everything from this marketplace is installed.')));
+    });
+    var loose = S.templates.filter(function (t) { return !t.installed && !seen[t.id] && !(t.marketplace && S.markets[t.marketplace]) && match(t); });
+    if (loose.length) box.push(el('section', { class: 'card', 'aria-label': 'Other templates' }, el('h3', { style: 'font-size:18px' }, 'Other'), el('div', null, loose.map(function (t) { return tplRow(t); }))));
+    if (!mk.length && !S.templates.length) box.push(el('div', { class: 'empty' }, el('h2', null, 'No marketplaces yet'), el('p', { class: 'muted' }, 'Refresh to read the marketplaces ZeremAI knows about.')));
+    main.append(el('div', { style: 'display:grid;gap:16px' }, box));
+  }
+  /* ---- marketplaces: the git repositories that hold the templates ---- */
+  var MKNAME = /^[\w.-]+$/;
+  function openForm(k) {
+    var m = S.markets[k] || {};
+    S.mkForm = k; S.confirm = ''; delete S.errs['mk:form'];
+    S.draft['mk:name'] = k === '+' ? '' : k; S.draft['mk:url'] = str(m.url); S.draft['mk:branch'] = str(m.branch) || 'main'; S.draft['mk:priority'] = k === '+' ? '100' : String(m.priority == null ? 100 : m.priority);
+    S.focusKey = 'mk:name'; render();
+  }
+  function mkForm(orig) {
+    var add = !orig, fld = function (key, label, o) { return el('div', { class: 'fld' }, el('label', { for: key }, label), input(key, o)); };
+    var args = function () { return add ? { name: S.draft['mk:name'], url: S.draft['mk:url'], branch: S.draft['mk:branch'], priority: S.draft['mk:priority'] } : { name: orig, newName: S.draft['mk:name'], url: S.draft['mk:url'], branch: S.draft['mk:branch'], priority: S.draft['mk:priority'] }; };
+    var changed = !add && S.markets[orig] && ((S.draft['mk:url'] || '').trim() !== str(S.markets[orig].url) || (S.draft['mk:branch'] || 'main') !== (str(S.markets[orig].branch) || 'main'));
+    var key = (add ? 'add' : 'update') + '-marketplace:' + (add ? S.draft['mk:name'] : orig), err = S.errs['mk:form'];
+    return el('section', { class: 'card', 'aria-label': add ? 'Add marketplace' : 'Edit ' + orig, style: 'display:grid;gap:12px' },
+      el('h3', { style: 'font-size:18px' }, add ? 'Add marketplace' : 'Edit ' + orig),
+      fld('mk:name', 'Name', { required: true, live: false }), fld('mk:url', 'Git address', { required: true, placeholder: 'https://github.com/acme/templates.git' }),
+      el('div', { class: 'row' }, fld('mk:branch', 'Branch', {}), fld('mk:priority', 'Priority (lower is read first)', { type: 'number' })),
+      changed ? el('p', { class: 'sub', role: 'note' }, 'The address or branch changed. The saved copy is deleted. Refresh to clone it again. Installed templates stay.') : null,
+      err ? el('p', { class: 'err', role: 'alert' }, err) : null,
+      el('div', { class: 'row' },
+        actBtn(add ? 'Add and refresh' : 'Save changes', add ? 'add-marketplace' : 'update-marketplace', args, { scope: 'session', primary: true, errKey: 'mk:form', validate: function () {
+          var a = args(); if (!MKNAME.test((a.newName || a.name || '').trim())) return 'The name has letters, digits, dot, dash and underscore only.';
+          if (!(a.url || '').trim()) return 'Give a git address.'; if (a.priority && !/^\d+$/.test(a.priority)) return 'Priority is a whole number.'; return '';
+        } }),
+        el('button', { class: 'btn', type: 'button', onclick: function () { S.mkForm = ''; render(); } }, 'Cancel')),
+      statusKey(key));
+  }
+  function mkSwitch(name, on) {
+    var a = { name: name }, key = ck('toggle-marketplace', a), st = cmdState(key), why = cantAct(null, 'session'), off = st.busy || !!why;
+    return el('button', { type: 'button', class: 'btn small sw', role: 'switch', 'aria-checked': String(on), 'aria-label': (on ? 'Turn off ' : 'Turn on ') + name, 'aria-disabled': off ? 'true' : null, 'aria-busy': st.busy ? 'true' : null, 'data-key': 'b:' + key, title: why || null,
+      onclick: function () { if (!off) send('toggle-marketplace', a, { scope: 'session' }); } }, el('span', { class: 'trk', 'aria-hidden': 'true' }, el('span', { class: 'knob' })), on ? 'On' : 'Off');
+  }
+  function mkCard(name, m) {
+    var on = m.enabled !== false, a = { name: name }, rk = 'remove-marketplace:' + name, rem = S.confirm === rk, k = !on ? 'done' : m.cached ? 'running' : 'waiting', n = Array.isArray(m.templates) ? m.templates.length : Number(m.templates) || 0, when = ms(m.refreshedAt);
+    var S_ = { scope: 'session', small: true };
+    var acts = rem ? [el('span', { class: 'sub' }, 'Remove “' + name + '”? Installed templates stay.'), actBtn('Yes, remove', 'remove-marketplace', a, { scope: 'session', danger: true, small: true }),
+        el('button', { class: 'btn small', type: 'button', onclick: function () { S.confirm = ''; S.focusKey = 'x:' + rk; render(); } }, 'Keep it')]
+      : [mkSwitch(name, on), el('button', { class: 'btn small', type: 'button', 'aria-expanded': S.mkForm === name ? 'true' : 'false', onclick: function () { if (S.mkForm === name) { S.mkForm = ''; render(); } else openForm(name); } }, 'Edit'),
+        el('button', { class: 'btn small', type: 'button', 'data-key': 'x:' + rk, 'aria-disabled': cantAct(null, 'session') ? 'true' : null, onclick: function () { if (!cantAct(null, 'session')) { S.confirm = rk; render(); } } }, 'Remove')];
+    var sub = [str(m.url), str(m.branch), 'priority ' + (m.priority == null ? 100 : m.priority), !on ? '' : m.cached ? words(n, 'template', 'templates') + (when ? ' · refreshed ' + ago(when) : '') : 'not cloned yet. Refresh to clone it.'].filter(Boolean).join(' · ');
+    return el('div', { style: 'display:grid;gap:8px' }, el('div', { class: 'trw card', style: 'padding:14px 18px' }, el('div', { class: 'nm' }, el('b', null, name, ' ', el('span', { class: 'pill k-' + k }, !on ? 'Off' : m.cached ? 'Ready' : 'Not cloned')), el('span', { class: 'sub' }, sub)),
+        el('div', { class: 'ac' }, el('div', { class: 'row' }, acts)), el('div', { class: 'full' }, statusLine('toggle-marketplace', a), statusLine('remove-marketplace', a))),
+      S.mkForm === name ? mkForm(name) : null);
+  }
+  function mkView(main) {
+    if (S.bad.marketplaces) { main.append(el('div', { class: 'empty' }, el('h2', null, 'Marketplaces'), el('p', { class: 'muted' }, 'Marketplaces are not available to you.'))); return; }
+    var why = cantAct(null, 'session'), names = Object.keys(S.markets).sort(function (x, y) { return (Number(S.markets[x].priority) || 100) - (Number(S.markets[y].priority) || 100) || x.localeCompare(y); });
+    var box = [el('div', { class: 'row', style: 'justify-content:space-between' }, el('h2', null, 'Marketplaces'), el('div', { class: 'row' }, actBtn('Refresh marketplaces', 'refresh-marketplaces', {}, { scope: 'session' }), el('button', { class: 'btn pri', type: 'button', onclick: function () { openForm('+'); } }, 'Add marketplace'))),
+      el('p', { class: 'sub' }, 'Git repositories that hold your templates. Lower priority is read first. Removing one deletes its saved copy; templates you installed stay.'), statusLine('refresh-marketplaces', {}), whyLine(why)];
+    if (S.mkForm === '+') box.push(mkForm(null));
+    names.forEach(function (n) { box.push(mkCard(n, S.markets[n])); });
+    if (!names.length && S.mkForm !== '+') box.push(el('div', { class: 'empty' }, el('h2', null, 'No marketplaces yet'), el('p', { class: 'muted' }, 'Add a git repository that holds templates.')));
+    main.append(el('div', { style: 'display:grid;gap:16px' }, box));
+  }
+  function tplRow(t) {
+    var cat = t.category, id = cat + '/' + t.name, a = { marketplace: t.marketplace, category: cat, name: t.name }, ta = { category: cat, name: t.name };
+    var rk = 'remove-template:' + id, uk = 'update:' + id, ek = 'edit:' + id, rem = S.confirm === rk, upd = S.confirm === uk, open = S.editOpen === id, S_ = { scope: 'session', small: true };
+    var keep = function (k) { return el('button', { class: 'btn small', type: 'button', onclick: function () { S.confirm = ''; S.focusKey = 'x:' + k; render(); } }, 'Keep it'); };
+    var ask = function (k, label) { return el('button', { class: 'btn small', type: 'button', 'data-key': 'x:' + k, 'aria-disabled': cantAct(null, 'session') ? 'true' : null, onclick: function () { if (!cantAct(null, 'session')) { S.confirm = k; render(); } } }, label); };
+    var acts;
+    if (!t.installed) acts = [t.marketplace ? actBtn('Install', 'install-template', a, { scope: 'session', small: true, primary: true }) : el('span', { class: 'sub' }, 'No marketplace')];
+    else if (rem) acts = [el('span', { class: 'sub' }, 'Remove “' + t.name + '”?'), actBtn('Yes, remove', 'remove-template', ta, { scope: 'session', danger: true, small: true }), keep(rk)];
+    else if (upd) acts = [el('span', { class: 'sub' }, 'This erases your change.'), actBtn('Yes, update', 'install-template', a, { scope: 'session', danger: true, small: true }), keep(uk)];
+    else {
+      acts = [actBtn('View', 'view-template', ta, S_), el('button', { class: 'btn small', type: 'button', 'aria-expanded': open ? 'true' : 'false', onclick: function () { S.editOpen = open ? '' : id; render(); } }, 'Edit')];
+      if (t.state === 'update' && t.marketplace) acts.push(t.edited ? ask(uk, 'Update…') : actBtn('Update', 'install-template', a, S_));
+      if (t.edited && t.marketplace) acts.push(actBtn('Send as PR', 'send-template', a, S_));
+      acts.push(ask(rk, 'Remove'));
+    }
+    var sub = [cat, t.marketplace, t.installed ? 'installed' : 'not installed', t.edited ? 'edited by you' : '', t.installed && t.state === 'update' ? 'update ready ' + verStep(t) : (t.installed && t.version ? 'v' + t.version : ''), words(t.fields.length, 'field', 'fields')].filter(Boolean).join(' · ');
+    var box = open && t.installed ? el('div', { class: 'full fld' }, el('label', { for: ek }, 'What should change?'), input(ek, { area: true, placeholder: 'Add a step that runs the linter before the pull request' }),
+      el('div', { class: 'row' }, actBtn('Ask Claude', 'edit-template', function () { return { category: cat, name: t.name, request: S.draft[ek] || '' }; }, { scope: 'session', small: true, primary: true, errKey: ek, validate: function () { return (S.draft[ek] || '').trim() ? '' : 'Write a few words first.'; } }), el('span', { class: 'sub' }, 'Claude drafts it. You approve before it saves.')), statusLine('edit-template', ta)) : null;
+    return el('div', { class: 'trw' }, el('div', { class: 'nm' }, el('b', null, t.name), el('span', { class: 'sub' }, sub), t.description ? el('span', null, t.description) : null, t.installed && t.state === 'update' && t.changes.length ? el('div', { class: 'sub' }, el('b', null, 'What is new'), el('ul', { style: 'margin:2px 0 0;padding-left:18px' }, t.changes.map(function (c) { return el('li', null, el('b', null, 'v' + c.version + ' '), c.changes.join(' ')); }))) : null),
+      el('div', { class: 'ac' }, el('div', { class: 'row' }, acts)), box, el('div', { class: 'full' }, statusLine('install-template', a), statusLine('remove-template', ta), statusLine('view-template', ta), statusLine('send-template', a))); // a result stays when the row moves between the lists
+  }
+
+  /* ---- flavors: what the user prefers. Each step gets the ones that fit; a flavor a flow learned waits in the inbox for a yes ---- */
+  var FLK = { add: 'New', update: 'Change', remove: 'Forget' }, FLMAX = 160, flHold = null, flGone = {}, flMq = window.matchMedia ? window.matchMedia('(max-width: 640px)') : null;
+  if (flMq && flMq.addEventListener) flMq.addEventListener('change', function () { render(); });
+  function flNarrow() { return !!(flMq && flMq.matches); }
+  function flPending() { return Object.keys(S.flavors).filter(function (k) { return S.flavors[k].status === 'pending'; }); }
+  function flActive() { // the active flavors that are on the screen: a flavor held for Undo or being deleted is not
+    Object.keys(flGone).forEach(function (k) { if (!S.flavors[k]) delete flGone[k]; });
+    return Object.keys(S.flavors).filter(function (k) {
+      var g = flGone[k] && cmdState(ck('remove-flavor', { id: k })).phase !== 'error';
+      return S.flavors[k].status !== 'pending' && !g && !(flHold && flHold.id === k);
+    });
+  }
+  function flNewest(x, y) { return str(S.flavors[y].updatedAt).localeCompare(str(S.flavors[x].updatedAt)); }
+  function flTopics(ids) { var n = {}; ids.forEach(function (k) { var t = str(S.flavors[k].topic); n[t] = (n[t] || 0) + 1; }); return Object.keys(n).sort(function (a, b) { return n[b] - n[a] || a.localeCompare(b); }).map(function (t) { return [t, n[t]]; }); }
+  function flBtn(text, cls, fn, extra) { var a = { type: 'button', class: 'flb' + (cls ? ' ' + cls : ''), onclick: fn }; Object.keys(extra || {}).forEach(function (k) { a[k] = extra[k]; }); return el('button', a, text); }
+  function flOwn(f) { return f.source === 'learned' ? 'Learned from “' + (f.fromFlow || 'a flow') + '”' : 'You wrote it'; }
+  function flAgo(f) { // the words of the design: 30 min ago, 2 hours ago, 5 days ago, 2 weeks ago, 1 month ago
+    var t = ms(f.updatedAt); if (!t) return ''; var m = Math.max(0, Math.round((Date.now() - t) / 60000)), u = function (n, w) { return n + ' ' + w + (n === 1 ? '' : 's') + ' ago'; };
+    return m < 1 ? 'just now' : m < 60 ? m + ' min ago' : m < 1440 ? u(Math.round(m / 60), 'hour') : m < 10080 ? u(Math.round(m / 1440), 'day') : m < 43200 ? u(Math.round(m / 10080), 'week') : u(Math.round(m / 43200), 'month');
+  }
+  // delete: no question. The row leaves the screen, the command goes after 6 seconds, and Undo cancels it.
+  function flSendDelete() { if (!flHold) return; var h = flHold; flHold = null; clearTimeout(h.t); flGone[h.id] = 1; send('remove-flavor', { id: h.id }, { scope: 'session' }); }
+  function flDelete(id) { if (!S.flavors[id]) return; var why = cantAct(null, 'session'); if (why) return say(why); flSendDelete(); flHold = { id: id, text: str(S.flavors[id].text), t: setTimeout(function () { flSendDelete(); render(); }, 6000) }; S.confirm = ''; S.focusKey = 'fl:undo'; render(); }
+  function flUndo() { if (!flHold) return; clearTimeout(flHold.t); S.focusKey = 'fe:' + flHold.id; flHold = null; render(); }
+  function flOpen() { S.flForm = '+'; S.flEdit = ''; delete S.errs['fl:form']; S.draft['fl:topic'] = ''; S.draft['fl:text'] = ''; S.focusKey = 'fl:topic'; render(); }
+  function flEdit(id) { S.flEdit = id; S.flForm = ''; delete S.errs['fl:e']; S.draft['fl:e'] = str(S.flavors[id].text); S.focusKey = 'fl:e'; render(); }
+  function flCheck(a) { return !(a.topic || '').trim() ? 'Give a topic.' : (a.topic || '').trim().length > 40 ? 'The topic is 40 characters at most.' : !(a.text || '').trim() ? 'Write what you prefer.' : (a.text || '').length > FLMAX ? 'One clear sentence: ' + FLMAX + ' characters at most.' : ''; }
+  function flForm() {
+    var topic = S.draft['fl:topic'] || '', text = S.draft['fl:text'] || '', err = S.errs['fl:form'], args = function () { return { topic: S.draft['fl:topic'] || '', text: S.draft['fl:text'] || '' }; };
+    var o = { scope: 'session', cls: 'flb pri big', errKey: 'fl:form', validate: function () { return flCheck(args()); }, then: function () { if (S.sent[ck('save-flavor', args())]) { S.flForm = ''; render(); } } };
+    var topics = flTopics(Object.keys(S.flavors).filter(function (k) { return S.flavors[k].status !== 'pending'; })).slice(0, 6);
+    var prev = '## Flavors\nPersonal preferences of the user that fit this step. Follow them unless the step definition says otherwise.\n- ' + (topic.trim() || 'Topic') + ': ' + (text.trim() || '…');
+    return el('section', { class: 'fl-form', 'aria-labelledby': 'fl-add' },
+      el('div', { class: 'l' }, el('h3', { id: 'fl-add' }, 'Add flavor'),
+        el('div', { class: 'fl-fld' }, el('label', { for: 'fl:topic' }, 'Topic'),
+          el('input', { class: 'fl-in', id: 'fl:topic', 'data-key': 'fl:topic', type: 'text', value: topic, autocomplete: 'off', maxlength: '40', oninput: function (e) { S.draft['fl:topic'] = e.target.value; delete S.errs['fl:form']; render(); } }),
+          topics.length ? el('div', { class: 'fl-tchips' }, el('span', null, 'Your topics'), topics.map(function (t) { return el('button', { type: 'button', class: 'fl-tchip', 'aria-pressed': String(topic.trim() === t[0]), onclick: function () { S.draft['fl:topic'] = t[0]; S.focusKey = 'fl:text'; render(); } }, t[0]); })) : null),
+        el('div', { class: 'fl-fld' }, el('label', { for: 'fl:text' }, 'What you prefer'),
+          el('textarea', { class: 'fl-in', id: 'fl:text', 'data-key': 'fl:text', rows: '3', maxlength: String(FLMAX), value: text, 'aria-describedby': 'fl-hint', oninput: function (e) { S.draft['fl:text'] = e.target.value; delete S.errs['fl:form']; render(); },
+            onkeydown: function (e) { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); if (flCheck(args())) { S.errs['fl:form'] = flCheck(args()); render(); } else { send('save-flavor', args(), o); o.then(); } } } }),
+          el('div', { class: 'fl-hint', id: 'fl-hint' }, el('span', null, 'One clear sentence. Say it the way you would tell a colleague.'), el('span', null, text.length + ' / ' + FLMAX))),
+        err ? el('p', { class: 'err', role: 'alert' }, err) : null,
+        el('div', { class: 'fl-save' }, actBtn('Save flavor', 'save-flavor', args, o), flBtn('Cancel', 'big', function () { S.flForm = ''; render(); }), el('span', null, 'Ctrl or ⌘ + Enter saves')),
+        statusLine('save-flavor', args())),
+      el('div', { class: 'r' }, el('b', null, 'What a step sees'), el('pre', { class: 'fl-pre' }, prev),
+        el('span', { class: 'cap' }, 'Haiku adds this to a step only when the flavor fits it, for example “Write the tests”. A preference that is really a how-to belongs in a skill.')));
+  }
+  function flProp(id, f) {
+    var a = { id: id }, kind = f.change || 'add', narrow = flNarrow(), strike = function (t) { return el('s', { class: 'fl-text fl-strike' }, t); };
+    var line = el('div', { class: 'fl-line' }, el('span', { class: 'fl-topic' }, str(f.topic)),
+      kind === 'update' && f.targetText ? [strike(f.targetText), el('span', { 'aria-hidden': 'true' }, '→'), el('span', { class: 'fl-text' }, str(f.text))] : kind === 'remove' ? strike(str(f.text)) : el('span', { class: 'fl-text' }, str(f.text)));
+    var meta = ['From “' + (f.fromFlow || 'a flow') + '”', flAgo(f), f.evidence ? 'you said “' + f.evidence + '”' : ''].filter(Boolean).join(' · ');
+    var phone = el('div', { class: 'fl-body' }, el('span', { class: 'fl-kind k-' + kind }, FLK[kind] + ' · ' + str(f.topic)),
+      kind === 'update' && f.targetText ? [strike(f.targetText), el('span', { class: 'fl-text' }, str(f.text))] : kind === 'remove' ? strike(str(f.text)) : el('span', { class: 'fl-text' }, str(f.text)), el('span', { class: 'fl-meta' }, 'From “' + (f.fromFlow || 'a flow') + '” · ' + flAgo(f)));
+    return el('div', { class: 'fl-prop', 'data-key': 'fp:' + id },
+      narrow ? phone : [el('span', { class: 'fl-kind k-' + kind }, FLK[kind]), el('div', { class: 'fl-body' }, line, el('span', { class: 'fl-meta' }, meta), statusLine('accept-flavor', a), statusLine('remove-flavor', a))],
+      el('div', { class: 'fl-acts' }, actBtn('Accept', 'accept-flavor', a, { scope: 'session', cls: 'flb pri', label: 'Accept: ' + str(f.text) }), actBtn('Reject', 'remove-flavor', a, { scope: 'session', cls: 'flb', label: 'Reject: ' + str(f.text) })),
+      narrow ? [statusLine('accept-flavor', a), statusLine('remove-flavor', a)] : null);
+  }
+  function flInbox() {
+    var KO = { add: 0, update: 1, remove: 2 }, ids = flPending().sort(function (x, y) { return KO[S.flavors[x].change || 'add'] - KO[S.flavors[y].change || 'add'] || str(S.flavors[y].updatedAt).localeCompare(str(S.flavors[x].updatedAt)); }), n = ids.length, narrow = flNarrow(), shown = narrow && !S.flAll ? ids.slice(0, 1) : ids;
+    return el('section', { class: 'fl-inbox', 'aria-labelledby': 'fl-inbox' },
+      el('div', { class: 'fl-inbox-hd' }, el('div', null, el('h3', { id: 'fl-inbox' }, 'Waiting for you · ' + n), el('span', null, narrow ? 'Steps ignore these until you accept them.' : 'Learned from your flows. Steps ignore these until you accept them.')),
+        n > 1 ? actBtn('Accept all ' + n, 'accept-all-flavors', {}, { scope: 'session', cls: 'flb pri' }) : null),
+      shown.map(function (id) { return flProp(id, S.flavors[id]); }),
+      narrow && n > shown.length ? el('button', { type: 'button', class: 'fl-more', 'aria-expanded': 'false', onclick: function () { S.flAll = true; render(); } }, 'Show the other ' + (n - shown.length) + ' ▾') : null,
+      narrow && S.flAll && n > 1 ? el('button', { type: 'button', class: 'fl-more', 'aria-expanded': 'true', onclick: function () { S.flAll = false; render(); } }, 'Show less ▴') : null,
+      statusLine('accept-all-flavors', {}));
+  }
+  function flRow(id, f) {
+    var key = ck('save-flavor', { id: id }), st = cmdState(key), saved = st.phase === 'done';
+    if (saved && !S.flSeen[id] && !PREVIEW) S.flSeen[id] = setTimeout(function () { if (st.row) S.dismiss[st.row.id] = 1; delete S.sent[key]; delete S.flSeen[id]; render(); }, 4000);
+    if (S.flEdit === id) {
+      var a = function () { return { id: id, topic: str(f.topic), text: S.draft['fl:e'] || '' }; }, o = { scope: 'session', cls: 'flb pri', errKey: 'fl:e', validate: function () { return (a().text.trim() ? '' : 'Write what you prefer.') || (a().text.length > FLMAX ? 'One clear sentence: ' + FLMAX + ' characters at most.' : ''); }, then: function () { if (S.sent[ck('save-flavor', { id: id })]) { S.flEdit = ''; S.focusKey = 'fe:' + id; render(); } } };
+      return el('div', { class: 'fl-row edit' }, el('div', { class: 'fl-body', style: 'gap:8px' }, el('label', { class: 'fl-lab', for: 'fl:e' }, 'Editing · ' + str(f.topic)),
+          el('input', { class: 'fl-in edit', id: 'fl:e', 'data-key': 'fl:e', type: 'text', value: S.draft['fl:e'] || '', maxlength: String(FLMAX), autocomplete: 'off', oninput: function (e) { S.draft['fl:e'] = e.target.value; delete S.errs['fl:e']; },
+            onkeydown: function (e) { if (e.key === 'Escape') { S.flEdit = ''; S.focusKey = 'fe:' + id; render(); } else if (e.key === 'Enter') { e.preventDefault(); if (o.validate()) { S.errs['fl:e'] = o.validate(); render(); } else { send('save-flavor', a(), o); o.then(); } } } }),
+          S.errs['fl:e'] ? el('p', { class: 'err', role: 'alert' }, S.errs['fl:e']) : null),
+        el('div', { class: 'fl-acts', style: 'padding-top:28px' }, actBtn('Save', 'save-flavor', a, o), flBtn('Cancel', '', function () { S.flEdit = ''; S.focusKey = 'fe:' + id; render(); })));
+    }
+    return el('div', { class: 'fl-row' + (saved ? ' saved' : ''), 'data-key': 'fr:' + id },
+      el('div', { class: 'fl-body' }, el('span', { class: 'fl-text' }, str(f.text)), saved ? el('span', { class: 'fl-meta ok' }, '✓ Saved just now') : el('span', { class: 'fl-meta' }, [flOwn(f), flAgo(f)].filter(Boolean).join(' · ')), statusLine('remove-flavor', { id: id })),
+      el('div', { class: 'fl-acts' }, flBtn('Edit', '', function () { flEdit(id); }, { 'data-key': 'fe:' + id, 'aria-label': 'Edit: ' + str(f.text) }), flBtn('Delete', 'del', function () { flDelete(id); }, { 'aria-label': 'Delete: ' + str(f.text) })));
+  }
+  function flEmpty() {
+    var add = function (t, x) { return el('div', { class: 'ex' }, el('div', null, el('small', null, t), el('span', null, x)), actBtn('Add', 'save-flavor', { topic: t, text: x }, { scope: 'session', cls: 'flb' })); };
+    return el('section', { class: 'fl-empty', 'aria-labelledby': 'fl-first' },
+      el('div', null, el('h3', { id: 'fl-first' }, 'Tell ZeremAI what you like, once'),
+        el('p', null, 'A flavor is one preference, like “Tests use Jest, not Vitest”. Every step that fits it gets it, in every flow. Say it once, and you stop repeating it.'),
+        el('div', { class: 'fl-save' }, flBtn('+ Add your first flavor', 'pri big', flOpen), el('span', null, 'or pick one below')),
+        el('p', { class: 's' }, 'Not sure it is a flavor? If it says what you like, it is. If it says how to do a task, it is a skill.')),
+      el('div', { style: 'gap:10px' }, el('span', { class: 'eh' }, 'Start from an example'), add('Tests', 'Use Jest, not Vitest.'), add('Git', 'Keep commit titles under 60 characters.'), add('Writing', 'Plain words. No jargon in summaries.')));
+  }
+  function flavorsView(main) {
+    if (S.bad.flavors) { main.append(el('div', { class: 'empty' }, el('h2', null, 'Flavors'), el('p', { class: 'muted' }, 'Flavors are not available to you.'))); return; }
+    var why = cantAct(null, 'session'), ids = flActive(), pend = flPending(), held = flHold ? 1 : 0, q = (S.draft['fl:q'] || '').trim().toLowerCase();
+    var topics = flTopics(ids), shown = ids.filter(function (k) { var f = S.flavors[k]; return (!S.flTopic || str(f.topic) === S.flTopic) && (!q || (str(f.topic) + ' ' + str(f.text)).toLowerCase().indexOf(q) >= 0); });
+    if (S.flTopic && !topics.some(function (t) { return t[0] === S.flTopic; })) S.flTopic = '';
+    var groups = flTopics(shown).map(function (t) { return [t[0], shown.filter(function (k) { return str(S.flavors[k].topic) === t[0]; }).sort(flNewest)]; });
+    var box = [el('div', { class: 'fl-title' }, el('div', null, el('h2', null, 'Flavors'), el('p', null, 'What you like and dislike. Each step of a flow gets the flavors that fit it.')), S.flForm === '+' || (!ids.length && !held && !pend.length) ? null : flBtn('+ Add flavor', 'pri big', flOpen))];
+    if (why) box.push(whyLine(why));
+    if (S.flForm === '+') box.push(flForm());
+    if (pend.length) box.push(flInbox());
+    if (!ids.length && !held && !pend.length && S.flForm !== '+') { box.push(flEmpty()); box.push(el('p', { class: 'fl-note-s' }, 'Flows also learn flavors for you. When a flow ends, what it noticed waits here for your OK.')); }
+    else if (ids.length || held) {
+      var chip = function (label, topic) { return el('button', { type: 'button', class: 'fl-chip', 'aria-pressed': String(S.flTopic === topic), onclick: function () { S.flTopic = topic; render(); } }, label); };
+      box.push(el('section', { class: 'fl-list', 'aria-labelledby': 'fl-mine' },
+        el('div', { class: 'fl-bar' }, el('h3', { id: 'fl-mine' }, 'Your flavors · ' + (ids.length + held)),
+          el('div', { class: 'fl-chips' }, [chip('All ' + ids.length, '')].concat(topics.map(function (t) { return chip(t[0] + ' ' + t[1], t[0]); }))),
+          el('div', null, el('label', { for: 'fl:q', style: 'position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)' }, 'Search flavors'),
+            el('input', { class: 'fl-q', id: 'fl:q', 'data-key': 'fl:q', type: 'search', placeholder: 'Search flavors', value: S.draft['fl:q'] || '', autocomplete: 'off', oninput: function (e) { S.draft['fl:q'] = e.target.value; render(); } }))),
+        shown.length ? el('div', { class: 'fl-box' }, groups.map(function (g) { return [el('div', { class: 'fl-grp' }, g[0] + ' · ' + g[1].length), g[1].map(function (k) { return flRow(k, S.flavors[k]); })]; }))
+          : el('div', { class: 'fl-box' }, el('div', { class: 'fl-row' }, el('span', { class: 'fl-meta' }, 'No flavor matches. Clear the search or pick All.'))),
+        el('p', { class: 'fl-note' }, 'A flavor says what you like. A how-to is a skill, not a flavor.')));
+    }
+    main.append(el('div', { class: 'fl' }, box));
+    if (flHold) main.append(el('div', { class: 'fl-toast', role: 'status' }, el('span', null, 'Deleted “' + (flHold.text.length > 60 ? flHold.text.slice(0, 59) + '…' : flHold.text) + '”'), el('button', { type: 'button', class: 'fl-undo', 'data-key': 'fl:undo', onclick: flUndo }, 'Undo')));
+    main.append(el('div', { class: 'fl-addbar' }, flBtn('+ Add flavor', 'pri', flOpen)));
+  }
+
+  /* ---- preview: an in-page database with a pretend mod, only with #preview and no real database ---- */
+  function fakeDb() {
+    var now = Date.now(), iso = function (m) { return new Date(now - m * 60000).toISOString(); }, data = { flows: {}, details: {}, sessions: {}, templates: {}, marketplaces: {}, flavors: {}, commands: {}, meta: {} }, subs = [];
+    var names = ['Read the PBI', 'Plan the design', 'Approve the design', 'Write the tests', 'Write the code', 'Run the tests', 'Open the pull request', 'Review comments', 'Merge', 'Deploy to dev', 'Approve production', 'Close the PBI'];
+    data.flows.codefactory = { name: 'CodeFactory E2E', template: 'dev/codefactory-e2e', status: 'waiting', activeStepId: 's3', updatedAt: iso(2), counts: { topics: 2, files: 2 }, needsYou: { stepId: 's3', stepNumber: 3, stepName: 'Approve the design', waitsFor: 'The design file is ready. It changes 4 files.', since: iso(12), routes: [{ label: 'Back to Plan the design', to: 'Plan the design' }, { label: 'Back to Read the PBI', to: 'Read the PBI' }] },
+      steps: names.map(function (n, i) { return { id: 's' + (i + 1), number: i + 1, name: n, phase: i < 3 ? 'Design' : i < 7 ? 'Build' : i < 9 ? 'Review' : 'Release', status: i < 2 ? 'done' : i === 2 ? 'waiting' : 'pending', approval: i === 2 || i === 10, summary: ['Read the work item and its parent feature.', 'Write the design and the test plan.', 'The design file is ready. It changes 4 files.'][i] || '', loopBackTo: i === 5 ? '5' : '', childFlowIds: i === 7 ? ['refund', 'docs', 'ledger'] : [] }; }) };
+    data.flows.refund = { name: 'Refund tool', template: 'dev/tool-build', status: 'running', activeStepId: 'r2', updatedAt: iso(0.4), activity: { text: 'Edit refund-service.ts', at: iso(0.2) }, parentFlowId: 'codefactory', counts: { topics: 0, files: 1 }, steps: [{ id: 'r1', number: 1, name: 'Scaffold', status: 'done' }, { id: 'r2', number: 2, name: 'Write the handler', status: 'running', summary: 'Adds the refund route and its test.' }, { id: 'r3', number: 3, name: 'Run the tests', status: 'pending' }] };
+    data.flows.docs = { name: 'Docs sync', template: 'ops/docs', status: 'paused', activeStepId: 'd2', updatedAt: iso(48), counts: {}, steps: [{ id: 'd1', number: 1, name: 'Collect changes', status: 'done' }, { id: 'd2', number: 2, name: 'Publish', status: 'paused', summary: 'Stopped: the docs site did not answer.' }] };
+    data.flows.ledger = { name: 'Ledger migration', template: 'ops/migrate', status: 'blocked', activeStepId: 'l2', updatedAt: iso(4), counts: {}, needsYou: { stepId: 'l2', stepNumber: 2, stepName: 'Run the tests', waitsFor: 'The Azure DevOps login expired. A retry cannot help.', blocked: true, command: 'az login', since: iso(4) }, steps: [{ id: 'l1', number: 1, name: 'Dry run', status: 'done' }, { id: 'l2', number: 2, name: 'Run the tests', status: 'blocked' }, { id: 'l3', number: 3, name: 'Apply', status: 'pending' }] };
+    data.flows.stalled = { name: 'Payoflows E2E', template: 'dev/e2e', status: 'running', activeStepId: 'p2', updatedAt: iso(16), folders: ['/work/payoflow'], counts: {}, steps: [{ id: 'p1', number: 1, name: 'Plan', status: 'done' }, { id: 'p2', number: 2, name: 'Build', status: 'running' }] }; // a running flow that no session lists: Continue shows
+    data.flows.notes = { name: 'Release notes', template: 'ops/notes', status: 'done', activeStepId: '', updatedAt: iso(180), counts: {}, steps: [{ id: 'n1', number: 1, name: 'Collect', status: 'done' }, { id: 'n2', number: 2, name: 'Write', status: 'done' }] };
+    data.details['codefactory~logs'] = { rows: [{ id: 's1', number: 1, name: 'Read the PBI', kind: 'done', started: iso(40), completed: iso(35), actions: ['Read PBI 4821', 'Read the parent feature'], reasoning: ['The acceptance criteria name four screens.'], problems: [] }, { id: 's2', number: 2, name: 'Plan the design', kind: 'done', started: iso(34), completed: iso(14), actions: ['Wrote the design file'], reasoning: [], problems: ['One test needs data that does not exist yet.'] }] };
+    data.details['codefactory~memory'] = { topics: [{ topic: 'design', entries: [{ step: '2', stepName: 'Plan the design', values: [['screens', '4'], ['flag', 'large_order_approval']], decisions: ['Limit is $10,000'], files: ['docs/design.md'], notes: [], updated: iso(14) }], writtenBy: ['2'], readBy: ['3', '5'] }], diffs: [{ topic: 'design', from: '1', to: '2', lines: ['+ screens: 4', '~ flag: none → large_order_approval', '- draft'] }] };
+    data.details['codefactory~files'] = { rows: [{ path: '/x/docs/design.md', name: 'docs/design.md', output: true, step: '2', openable: true }, { path: '/x/flow.json', name: 'flow.json', output: false, openable: true }] };
+    var live = HASH !== 'previewclosed' && HASH !== 'previewnone';
+    if (HASH === 'previewbusy') { var bid = 'busy0001'; data.commands[bid] = { id: bid, session: 'demo', at: new Date(now - 2000).toISOString(), action: 'approve', args: { flowId: 'codefactory', stepId: 's3' }, status: 'new' }; } // the demo of the stage line: a click that ZeremAI has not taken yet
+    data.sessions.demo = { name: 'code-factory', folder: '/work/code-factory', beat: live ? iso(0.2) : iso(9), flows: ['codefactory', 'refund', 'ledger'] };
+    data.sessions.old = { folder: '/work/old-docs', beat: iso(40), flows: ['docs'] };
+    data.meta.mod = { beat: live ? iso(0.1) : iso(9) };
+    var fields = function (a) { return a.map(function (f) { return { name: f[0], required: f[1], type: f[2] || 'text', description: f[3] || '', example: f[4] || '' }; }); };
+    data.templates['dev~bug-fix'] = { name: 'bug-fix', category: 'dev', description: 'Find the cause of a bug, fix it, and open a pull request.', installed: true, marketplace: 'code-factory', fields: fields([['workItemId', true, 'number', 'The Azure DevOps work item.', '7421'], ['summary', true, 'text', 'What goes wrong, in one or two sentences.', 'Refund fails when the amount is 0'], ['branch', false, 'text', '', 'fix/refund-zero']]) };
+    data.templates['dev~codefactory-e2e'] = { name: 'codefactory-e2e', category: 'dev', description: 'One PBI from first read to production release.', installed: true, edited: true, state: 'update', marketplace: 'code-factory', fields: fields([['pbi', true, 'number', '', '4821']]) };
+    data.templates['ops~docs-sync'] = { name: 'docs-sync', category: 'ops', description: 'Keep the docs site in step with the code.', installed: true, marketplace: 'team-ops', fields: [] };
+    data.templates['dev~perf-audit'] = { name: 'perf-audit', category: 'dev', description: 'Measure, find the slowest path, report.', installed: false, marketplace: 'code-factory', fields: fields([['service', true, 'text', '', 'orders-api']]) };
+    data.templates['ops~flaky-template'] = { name: 'flaky-template', category: 'ops', description: 'A template whose install fails, to show an error.', installed: false, marketplace: 'team-ops', fields: [] };
+    data.marketplaces['code-factory'] = { name: 'code-factory', url: 'https://github.com/acme/code-factory-templates.git', branch: 'main', priority: 50, enabled: true, cached: true, templates: 3, refreshedAt: iso(30) }; data.marketplaces['official'] = { name: 'official', url: 'https://github.com/HMTools/ZeremAI-marketplace.git', branch: 'main', priority: 100, enabled: false, cached: false, templates: 0 }; data.marketplaces['team-ops'] = { name: 'team-ops', url: 'https://dev.azure.com/acme/ops/_git/templates', branch: 'main', priority: 100, enabled: true, cached: true, templates: 2, refreshedAt: iso(300) };
+    var fl = function (id, topic, text, minutes, from, extra) { data.flavors[id] = Object.assign({ topic: topic, text: text, status: 'active', source: from ? 'learned' : 'user', updatedAt: iso(minutes) }, from ? { fromFlow: from } : {}, extra || {}); };
+    if (HASH !== 'previewflavorsempty') {
+      fl('f1', 'Tests', 'Use Jest, not Vitest.', 2880); fl('f4', 'Tests', 'Name test files after the module they cover.', 7200, 'CodeFactory E2E'); fl('f5', 'Tests', 'Mock the network, never the database.', 20160);
+      fl('f6', 'Git', 'One commit for each logical change.', 30240); fl('f7', 'Git', 'Branch names start with the work item id.', 43200, 'Refund tool'); fl('f8', 'Writing', 'Plain words. No jargon in summaries.', 43800);
+      if (HASH !== 'previewflavorsedit') {
+        fl('f2', 'Git', 'Keep commit titles under 60 characters.', 30, 'Refund tool', { status: 'pending', change: 'add' });
+        fl('f3', 'Tests', 'Vitest is fine for new packages.', 20, 'Refund tool', { status: 'pending', change: 'update', targetId: 'f1', targetText: 'Use Jest, not Vitest.', evidence: 'vitest is fine here' });
+        fl('f9', 'Writing', 'Keep step names to two words.', 120, 'Docs sync', { status: 'pending', change: 'remove', targetId: 'f8', evidence: 'forget the short names rule' });
+      }
+    }
+    if (HASH === 'previewflavorsedit') { // the states of the design canvas: the form open, one row saved, one in edit, one delete held for Undo
+      S.flForm = '+'; S.draft['fl:topic'] = 'Tests'; S.draft['fl:text'] = 'Use Jest, not Vitest.'; S.flEdit = 'f5'; S.draft['fl:e'] = 'Mock the network, never the database.';
+      flHold = { id: 'f8', text: 'Plain words. No jargon in summaries.', t: 0 };
+      data.commands.c0 = { id: 'c0', session: 'demo', at: new Date().toISOString(), action: 'save-flavor', args: { id: 'f1', topic: 'Tests', text: 'Use Jest, not Vitest.' }, status: 'done', result: 'Saved.', doneAt: new Date().toISOString() };
+    }
+    function acceptFlavor(fid) { var pf = data.flavors[fid]; if (!pf) return; if (pf.change === 'add') { pf.status = 'active'; delete pf.change; delete pf.evidence; return; } if (pf.change === 'update' && data.flavors[pf.targetId]) { data.flavors[pf.targetId].text = pf.text; data.flavors[pf.targetId].topic = pf.topic; } if (pf.change === 'remove') delete data.flavors[pf.targetId]; delete data.flavors[fid]; }
+    function notify(c) { subs.forEach(function (s) { if (s.c === c) s.fn(); }); }
+    function docSnap(c, id) { return { id: id, exists: !!data[c][id], data: function () { return data[c][id]; } }; }
+    function query(c, q) {
+      return { orderBy: function (f, d) { return query(c, { order: [f, d], lim: q.lim }); }, limit: function (n) { return query(c, { order: q.order, lim: n }); }, doc: function (id) { return ref(c, id); },
+        onSnapshot: function (ok) { var s = { c: c, fn: function () { var ids = Object.keys(data[c]); if (q.order) ids.sort(function (a, b) { return String(data[c][b][q.order[0]]).localeCompare(String(data[c][a][q.order[0]])); }); if (q.lim) ids = ids.slice(0, q.lim); ok({ docs: ids.map(function (i) { return docSnap(c, i); }), size: ids.length, empty: !ids.length }); } }; subs.push(s); setTimeout(s.fn, 0); return function () { subs.splice(subs.indexOf(s), 1); }; } };
+    }
+    function ref(c, id) {
+      return { set: function (v) { data[c][id] = JSON.parse(JSON.stringify(v)); notify(c); return Promise.resolve({}); }, onSnapshot: function (ok) { var s = { c: c, fn: function () { ok(docSnap(c, id)); } }; subs.push(s); setTimeout(s.fn, 0); return function () {}; } };
+    }
+    /* the pretend mod: new -> running after 0.7 s -> done or error after 1 s more */
+    setInterval(function () {
+      Object.keys(data.commands).forEach(function (id) {
+        var c = data.commands[id], a = c.args || {};
+        if (c.status === 'new' && HASH !== 'previewbusy' && Date.now() - Date.parse(c.at) > 700) { c.status = 'running'; c.since = Date.now(); notify('commands'); }
+        else if (c.status === 'running' && Date.now() - c.since > 1000) {
+          var bad = a.name === 'flaky-template' || a.reason === 'fail', fl = data.flows[a.flowId];
+          c.status = bad ? 'error' : 'done';
+          if (bad) c.result = a.name === 'flaky-template' ? 'Could not reach the marketplace team-ops.' : 'The agent refused the change.';
+          else if (c.action === 'approve') { c.result = 'Approved. The flow goes on.'; if (fl) { fl.status = 'running'; fl.needsYou = null; fl.updatedAt = new Date().toISOString(); fl.steps.forEach(function (s) { if (s.id === a.stepId) s.status = 'done'; }); notify('flows'); } }
+          else if (c.action === 'route') { c.result = 'Sent back. The agent starts that step again.'; if (fl) { fl.needsYou = null; fl.status = 'running'; fl.updatedAt = new Date().toISOString(); notify('flows'); } }
+          else if (c.action === 'request-changes') { c.result = 'Sent to the agent. It will redo the step.'; if (fl) { fl.needsYou = null; fl.status = 'running'; fl.updatedAt = new Date().toISOString(); notify('flows'); } }
+          else if (c.action === 'continue') { c.result = 'The agent continues.'; if (fl) { fl.status = 'running'; fl.updatedAt = new Date().toISOString(); fl.steps.forEach(function (s) { if (s.status === 'paused') s.status = 'running'; }); notify('flows'); } }
+          else if (c.action === 'delete') { c.result = 'Deleted. The flow folder is gone.'; delete data.flows[a.flowId]; notify('flows'); }
+          else if (c.action === 'close') { c.result = 'Flow closed.'; delete data.flows[a.flowId]; notify('flows'); }
+          else if (c.action === 'fill-fields') c.result = JSON.stringify({ summary: 'Refund fails when the amount is 0', workItemId: '7421' });
+          else if (c.action === 'install-template') { c.result = 'Installed ' + a.name + '.'; var t = data.templates[a.category + '~' + a.name]; if (t) { t.installed = true; notify('templates'); } }
+          else if (/^(view|edit|send)-template$/.test(c.action)) c.result = 'Sent. Claude carries on in the session.';
+          else if (c.action === 'remove-template') { c.result = 'Removed ' + a.name + '.'; var r = data.templates[a.category + '~' + a.name]; if (r) { r.installed = false; notify('templates'); } }
+          else if (c.action === 'save-flavor') { var fid = a.id || 'f' + id.slice(0, 4); data.flavors[fid] = Object.assign(data.flavors[fid] || { source: 'user' }, { topic: a.topic, text: a.text, status: 'active', updatedAt: new Date().toISOString() }); c.result = 'Saved.'; notify('flavors'); }
+          else if (c.action === 'accept-flavor') { acceptFlavor(a.id); c.result = 'Accepted. Steps use it now.'; notify('flavors'); }
+          else if (c.action === 'accept-all-flavors') { var nacc = 0; Object.keys(data.flavors).forEach(function (k) { if (data.flavors[k] && data.flavors[k].status === 'pending') { acceptFlavor(k); nacc++; } }); c.result = 'Accepted ' + nacc + '. Steps use them now.'; notify('flavors'); }
+          else if (c.action === 'remove-flavor') { delete data.flavors[a.id]; c.result = 'Removed.'; notify('flavors'); }
+          else if (c.action === 'set-theme') { c.result = 'Saved.'; data.meta.ui = { theme: a.mode }; notify('meta'); }
+          else if (/^(add|update)-marketplace$/.test(c.action)) { var nn = a.newName || a.name; if (a.newName) delete data.marketplaces[a.name]; data.marketplaces[nn] = { name: nn, url: a.url, branch: a.branch || 'main', priority: Number(a.priority || 100), enabled: true, cached: c.action === 'add-marketplace', templates: 0 }; c.result = 'Saved.'; notify('marketplaces'); }
+          else if (c.action === 'toggle-marketplace') { var tm = data.marketplaces[a.name]; if (tm) { tm.enabled = tm.enabled === false; notify('marketplaces'); } c.result = 'Done.'; }
+          else if (c.action === 'remove-marketplace') { delete data.marketplaces[a.name]; c.result = 'Removed. Installed templates stay.'; notify('marketplaces'); }
+          else if (c.action === 'refresh-marketplaces') { c.result = 'Refreshed 2 marketplaces.'; Object.keys(data.marketplaces).forEach(function (k) { data.marketplaces[k].refreshedAt = new Date().toISOString(); }); notify('marketplaces'); }
+          else if (c.action === 'new-flow') { c.result = 'Started a flow from ' + a.template + '.'; data.flows['new' + id.slice(0, 4)] = { name: a.name || a.template.split('/').pop(), template: a.template, status: 'running', activeStepId: 'n1', updatedAt: new Date().toISOString(), counts: {}, steps: [{ id: 'n1', number: 1, name: 'Read the request', status: 'running' }, { id: 'n2', number: 2, name: 'Do the work', status: 'pending' }] }; data.sessions.demo.flows.push('new' + id.slice(0, 4)); notify('flows'); notify('sessions'); }
+          notify('commands');
+        }
+      });
+    }, 300);
+    setInterval(function () { if (HASH !== 'previewclosed' && HASH !== 'previewnone') { data.meta.mod.beat = new Date().toISOString(); data.sessions.demo.beat = data.meta.mod.beat; notify('sessions'); } notify('meta'); }, 20000);
+    return { collection: function (c) { return query(c, {}); }, doc: function (p) { var s = p.split('/'); return ref(s[0], s[1]); } };
+  }
+
+  /* ---- start ---- */
+  render();
+  var use = window.claude && window.claude.use ? window.claude.use('db') : Promise.resolve(null);
+  use.then(function (db) {
+    if (!db) { if (!PREVIEW) { S.noDb = true; return render(); } db = fakeDb(); S.owner = true; S.ownerKnown = true; if (HASH === 'previewnone') S.session = ''; if (HASH === 'previewstarting') S.awaitNew = { before: ['codefactory', 'refund', 'docs', 'ledger', 'notes'], name: 'Bug fix', t: Date.now() - 2000 }; }
+    DB = db; connect(db);
+    if (!PREVIEW && window.claude.use) window.claude.use('user').then(function (u) { try { if (u && u.isOwner) { S.owner = !!u.isOwner(); S.ownerKnown = true; } } catch (e) {} render(); }).catch(function () {});
+  }).catch(function () { if (PREVIEW) { DB = fakeDb(); connect(DB); S.owner = true; S.ownerKnown = true; } else { S.noDb = true; render(); } });
+})();
+</script>

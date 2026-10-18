@@ -1,0 +1,34 @@
+---
+title: "Sub-flows"
+description: "A template step can start another flow, a child, and wait for it. The parent drives the child itself."
+---
+
+A template step can start another flow, a **child**, and wait for it. The parent drives the child itself.
+
+## How it runs
+
+1. The step's `subFlowTrigger` names a template by UUID and maps parent parameters into the child.
+2. A child flow is created in `active/` and bound to your session.
+3. The parent records it in `subFlowState.childFlows`.
+4. The agent works the child's steps with the normal loop. A child step can itself be a sub-flow.
+5. When the child completes, it reports a short summary. The parent marks the step done and continues.
+
+## Reading a template with child flows
+
+`/zeremai:view-template` shows each sub-flow step with when it starts, what it passes and where the parent waits. A later sync point is marked on both steps. In the runbook the child opens under its step, to three levels, and in Two lanes you open it with the link in the step panel. The facts line counts approvals inside child flows once each. A child that cannot be found is marked as missing.
+
+## Watching child flows
+
+On the [Flows screen](/ui/flows#a-flow-with-child-flows) a step that starts children has a badge, and the children are listed under the diagram. A step with `forEach` can start many children, and they never cover each other: the list grows, not the diagram.
+
+## Fan-out
+
+`forEach` in the trigger starts one child per item of a list in the parent, for example one child per file.
+
+## Resuming
+
+Resume the **parent** with **Continue** on the site. If a child is still `running`, the agent reports it and drives it before the parent's next step. **Continue** on a child also binds its running parents, so the child still answers first.
+
+## Loops
+
+Separate from sub-flows: a flow can go back to an earlier step in three ways: your click on a Back button (no limit), a failed check (`onVerifierFail`), or a retry of the agent (`loopBackTo`). The last two are counted and stop at `maxIterations`. See [Write a template](/authoring/templates) and [Loops](/design/lifecycles/flow-states#loops).

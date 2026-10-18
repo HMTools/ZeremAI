@@ -1,0 +1,19 @@
+{
+  "id": "RM-012",
+  "title": "Simple do template for ad-hoc workflows",
+  "description": "A simple built-in \"do\" template that builds a workflow on the fly from existing steps, then saves any new steps and the flow as a reusable template.",
+  "type": "feature",
+  "status": "proposed",
+  "priority": "medium",
+  "category": "framework",
+  "milestone": "backlog",
+  "effort": "",
+  "tags": [],
+  "dependencies": [],
+  "created": "2026-05-29",
+  "updated": "2026-10-12",
+  "author": "m4t4ngm@gmail.com",
+  "notes": "",
+  "acceptance_criteria": [],
+  "illustration": "template-compose"
+}

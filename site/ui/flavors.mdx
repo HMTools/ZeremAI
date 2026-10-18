@@ -1,0 +1,43 @@
+---
+title: "Flavors screen"
+description: "See, search, add, edit and delete your flavors, and accept the ones a flow learned."
+---
+
+The **Flavors** screen lists every flavor you have: what you like and dislike, in your own words. You edit them here, with no file to open. See [Flavors](/guide/flavors) for what a flavor is and how it differs from a skill.
+
+<Frame caption="The Flavors screen. Demo data.">
+  <img className="dark:hidden" src="/images/ui/flavors-light.png" alt="The Flavors screen: an amber inbox called Waiting for you with three proposals from flows, each with Accept and Reject buttons and an Accept all button. Below it, your flavors grouped by topic, with topic chips and a search box." />
+  <img className="hidden dark:block" src="/images/ui/flavors-dark.png" alt="The Flavors screen: an amber inbox called Waiting for you with three proposals from flows, each with Accept and Reject buttons and an Accept all button. Below it, your flavors grouped by topic, with topic chips and a search box." />
+</Frame>
+
+## What is on the screen
+
+1. **Add flavor** opens the form above the list.
+2. **Waiting for you.** One amber inbox for every flavor that a flow learned. Each proposal has a label (`New`, `Change` or `Forget`), the topic, the text, and where it came from: the flow name, the time and, when the flow saved them, the words you said. A change shows the old text crossed out, then the new one. The tab shows how many proposals wait.
+3. **Your flavors.** Grouped by topic, newest first. Above the list are one chip for each topic (with a count) and a search box. The search reads the topic and the text.
+4. **One row for each flavor** shows the text and where it came from: `You wrote it`, or `Learned from <flow name>`, with the time.
+
+## The buttons
+
+| Button | What it does |
+|---|---|
+| **Add flavor** | Opens a form: **Topic** (type one, or tap one of your topics) and **What you prefer** (one clear sentence, 160 characters at most). **What a step sees** shows the exact lines a step would get. **Save flavor** applies it at once. **Ctrl or ⌘ + Enter** saves too. |
+| **Edit** | The text of the row becomes a field. **Save** or **Enter** keeps it. **Cancel** or **Esc** drops the change. The row then shows `✓ Saved just now`. |
+| **Delete** | Deletes at once, with no question. The row leaves the list and a toast shows **Undo** for 6 seconds. **Undo** puts it back and nothing is deleted. After 6 seconds the delete is sent. If you close the page in those 6 seconds, the flavor stays. |
+| **Accept** | On a proposal. A new flavor becomes active. A change gives the flavor its new text. A "forget" deletes the flavor. Steps use the result from the next step on. |
+| **Reject** | On a proposal. Deletes the proposal and changes nothing else. |
+| **Accept all** | In the inbox, when two or more proposals wait. Accepts every one, oldest first, in one pass. A proposal whose flavor is gone is dropped, and the answer says how many were skipped. |
+
+Only a flavor with status active reaches a step. A proposal that waits does not.
+
+## When you have no flavors
+
+The screen offers three examples to add in one tap, and one line on the difference between a flavor and a skill.
+
+## On a phone
+
+Rows stack: the text, then the buttons under it, each at least 44 px high. The inbox shows the first proposal, with **Show the other N** for the rest. **Add flavor** stays at the bottom of the screen.
+
+## Related
+
+[Flavors](/guide/flavors), [Continuous improvement](/guide/improvements).

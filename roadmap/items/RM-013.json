@@ -1,0 +1,19 @@
+{
+  "id": "RM-013",
+  "title": "Smarter continuous improvement findings",
+  "description": "Make the Continuous Improvement step find changes that make future flows one-shot, cheaper in tokens, and lighter on context, and rank them better before saving findings.",
+  "type": "improvement",
+  "status": "proposed",
+  "priority": "medium",
+  "category": "framework",
+  "milestone": "backlog",
+  "effort": "",
+  "tags": [],
+  "dependencies": [],
+  "created": "2026-05-29",
+  "updated": "2026-10-12",
+  "author": "m4t4ngm@gmail.com",
+  "notes": "",
+  "acceptance_criteria": [],
+  "illustration": "brain-learning"
+}

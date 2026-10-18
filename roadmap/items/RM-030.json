@@ -1,0 +1,19 @@
+{
+  "id": "RM-030",
+  "title": "Create templates by chat in the pane",
+  "description": "Design a template conversationally from the flow pane, with a live preview of its steps and parameters.",
+  "type": "feature",
+  "status": "proposed",
+  "priority": "medium",
+  "category": "ui",
+  "milestone": "backlog",
+  "effort": "",
+  "tags": [],
+  "dependencies": [],
+  "created": "2026-05-29",
+  "updated": "2026-10-12",
+  "author": "m4t4ngm@gmail.com",
+  "notes": "",
+  "acceptance_criteria": [],
+  "illustration": "chat-interface"
+}

@@ -1,0 +1,35 @@
+---
+title: "Approvals"
+description: "A step marked approvalRequired: true cannot complete until you approve its output."
+---
+
+A step marked `approvalRequired: true` cannot complete until **you** approve its output.
+
+## How it works
+
+1. The agent finishes the step and presents the deliverables.
+2. It runs the `request-approval` command. A dialog opens with the step name and output, and the call waits.
+3. You click, in the dialog or on [the site](/guide/live-site). Both paths do the same thing:
+   - **Approve**: the step is marked approved and can complete.
+   - **Request changes**: type what to change. The agent reads it, applies only those corrections, and asks again.
+   - **Back** (only on a step whose template names a Back target): type why, and the flow goes back to that earlier step. The steps from there to this one start again, with their notes and logs kept. Back has no limit.
+
+There is no Reject button. A step you do not want gets changes requested.
+
+## What the agent cannot do
+
+- Approve a step itself. There is no approve command.
+- Complete an unapproved step. `update_step_status` refuses.
+- Complete a [blocked step](/guide/blocked-steps), or start the next one while it is blocked.
+- Treat "approved" typed in chat as approval. Only the click counts.
+- Edit flow state files by hand. Write, Edit and Bash writes to them are blocked.
+
+## While the dialog is open
+
+The agent can only research: read files, search, use MCP tools and subagents. Any write, edit or Bash command waits for your click.
+
+If you close the dialog, it reopens with your next prompt. The gate is stored by the plugin, so a restart does not lose it.
+
+## Mid-step questions
+
+A "yes" to a clarifying question (an assumption, a suggested approach) is **not** approval of the deliverable. The agent asks those with the question dialog and logs your answer.

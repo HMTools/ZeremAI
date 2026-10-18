@@ -1,0 +1,23 @@
+{
+  "id": "RM-036",
+  "title": "Create official framework wiki on Mintlify",
+  "description": "Public documentation site for ZeremAI on Mintlify: install, concepts, authoring, reference and this roadmap.",
+  "type": "documentation",
+  "status": "done",
+  "priority": "high",
+  "category": "framework",
+  "milestone": "backlog",
+  "effort": "",
+  "tags": [
+    "docs",
+    "mintlify",
+    "wiki"
+  ],
+  "dependencies": [],
+  "created": "2026-06-10",
+  "updated": "2026-10-12",
+  "author": "m4t4ngm@gmail.com",
+  "notes": "",
+  "acceptance_criteria": [],
+  "illustration": "file-document"
+}

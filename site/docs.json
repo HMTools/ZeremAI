@@ -1,0 +1,155 @@
+{
+  "$schema": "https://mintlify.com/docs.json",
+  "theme": "mint",
+  "name": "ZeremAI",
+  "colors": {
+    "primary": "#4F46E5",
+    "light": "#7C3AED",
+    "dark": "#4F46E5"
+  },
+  "logo": {
+    "light": "/logo.png",
+    "dark": "/logo.png"
+  },
+  "favicon": "/logo.png",
+  "navigation": {
+    "groups": [
+      {
+        "group": "Get started",
+        "pages": [
+          "index",
+          "guide/installation",
+          "guide/quick-start"
+        ]
+      },
+      {
+        "group": "Build",
+        "pages": [
+          "authoring/templates",
+          "authoring/steps",
+          "authoring/verifiers",
+          "authoring/edit-and-send"
+        ]
+      },
+      {
+        "group": "UI",
+        "pages": [
+          "guide/live-site",
+          "ui/flows",
+          "ui/new-flow",
+          "ui/templates",
+          "ui/marketplaces",
+          "ui/flavors",
+          "ui/session-states",
+          "ui/plan-pages",
+          "ui/terminal"
+        ]
+      },
+      {
+        "group": "Guide",
+        "pages": [
+          {
+            "group": "Concepts",
+            "pages": [
+              "guide/concepts",
+              "guide/flow-files"
+            ]
+          },
+          {
+            "group": "Run a flow",
+            "pages": [
+              "guide/approvals",
+              "guide/blocked-steps",
+              "guide/sub-flows"
+            ]
+          },
+          {
+            "group": "Share templates",
+            "pages": [
+              "guide/marketplaces"
+            ]
+          },
+          {
+            "group": "Improve",
+            "pages": [
+              "guide/improvements",
+              "guide/flavors"
+            ]
+          },
+          {
+            "group": "Help",
+            "pages": [
+              "guide/troubleshooting"
+            ]
+          }
+        ]
+      },
+      {
+        "group": "Commands",
+        "pages": [
+          "commands/init",
+          "commands/create-template",
+          "commands/edit-template",
+          "commands/view-template",
+          "commands/create-marketplace",
+          "commands/marketplace",
+          "commands/apply-improvements"
+        ]
+      },
+      {
+        "group": "Technical design",
+        "pages": [
+          "design/overview",
+          "design/live-site",
+          {
+            "group": "Lifecycles",
+            "pages": [
+              "design/lifecycles/mod-events",
+              "design/lifecycles/flow-states"
+            ]
+          },
+          "design/memory",
+          {
+            "group": "Guards",
+            "pages": [
+              "design/guards/approval-gate",
+              "design/guards/stop-prevention"
+            ]
+          },
+          "design/template-sources",
+          "design/improvement-findings"
+        ]
+      },
+      {
+        "group": "Reference",
+        "pages": [
+          "reference/tools",
+          "reference/internals"
+        ]
+      },
+      {
+        "group": "Project",
+        "pages": [
+          "changelog",
+          "roadmap"
+        ]
+      }
+    ]
+  },
+  "navbar": {
+    "links": [
+      {
+        "label": "Changelog",
+        "href": "/changelog"
+      },
+      {
+        "label": "Roadmap",
+        "href": "/roadmap"
+      }
+    ],
+    "primary": {
+      "type": "github",
+      "href": "https://github.com/HMTools/ZeremAI"
+    }
+  }
+}

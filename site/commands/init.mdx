@@ -1,0 +1,30 @@
+---
+title: "/zeremai:init"
+description: "Open the ZeremAI site for this session. Run it first in a new terminal."
+---
+
+## Run it
+
+```
+/zeremai:init
+```
+
+Any word after it does the same (`/zeremai:init live` too).
+
+## What it does
+
+1. The mod answers the command. It does not go to the model.
+2. The first time in a session, it publishes the ZeremAI site as a page on claude.ai and pins it to your sidebar. Every other time, it opens the page of this session.
+3. If a new version of the plugin ships a new page, it publishes it to the same link.
+4. If the Artifact tool cannot open the page, it uses the system opener, and then shows the link in a message.
+
+## What it needs
+
+- Claude Code with mods enabled, and a claude.ai sign-in. See [Installation](/guide/installation).
+- A surface with the Artifact tool. Print mode and the VS Code extension do not have it.
+
+If you read the text of the skill instead of seeing the page, the mod did not run. See [Troubleshooting](/guide/troubleshooting).
+
+## Related
+
+[The ZeremAI site](/guide/live-site), [The live site (design)](/design/live-site).

@@ -1,0 +1,19 @@
+{
+  "id": "RM-004",
+  "title": "Change memory from single file to multiple files",
+  "description": "Split the single memory file into topic-based memory files in the flow memory folder, with per-step read and write access.",
+  "type": "improvement",
+  "status": "done",
+  "priority": "high",
+  "category": "framework",
+  "milestone": "backlog",
+  "effort": "",
+  "tags": [],
+  "dependencies": [],
+  "created": "2026-05-29",
+  "updated": "2026-10-12",
+  "author": "m4t4ngm@gmail.com",
+  "notes": "",
+  "acceptance_criteria": [],
+  "illustration": "memory-storage"
+}

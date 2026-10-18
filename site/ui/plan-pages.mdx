@@ -1,0 +1,49 @@
+---
+title: "Plan pages"
+description: "The one-page views that create-template, edit-template, view-template and create-marketplace show before they write anything."
+---
+
+Four commands show their work on **one page** and write nothing until you press **Approve**. These pages are Artifacts, like the site, but each is made for one job.
+
+| Command | The page shows |
+|---|---|
+| [`/zeremai:create-template`](/commands/create-template) | The planned template, its steps and the reviewer's findings. |
+| [`/zeremai:edit-template`](/commands/edit-template) | The same page, with the change in the title. |
+| [`/zeremai:view-template`](/commands/view-template) | The same page in view mode: no answer bar, nothing to approve. |
+| [`/zeremai:create-marketplace`](/commands/create-marketplace) | The folder to create, the catalog and where it will live. |
+
+## The template page
+
+<Frame caption="The page of /zeremai:create-template. Demo data.">
+  <img className="dark:hidden" src="/images/ui/plan-create-template-light.png" alt="The template page: a title and one line of facts, a switch between Runbook and Two lanes, the steps, and a side panel with the actions of the chosen step." />
+  <img className="hidden dark:block" src="/images/ui/plan-create-template-dark.png" alt="The template page: a title and one line of facts, a switch between Runbook and Two lanes, the steps, and a side panel with the actions of the chosen step." />
+</Frame>
+
+- A title and one line of facts: the number of steps, approvals, loops and child flows.
+- A switch for **Runbook** or **Two lanes**. A boxed STOP follows each approval step, and a note marks each loop and child flow.
+- Click a step to read it in the side panel. The panel has four tabs:
+  - **Step**: what the step does, its actions and output, the parameters it uses, the findings about it and a box for your note.
+  - **Form**: the fields the ZeremAI site will ask for, and which steps use each one.
+  - **Review**: the findings of the reviewer, to fix or to ignore.
+  - **Files**: the files the command will write.
+- Findings from the reviewer sit on the steps they are about. For each one you choose **fix it** or **ignore**, and you can add a note.
+- **Approve** or **Ask for changes** at the bottom. Your answer goes back to the session as a comment, and the command goes on from there.
+
+## The marketplace page
+
+<Frame caption="The page of /zeremai:create-marketplace. Demo data.">
+  <img className="dark:hidden" src="/images/ui/plan-create-marketplace-light.png" alt="The marketplace page: the planned folder as a tree on the left, and on the right the text of the chosen file with tabs File, Catalog, Steps and Where it lives." />
+  <img className="hidden dark:block" src="/images/ui/plan-create-marketplace-dark.png" alt="The marketplace page: the planned folder as a tree on the left, and on the right the text of the chosen file with tabs File, Catalog, Steps and Where it lives." />
+</Frame>
+
+- **The new folder** lists every file the command will create. Tap a name to read it.
+- Tabs: **File** (the text), **Catalog** (how the Templates screen will list it), **Steps** (what the command will do) and **Where it lives**.
+- **Where it lives** is where you pick: only on this machine, a new GitHub or Azure DevOps repository, or an existing remote repository. You also say whether to add it to the ZeremAI config.
+
+## When the page cannot send
+
+The pages need the Artifact tool and a session that watches the page. Without them, the command says so and asks you in chat.
+
+## Related
+
+[Write a template](/authoring/templates), [Marketplaces](/guide/marketplaces).

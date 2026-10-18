@@ -1,0 +1,44 @@
+---
+title: "Edit and send a template"
+description: "Change an installed template, then send the change to its marketplace as a pull request."
+---
+
+An installed template is a copy of a marketplace template. You can change your copy, and you can send the change back to the marketplace.
+
+## Edit
+
+From the site, press **Edit** on a template of the **Templates** screen and describe the change. Or run the command:
+
+```
+/zeremai:edit-template ~/.claude/zeremai/templates/flows/development/fix-bug Add a rollback step before deploy
+```
+
+The skill drafts only the change you asked for. A script checks the exact facts, and the `template-reviewer` agent checks the draft. You see it on one page. Nothing is written until you press **Approve**.
+
+Then the Templates screen shows the template as edited by you.
+
+<Note>
+  A flow that is already running keeps its own copy of every step, so an edit does not reach it. Start a new flow to use the edit. See [Template sources](/design/template-sources).
+</Note>
+
+If the template came from a marketplace, your edit is a copy. The next **Update** from that marketplace asks before it erases your change. Send the change first if you want to keep it.
+
+## Send
+
+Press **Send as PR** on the template, or run the same command with the word `send`. The skill:
+
+1. Reads the marketplace address and branch from `~/.claude/zeremai/config/marketplaces.json`. A template with no marketplace cannot be sent.
+2. Clones the marketplace fresh into a scratch folder.
+3. Checks whether the marketplace changed the same template since you installed it. If it did, the skill does **not** push. It merges the two versions with you first.
+4. Raises `metadata.version` and adds an entry to `changelog.json` (see [Version and changelog](/authoring/templates#version-and-changelog)). Copies your template over it, makes a branch `edit-template-<name>` and commits.
+5. Asks before the push. Then it opens a pull request with `gh pr create`, or gives you the branch and the address when `gh` is not installed.
+
+If git asks for a login that does not work, the skill says so and stops. Nothing is lost.
+
+Your copy on this machine stays as it is. After the pull request merges, press **Refresh** and then **Update** on the Templates screen, and the template shows as up to date.
+
+## Related
+
+- [`/zeremai:edit-template`](/commands/edit-template)
+- [Marketplaces](/guide/marketplaces)
+- [Write a template](/authoring/templates)

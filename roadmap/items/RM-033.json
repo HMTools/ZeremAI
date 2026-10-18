@@ -1,0 +1,23 @@
+{
+  "id": "RM-033",
+  "title": "Review improvement findings in the pane",
+  "description": "Browse saved improvement findings in the flow pane as cards (category, what, why, impact, files) and approve, reject or defer them, instead of running /apply-improvements blind.",
+  "type": "improvement",
+  "status": "proposed",
+  "priority": "high",
+  "category": "ui",
+  "milestone": "backlog",
+  "effort": "",
+  "tags": [
+    "ux",
+    "continuous-improvement",
+    "ui-redesign"
+  ],
+  "dependencies": [],
+  "created": "2026-06-06",
+  "updated": "2026-10-12",
+  "author": "m4t4ngm@gmail.com",
+  "notes": "",
+  "acceptance_criteria": [],
+  "illustration": "brain-learning"
+}

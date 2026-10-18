@@ -1,0 +1,19 @@
+{
+  "id": "RM-032",
+  "title": "Rebrand to ZeremAI",
+  "description": "The framework is now ZeremAI, a Claude Code plugin, with the /zeremai command.",
+  "type": "idea",
+  "status": "done",
+  "priority": "low",
+  "category": "framework",
+  "milestone": "backlog",
+  "effort": "",
+  "tags": [],
+  "dependencies": [],
+  "created": "2026-05-30",
+  "updated": "2026-10-12",
+  "author": "m4t4ngm@gmail.com",
+  "notes": "",
+  "acceptance_criteria": [],
+  "illustration": "deploy-rocket"
+}

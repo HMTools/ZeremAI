@@ -1,0 +1,32 @@
+---
+title: "Marketplaces screen"
+description: "Add, edit, switch off and remove the git repositories that hold your templates."
+---
+
+The **Marketplaces** screen lists the git repositories that hold your templates. You set them here, with no file to edit.
+
+<Frame caption="The Marketplaces screen. Demo data.">
+  <img className="dark:hidden" src="/images/ui/marketplaces-light.png" alt="The Marketplaces screen: one card for each marketplace with its git address, branch and priority, an On/Off switch, and Edit and Remove buttons. Refresh marketplaces and Add marketplace are at the top." />
+  <img className="hidden dark:block" src="/images/ui/marketplaces-dark.png" alt="The Marketplaces screen: one card for each marketplace with its git address, branch and priority, an On/Off switch, and Edit and Remove buttons. Refresh marketplaces and Add marketplace are at the top." />
+</Frame>
+
+## What is on the screen
+
+1. **Refresh marketplaces** fetches the latest catalog of every marketplace that is on.
+2. **Add marketplace** opens the form.
+3. **One card for each marketplace.** It shows the name, a status (`Ready`, `Not cloned` or `Off`), the git address, the branch, the priority and, for a cloned one, the template count and the time of the last refresh. Lower priority is read first.
+
+## The buttons
+
+| Button | What it does |
+|---|---|
+| **Add marketplace** | Opens a form: **Name**, **Git address**, **Branch** (default `main`) and **Priority** (default `100`). **Add and refresh** saves it and clones it at once. |
+| **Edit** | Opens the same form for that marketplace. **Save changes** keeps the saved copy only if the address and the branch are the same. Otherwise it deletes the copy, so press **Refresh marketplaces** to clone it again. |
+| **On / Off** | A marketplace that is off is skipped when you refresh. Its saved copy and your installed templates stay. |
+| **Remove** | Asks first. **Yes, remove** deletes the marketplace and its folder in `cache/sources/`. Templates you installed stay, because they are copies. |
+
+The name has letters, digits, dot, dash and underscore only. The git address is any address your machine can already clone. See [Private marketplaces](/guide/marketplaces#private-marketplaces).
+
+## Related
+
+[Marketplaces](/guide/marketplaces), [Templates screen](/ui/templates).

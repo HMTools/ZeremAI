@@ -1,0 +1,33 @@
+---
+title: "Blocked steps"
+description: "What it means when a step is blocked, what to do, and how the flow goes on."
+---
+
+A step is **blocked** when a retry cannot help and you must act first. Typical causes are an expired login, no access, or a missing secret.
+
+## What you see
+
+- The site shows a card for the step: `Step 3 · <name> is blocked`, with the reason in one sentence and, when there is one, the command to run. The card has a **Continue** button.
+- The button above the prompt counts the step as one that needs you, in the same group as `approve`, `failed` and `paused`.
+- The agent tells you the reason and the command in the terminal, then ends its turn.
+
+A blocked step has nothing to approve. It is not an approval gate.
+
+## What to do
+
+1. Do what the reason says, for example run the command it names.
+2. Press **Continue** on [the site](/guide/live-site), or next to the button above the prompt.
+
+The step runs again from its start.
+
+## What the agent cannot do
+
+- Complete a blocked step. `update_step_status` refuses `completed`.
+- Start a later step while an earlier one is blocked.
+- Block a step without a reason. The reason is required, and the command is optional.
+
+Any other status on the step clears the block.
+
+## For template authors
+
+You do not mark a step blocked in a template. The step executor reports it when it meets a problem that a retry cannot fix. See [`update_step_status`](/reference/tools#progress).

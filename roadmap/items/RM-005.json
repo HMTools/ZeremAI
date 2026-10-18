@@ -1,0 +1,19 @@
+{
+  "id": "RM-005",
+  "title": "Dynamic context injection in the flow-run skill",
+  "description": "Use dynamic context injection in the flow-run skill so it loads only what the current step needs, cutting token use.",
+  "type": "improvement",
+  "status": "proposed",
+  "priority": "high",
+  "category": "framework",
+  "milestone": "backlog",
+  "effort": "",
+  "tags": [],
+  "dependencies": [],
+  "created": "2026-05-29",
+  "updated": "2026-10-12",
+  "author": "m4t4ngm@gmail.com",
+  "notes": "",
+  "acceptance_criteria": [],
+  "illustration": "context-inject"
+}

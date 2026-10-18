@@ -1,0 +1,19 @@
+{
+  "id": "RM-017",
+  "title": "Remove view-only MD files, add view-page skill",
+  "description": "Remove the view-only markdown files and instead create a skill that generates interactive view pages from JSON definitions.",
+  "type": "improvement",
+  "status": "done",
+  "priority": "low",
+  "category": "framework",
+  "milestone": "backlog",
+  "effort": "",
+  "tags": [],
+  "dependencies": [],
+  "created": "2026-05-29",
+  "updated": "2026-06-06",
+  "author": "m4t4ngm@gmail.com",
+  "notes": "",
+  "acceptance_criteria": [],
+  "illustration": "file-document"
+}

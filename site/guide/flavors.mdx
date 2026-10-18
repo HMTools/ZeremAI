@@ -1,0 +1,64 @@
+---
+title: "Flavors"
+description: "Flavors save what you like and dislike. Each step of a flow gets the ones that fit it. They are not skills."
+---
+
+A **flavor** is one personal preference of yours, in your own words. `Tests: use Jest, not Vitest.` `Git: keep commit titles under 60 characters.` You say it once. ZeremAI adds it to the prompt of every step that it fits, in every flow and every project.
+
+## Flavors and skills
+
+A flavor and a skill are both text that Claude reads. They answer different questions.
+
+| | Skill | Flavor |
+|---|---|---|
+| **It answers** | How to do a task | What you like or dislike |
+| **Example** | How to write a flow template | Tests use Jest. Commit titles stay short. |
+| **Who writes it** | The plugin authors | You, or the last step of a flow (you accept it) |
+| **When Claude reads it** | When a task needs that skill | At each step. A small model (Haiku) picks the flavors that fit the step |
+| **Where it lives** | In the plugin. The same for everyone | In your own folder. Only yours |
+
+A skill never knows who you are. A flavor never says how to do a task. If you write "to add a step, edit the step folder and run the checker", that is a how-to, so it belongs in a skill or a template. If you write "I like short step names", that is a flavor.
+
+## How a step gets its flavors
+
+1. The agent starts a step. ZeremAI builds the prompt of the step, as it always does.
+2. ZeremAI reads the short line of each active flavor, and asks **Haiku** which of them fit this step. Haiku sees the step and the lines, and answers with the ids that fit.
+3. ZeremAI reads those flavors in full and adds a **Flavors** section to the end of the prompt.
+
+```
+## Flavors
+Personal preferences of the user that fit this step. Follow them unless the step definition says otherwise.
+- Tests: Use Jest, not Vitest.
+```
+
+A step never waits for its flavors. If you have no flavors, if none fits, or if Haiku fails or takes more than 5 seconds, the step starts with no Flavors section. The next step asks again.
+
+## How flavors are saved
+
+Flavors live in one folder, `~/.claude/zeremai/flavors/`:
+
+```
+flavors/
+├── index.json    # one short line for each flavor: id, topic, description, status
+├── a1b2c3.json   # one flavor, in full
+└── d4e5f6.json
+```
+
+`index.json` is what Haiku, the search and the list on the page read. Each flavor file holds the full text. A flavor has a **topic** (the area, for example `Tests`) and a **text** (one clear sentence). Only the flow script writes the folder, so the index always agrees with the files. Do not edit it by hand: the plugin refuses it.
+
+## Two ways to get a flavor
+
+- **You write it.** Open the **Flavors** tab of the [live site](/ui/flavors), press **Add flavor**, and fill in the topic and the text. It applies at once.
+- **A flow learns it.** The last step of every flow, [Continuous Improvement](/guide/improvements#flavors), reads the log for lasting preferences you stated or corrected, and **proposes** them. A proposal waits on the Flavors tab until you press **Accept**. Steps ignore it until then.
+
+A proposal is one of three kinds: a new flavor, a new text for a flavor you have, or "forget this flavor". It shows the words you said that led to it, when the flow saved them. **Accept** applies it, and **Accept all** applies every waiting proposal. **Reject** deletes the proposal and changes nothing else.
+
+## What is not a flavor
+
+- A one-time instruction ("for this work item only, skip the docs").
+- A fact about the task ("the API is at `/v2`").
+- A how-to. That is a skill or a template.
+
+## Related
+
+[Flavors screen](/ui/flavors), [Continuous improvement](/guide/improvements), [Core concepts](/guide/concepts).

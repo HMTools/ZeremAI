@@ -1,0 +1,96 @@
+---
+title: "Flow tools"
+description: "Every operation of the flow script, with what it does and what it refuses."
+---
+
+These are the operations of the flow script `scripts/flow_manager.py` (Python 3.9 or newer). The agent runs one as a Bash command, with the name written with dashes (`update_step_status` is `update-step-status`):
+
+```bash
+python3 <plugin>/scripts/flow_manager.py update-step-status --json '{"flowDir":"...","stepId":"...","status":"in_progress"}'
+```
+
+The plugin checks every call before the script runs: the command form, the input, that the folder is a flow of this session, and the moment (a flow is bound, the log is written, no approval dialog is open). It refuses a bad call and says why. Each call answers `{"status": "ok", ...}` or `{"status": "error", "message": "..."}`. Every operation takes `flowDir` (absolute path of the flow folder) except `list_findings`, `update_finding_status` and `list_flavors`, which are not about one flow folder. `write_finding` takes `flowDir`.
+
+After `update_flow_status` moves a folder, use the `relocated_to` path from the answer.
+
+## Flow lifecycle
+
+| Tool | Purpose |
+|---|---|
+| `create_flow` | Create a flow from a template. `templatePath`; optional `name`, `params`, `projectPath`, and `parentFlowPath`/`parentId`/`parentName`/`returnToStep` for sub-flows. Used by the mod (for **Create flow** on the site) and sub-flow steps only. |
+| `bind_flow` | Link this session to a flow, so the rules of the plugin apply to it. Input: `flowDir`. Call it first when you resume a flow. It is not a script subcommand: the mod does it, because the link is a session link and not a file. |
+| `update_flow_status` | Set `running`, `completed`, `failed` or `paused`. Moves the folder. A sub-flow also passes `summary`. |
+
+## Progress
+
+| Tool | Purpose |
+|---|---|
+| `update_step_status` | `pending`, `in_progress`, `completed`, `skipped`, `awaiting_approval`, `blocked`. `blocked` needs `reason` (one sentence on what you must do) and may have `command`. Sets `startedAt` / `completedAt`. Refuses `completed` on an unapproved or blocked step. |
+| `route_step` | Go back to the earlier step named in `loopBackTo`, as a counted retry (`by: "retry"`). Steps from there to this one become `pending`, notes and logs stay. Refused after `maxIterations` retries (3 when none is named). A completed step cannot be reopened with `update_step_status`: this is the only way back for the agent. |
+| `update_current_state` | Set the active step, its summary, substep count, current substep |
+| `update_active_substep` | Change only the current substep |
+
+## Memory
+
+| Tool | Purpose |
+|---|---|
+| `add_memory_entry` | Add or merge what a step produced into `memory/<topic>.json`. Respects the step's `writeTo`. |
+| `read_memory_topic` | Read a topic. Respects the step's `readFrom`. `_cross-references` is always readable. |
+
+## Verifiers
+
+| Tool | Purpose |
+|---|---|
+| `run_verifiers` | Run the verifier scripts of a step. Always `status: ok`, with `result` (`pass` or `fail`) and `checks` (`name`, `passed`, `message`). It only reads. The plugin runs it when a step subagent ends. |
+
+## Logging
+
+| Tool | Purpose |
+|---|---|
+| `add_log_entry` | Append actions, reasoning, files modified, problems, decisions, performance notes for a step |
+| `update_log_observations` | Append flow-wide patterns and recommendations |
+
+The plugin logs each prompt of the user, and each answer in the approval dialog, by itself, with `log_interaction` (see [Plugin-only operations](#plugin-only-operations)). For **Approve**, the entry is a fixed line (`The user pressed Approve.`) and no model is called. For **Request changes** and your prompts, a small model (Haiku) writes the reason, the answer and the improvement flag of the entry. The agent has no tool for it.
+
+## Approval
+
+| Tool | Purpose |
+|---|---|
+| `request-approval` (answered by the plugin, not the script) | Open the approval dialog and wait for the user's click. Returns Approve or the requested changes. |
+
+## Sub-flows
+
+| Tool | Purpose |
+|---|---|
+| `register_child_flow` | Record a child in the parent: `childId`, `childName`, `childStatus`, `spawnedAtStep`, `syncPoint`, `childFlowPath` |
+| `update_child_status` | Update a child's status in the parent |
+
+## Improvement findings
+
+| Tool | Purpose |
+|---|---|
+| `write_finding` | Save a finding (`category`, `title`, `what`, `why`, `impact`, optional `scope`). Only Continuous Improvement calls it. |
+| `list_findings` | List findings by `status` (`open`, `applied`, `rejected`, `deferred`) and optional `templateId`. Only `apply-improvements` calls it. |
+| `update_finding_status` | Record `applied`, `rejected` or `deferred` with `notes` and `filesModified` |
+| `list_flavors` | List the flavors as short lines (`id`, `topic`, `description`, `status`). No input. Only Continuous Improvement calls it. |
+| `save_flavor` | Propose a flavor (`flowDir`, `topic`, `text`, optional `targetId` to give an active flavor a new text, optional `evidence`: a few of your words, 200 characters at most, shown under the proposal). It waits for you to accept it. |
+| `delete_flavor` | Propose to forget an active flavor (`flowDir`, `targetId`, optional `evidence`). It stays until you accept. |
+
+## Plugin-only operations
+
+The mod runs these itself. They are in the script. The agent does not call `log_interaction`, `approve_step` or `reset_loops`, and the plugin refuses `approve_step` and `reset_loops` for the agent. It can call `route_step` only as a retry (`by: "retry"`): the plugin runs the click form (`by: "click"`) and the failed-check form (`by: "verifier"`) itself.
+
+| Tool | Purpose |
+|---|---|
+| `get_step_brief` | Build the prompt of a step subagent as one text: the step, the flow parameters, the memory it reads, and on a re-run its earlier summary and your corrections. It only reads. Run by the `on-step-brief` rule when a step starts. It is in the agent's tool list, but the agent is not expected to call it. |
+| `log_interaction` | Append a user prompt or an approval answer to the log, with its reason and answer. Run before the agent sees your prompt. |
+| `approve_step` | Set `approved: true` on a step. Run after your click. The plugin refuses it for the agent. |
+| `route_step` (click, verifier) | Send the flow back to an earlier step. Run after your click on a Back button (no limit), or when a check still fails and the step names `onVerifierFail` (counted). |
+| `reset_loops` | Set the count of automatic loops of a step to zero. Run after your click on Request changes. The plugin refuses it for the agent. |
+
+## Rules
+
+1. Never use Write, Edit or Bash on a flow's state files or the findings store. The plugin refuses it.
+2. Always read the answer. An error message says what to do next.
+3. Use full paths for `flowDir`.
+4. Approval is the user's. The agent cannot set it.

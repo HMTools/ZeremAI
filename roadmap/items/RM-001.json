@@ -1,0 +1,19 @@
+{
+  "id": "RM-001",
+  "title": "Explicit step type: spawn and direct",
+  "description": "Add a stepType field (spawn for a sub-flow, direct for a regular step) so the type is declared, not inferred from subFlowTrigger. Show it in the flow pane and link a spawn step to its target template.",
+  "type": "feature",
+  "status": "proposed",
+  "priority": "high",
+  "category": "framework",
+  "milestone": "backlog",
+  "effort": "",
+  "tags": [],
+  "dependencies": [],
+  "created": "2026-05-29",
+  "updated": "2026-10-12",
+  "author": "m4t4ngm@gmail.com",
+  "notes": "",
+  "acceptance_criteria": [],
+  "illustration": "process-steps"
+}

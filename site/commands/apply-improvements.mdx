@@ -1,0 +1,31 @@
+---
+title: "/zeremai:apply-improvements"
+description: "Review the improvement findings that past flows saved, and apply the ones you approve."
+---
+
+## Run it
+
+```
+/zeremai:apply-improvements
+```
+
+Add a template name to focus on one template. The short form `/apply-improvements` works too.
+
+## What it does
+
+1. Lists the open findings across all flows, and groups similar ones.
+2. Picks the top three to five by how often they came up, their impact and how easy they are.
+3. For each one, shows What, Why, Impact and Scope, and waits for **approve**, **reject** or **defer**.
+4. If you approve, it reads the real files, makes one atomic change and shows the diff.
+5. Records the outcome as `applied`, `rejected` or `deferred`, with notes.
+
+Zero open findings is a normal result. It then stops.
+
+## What it will not do
+
+- Edit a template you installed from a marketplace. It says so and stops. Send the change to the marketplace instead, with [`/zeremai:edit-template`](/commands/edit-template).
+- Edit the findings store by hand. Status changes go through the flow script.
+
+## Related
+
+[Continuous improvement](/guide/improvements), [Improvement findings (design)](/design/improvement-findings).

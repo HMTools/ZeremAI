@@ -1,0 +1,19 @@
+{
+  "id": "RM-009",
+  "title": "Block hand edits of flow state files",
+  "description": "The mod refuses Write, Edit and Bash writes to a flow's state files (flow, log, memory, findings) so only the flow tools change them. Only the user click can approve a step.",
+  "type": "feature",
+  "status": "done",
+  "priority": "medium",
+  "category": "framework",
+  "milestone": "backlog",
+  "effort": "",
+  "tags": [],
+  "dependencies": [],
+  "created": "2026-05-29",
+  "updated": "2026-10-12",
+  "author": "m4t4ngm@gmail.com",
+  "notes": "",
+  "acceptance_criteria": [],
+  "illustration": "security-lock"
+}

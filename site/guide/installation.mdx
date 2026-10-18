@@ -1,0 +1,80 @@
+---
+title: "Installation"
+description: "What ZeremAI needs, how to install the plugin, and how to get templates."
+---
+
+## Requirements
+
+- **Claude Code with mods enabled.** ZeremAI is a Claude Code mod, so it needs a version that supports mods:
+  - **Claude Code in a terminal (CLI):** v2.1.287 or later. Check with `claude --version`. The JetBrains plugin and an editor's integrated terminal count as the terminal.
+  - **Claude Desktop, Code tab:** the app ships its own copy of Claude Code, and mods work from Claude Code **v2.1.286**. In a local session in the Code tab, enter `/status` and read the **Claude Code** row. Update the Desktop app if it is older. Sessions in WSL do not load plugins, so ZeremAI does not work there.
+
+<Warning>
+  **Visual Studio Code is not supported yet.** ZeremAI starts and resumes flows from [the ZeremAI site](/guide/live-site), a page that Claude Code opens with the Artifact tool. The VS Code extension does not offer it. Use the terminal or the Desktop app. This page will change when the extension supports mods.
+</Warning>
+
+- **A claude.ai sign-in.** The ZeremAI site is an Artifact on claude.ai, so you must be signed in to open it.
+
+- **Python 3.9 or newer** on your `PATH` (`python3` on macOS and Linux, `python` on Windows). ZeremAI changes every flow file with one Python script, `scripts/flow_manager.py`, and nothing else. It uses only the standard library, so there is nothing to `pip install`.
+- `git` on your `PATH` (templates come from git repositories).
+
+Check Python with:
+
+```bash
+python3 --version
+```
+
+## Install the plugin
+
+Add the marketplace once, then install:
+
+```bash
+# inside Claude Code
+/plugin marketplace add HMTools/ZeremAI
+```
+
+```bash
+claude plugin install zeremai@zeremai
+```
+
+### Local checkout (no marketplace)
+
+For development or customization:
+
+```bash
+claude --plugin-dir /path/to/zeremai
+```
+
+## Update the plugin
+
+At the start of each session ZeremAI checks for a newer version of the plugin. When there is one, it shows a message and a banner on [the site](/guide/live-site#plugin-updates) with **Update now** and a link to the [Changelog](/changelog). Restart Claude Code afterwards.
+
+## Allow the flow script
+
+Claude runs the script with Bash. The plugin only lets it run at the right moment and with valid input, but Claude Code still asks you to allow each Bash call. The first time you start a flow, ZeremAI shows the rule to add. Add it to your settings once to skip the prompts:
+
+```json
+{ "permissions": { "allow": ["Bash(python3 /path/to/zeremai/scripts/flow_manager.py *)"] } }
+```
+
+Use the exact path from the message (on Windows the command is `python`).
+
+## Install templates
+
+The plugin ships **no templates**. They come from git-backed [marketplaces](/guide/marketplaces).
+
+1. Run [`/zeremai:init`](/commands/init) to open the [ZeremAI site](/guide/live-site).
+2. Open the [**Templates**](/ui/templates) screen.
+3. Press **Refresh**, then **Install** the templates you need.
+
+Templates land in `~/.claude/zeremai/templates/flows/`.
+
+## When mods are off
+
+If mods are disabled (admin policy, an untrusted new folder, a crash, or `--safe-mode`), ZeremAI cannot change a flow. The flow skill tells you and stops. Under `--safe-mode` no plugin loads at all, so you will see nothing from ZeremAI.
+
+Try `/reload-plugins`, trust the folder, or ask your admin.
+
+## Verify
+
+Run `/zeremai:init`. A page opens on claude.ai with **Flows**, **New flow** and **Templates**, and the header names your session as live.

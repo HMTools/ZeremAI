@@ -1,0 +1,52 @@
+---
+title: "Quick start"
+description: "Open the ZeremAI site, create a flow, approve its steps and resume it later."
+---
+
+## 1. Open the site
+
+```
+/zeremai:init
+```
+
+It opens the ZeremAI site: a live page on claude.ai with your flows, a **New flow** screen and your **Templates**. The first time, ZeremAI publishes the page and pins it to your sidebar. See [The ZeremAI site](/guide/live-site) and the tour of its [Flows](/ui/flows), [New flow](/ui/new-flow) and [Templates](/ui/templates) screens.
+
+You can also press the button above the prompt. It ends with **ZeremAI ↗**.
+
+## 2. Create a flow
+
+On the **New flow** screen:
+
+1. Pick a template.
+2. Fill in its fields. Required ones have a star. **Fill the fields** suggests values from a sentence you write.
+3. Press **Create flow**.
+
+ZeremAI resolves the template's steps, substitutes your parameters, creates the flow in `~/.claude/zeremai/active/`, binds it to your session and starts the first step. The flow starts in the session where you pressed ZeremAI.
+
+## 3. Work through the steps
+
+For each step the agent:
+
+1. Marks it `in_progress`.
+2. Hands it to a **step-executor** subagent that follows the step's guidance and writes results to flow memory.
+3. If the step needs approval, shows you its output in a dialog. You click **Approve** or **Request changes**, in the dialog or on the site.
+4. Marks it `completed` and moves on.
+
+You can talk to the agent at any time. Every request or correction you make is logged in the flow's audit log.
+
+## 4. Finish
+
+Every flow ends with two automatic steps:
+
+- **Continuous Improvement**: saves findings about what could be better, and proposes flavors from what you said. See [Continuous improvement](/guide/improvements) and [Flavors](/guide/flavors).
+- **Complete Flow**: deletes leftover artifact files, then moves the flow to `completed/`.
+
+## Resume later
+
+Open the site (`/zeremai:init`) → **Flows**. Each active flow shows its current step and last change. Pick one and press **Continue**. It resumes from the last incomplete step.
+
+## Tips
+
+- Be specific in parameters. Vague input gives vague plans.
+- Review each step's output before approving.
+- Never hand-edit the flow's state files. ZeremAI refuses agent edits to them, and your own edit can corrupt the flow.

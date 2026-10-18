@@ -1,0 +1,20 @@
+{
+  "name": "zeremai",
+  "version": "1.0.0",
+  "description": "Flow automation framework for agentic coding environments. Define, execute, and manage structured workflows with state tracking and approval checkpoints.",
+  "author": {
+    "name": "HM",
+    "email": "m4t4ngm@gmail.com"
+  },
+  "homepage": "https://github.com/HMTools/ZeremAI",
+  "repository": "https://github.com/HMTools/ZeremAI",
+  "license": "MIT",
+  "keywords": [
+    "flow-automation",
+    "workflow",
+    "agentic",
+    "templates",
+    "state-management"
+  ],
+  "logo": "assets/logo.png"
+}

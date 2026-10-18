@@ -1,0 +1,182 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "Stop prevention: what happens when the agent ends a turn",
+    "output": "site/diagrams/stop-decision.html",
+    "quality_profile": "standard"
+  },
+  "lanes": [
+    {
+      "id": "check",
+      "label": "Mod checks"
+    },
+    {
+      "id": "reprompt",
+      "label": "What the mod does (a re-prompt: max 3 times in a row for the same prompt)"
+    }
+  ],
+  "mainPath": [
+    "d1",
+    "dB",
+    "d2",
+    "d4",
+    "d3",
+    "stop"
+  ],
+  "nodes": [
+    {
+      "id": "d1",
+      "lane": "check",
+      "col": 0,
+      "type": "messagebus",
+      "label": "Flow running, no gate open?",
+      "width": 190
+    },
+    {
+      "id": "dB",
+      "lane": "check",
+      "col": 1,
+      "type": "messagebus",
+      "label": "A step blocked?",
+      "width": 132
+    },
+    {
+      "id": "d2",
+      "lane": "check",
+      "col": 2,
+      "type": "messagebus",
+      "label": "Approval step in progress?",
+      "width": 182
+    },
+    {
+      "id": "d4",
+      "lane": "check",
+      "col": 3,
+      "type": "messagebus",
+      "label": "A step in progress?",
+      "width": 132
+    },
+    {
+      "id": "d3",
+      "lane": "check",
+      "col": 4,
+      "type": "messagebus",
+      "label": "A step pending?",
+      "width": 132
+    },
+    {
+      "id": "stop",
+      "lane": "check",
+      "col": 5,
+      "type": "database",
+      "label": "Agent may stop",
+      "width": 132
+    },
+    {
+      "id": "ask",
+      "lane": "reprompt",
+      "col": 2,
+      "type": "backend",
+      "label": "Ask you, or complete the step",
+      "width": 200
+    },
+    {
+      "id": "wait_del",
+      "lane": "reprompt",
+      "col": 3,
+      "type": "backend",
+      "label": "Wait for executor, or start it again",
+      "width": 250
+    },
+    {
+      "id": "delegate",
+      "lane": "reprompt",
+      "col": 4,
+      "type": "backend",
+      "label": "Start the next step",
+      "width": 156
+    },
+    {
+      "id": "stop1",
+      "lane": "reprompt",
+      "col": 0,
+      "type": "database",
+      "label": "Agent may stop",
+      "width": 132
+    },
+    {
+      "id": "stopB",
+      "lane": "reprompt",
+      "col": 1,
+      "type": "database",
+      "label": "Agent may stop and wait for you",
+      "width": 210
+    }
+  ],
+  "edges": [
+    {
+      "id": "e-d1-yes",
+      "from": "d1",
+      "to": "dB",
+      "label": "yes"
+    },
+    {
+      "id": "e-d1-no",
+      "from": "d1",
+      "to": "stop1",
+      "label": "no",
+      "variant": "dashed"
+    },
+    {
+      "id": "e-dB-no",
+      "from": "dB",
+      "to": "d2",
+      "label": "no"
+    },
+    {
+      "id": "e-dB-yes",
+      "from": "dB",
+      "to": "stopB",
+      "label": "yes",
+      "variant": "dashed"
+    },
+    {
+      "id": "e-d2-yes",
+      "from": "d2",
+      "to": "ask",
+      "label": "yes"
+    },
+    {
+      "id": "e-d2-none",
+      "from": "d2",
+      "to": "d4",
+      "label": "none"
+    },
+    {
+      "id": "e-d4-yes",
+      "from": "d4",
+      "to": "wait_del",
+      "label": "yes"
+    },
+    {
+      "id": "e-d4-no",
+      "from": "d4",
+      "to": "d3",
+      "label": "no"
+    },
+    {
+      "id": "e-d3-yes",
+      "from": "d3",
+      "to": "delegate",
+      "label": "yes"
+    },
+    {
+      "id": "e-d3-no",
+      "from": "d3",
+      "to": "stop",
+      "label": "no",
+      "variant": "dashed"
+    }
+  ]
+}

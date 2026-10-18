@@ -1,0 +1,35 @@
+---
+title: "/zeremai:create-template"
+description: "Plan, review and write a new flow template from a description."
+---
+
+## Run it
+
+```
+/zeremai:create-template Review a pull request for security problems, and ask me before it writes the report
+```
+
+Give it a description. With none, it asks for one.
+
+## What it does
+
+1. Looks at your installed templates. If one already does the job, it tells you and asks whether to go on.
+2. Plans the template: parameters, ordered steps, approval steps, and any step copied from an installed template. A step that must repeat becomes a child template.
+3. A script checks the exact facts (ids, parameters, step files, version). The new template starts at version `1.0.0` with a `changelog.json`.
+4. A separate reviewer agent (`template-reviewer`) checks the plan.
+5. Shows the result on one page, with findings on the steps they are about.
+
+It never starts or changes a flow, and never adds Continuous Improvement or Complete Flow.
+
+## What it asks first
+
+- **Approve** or **Ask for changes**, on the page. Nothing is written before Approve.
+- Where to save: your templates folder, a marketplace repository, or both.
+
+## Result
+
+A normal template: one JSON file and one folder per step, in `~/.claude/zeremai/templates/flows/<category>/<name>/` or in the marketplace repository. A marketplace save opens a pull request after you confirm the push.
+
+## Related
+
+[Write a template](/authoring/templates), [Write a step](/authoring/steps), [Deterministic Verifiers](/authoring/verifiers).

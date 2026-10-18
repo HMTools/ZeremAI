@@ -1,0 +1,243 @@
+{
+  "type": "framework-step",
+  "id": "aba25021-e2a0-4b50-853e-aa84ddd4efcd",
+  "name": "continuous-improvement",
+  "category": "learning",
+  "approvalRequired": false,
+  "metadata": {
+    "title": "Continuous Improvement & Learning",
+    "purposeAndUsage": "Analyze flow execution log and SAVE improvement findings for later, async review. Also reads the log for the personal preferences of the user (flavors) and PROPOSES changes to them. Does not implement, or block on user approval — see the apply-improvements skill for findings; the user accepts a proposed flavor on the live page. Auto-injected by the framework at flow creation time — template authors do not include this step.",
+    "lastUpdated": "2026-10-19"
+  },
+  "output": {
+    "description": "Improvement findings saved to the global findings store; proposed flavor changes saved to the flavors folder",
+    "artifacts": [
+      "improvement-findings/<templateId>/<flowId>.json entries",
+      "flavors/<id>.json entries with status pending"
+    ],
+    "memoryUpdates": [
+      "improvementsIdentified",
+      "improvementsSaved",
+      "summary",
+      "flavorsProposed"
+    ]
+  },
+  "guidance": {
+    "prerequisites": [
+      "Flow execution log (log.json) with user interactions"
+    ],
+    "specificActions": [
+      "Read Flow Log: Load log.json; parse all user interactions and change requests; identify patterns and recurring issues; note high iteration counts",
+      "Analyze for Improvements: Group similar user corrections; identify corrections that could be automated; find missing validations; detect documentation gaps",
+      "Prioritize Improvements: Rank by frequency, impact, and ease; focus on high frequency + high impact + easy to implement; limit to top 3-5",
+      "For Each Finding: Call the tool write_finding with category, title, what/why/impact, and scope (target files) — do NOT propose in chat and do NOT modify any file in this step",
+      "Extract Flavor Changes: Read the log for the personal preferences of the user (what they like or dislike, not how to do a task). Call list_flavors first, then save_flavor to propose a new flavor or a new text for one that exists, and delete_flavor to propose forgetting one. Nothing changes for the steps until the user accepts it on the live page",
+      "Summarize: List findings written to the global store; this step never blocks and never needs approval"
+    ],
+    "files": {
+      "read": [
+        "~/.claude/zeremai/active/{flow-name}/log.json"
+      ],
+      "create": [],
+      "update": []
+    },
+    "tools": [
+      "read_file - Read log.json",
+      "flow-state-update skill (the tool write_finding) - Save findings to the global store",
+      "flow-state-update skill (the tools list_flavors, save_flavor, delete_flavor) - Propose flavor changes"
+    ],
+    "bestPractices": [
+      "Save, don't implement: this step's only output is finding records — implementation happens later, in the apply-improvements skill",
+      "One finding per write_finding call: keep records atomic and independently actionable",
+      "Still do the deep dive: findings should name real files and real evidence, even though nothing gets changed here",
+      "DEEP DIVE REQUIRED: Never save a shallow finding - always trace actual execution and identify ALL affected files across the framework",
+      "VERIFY BEFORE PROPOSING: Confirm the target files were actually used in this flow before naming them in a finding's scope",
+      "Zero findings is a valid outcome — do not force artificial findings to fill a quota",
+      "A flavor is a preference of the user (Tests: use Jest, not Vitest), never a how-to: a how-to is a skill",
+      "Propose a flavor only when the user said it in this flow and it holds beyond it. A one-time instruction (this PBI only) is not a flavor",
+      "Update, do not copy: call list_flavors first and use targetId when a flavor on the same topic exists"
+    ]
+  },
+  "substeps": [
+    {
+      "number": 1,
+      "name": "Read Flow Log (Comprehensive Analysis)",
+      "description": "Load and comprehensively parse ALL sections of the flow execution log",
+      "actions": [
+        "Load flow log from ~/.claude/zeremai/active/{flow-name}/log.json",
+        "COMPREHENSIVE ANALYSIS - Analyze ALL of the following log sections:",
+        "- steps[].userInteractions: Every user interaction, request, correction, and feedback",
+        "- steps[].problemsEncountered: Issues that occurred during each step",
+        "- steps[].decisionsMade: Choices the agent made that could be questioned or improved",
+        "- steps[].agentReasoning: Logic behind actions (may reveal flawed assumptions)",
+        "- steps[].actionsTaken: Full action history (may reveal inefficiencies)",
+        "- steps[].filesModified: File modification patterns and iteration counts",
+        "PRIORITY EXTRACTION - Identify and prioritize flagged entries:",
+        "- Find ALL userInteractions where forImprovementStep: true - these are explicitly flagged for review",
+        "- Extract ALL potentialImprovement values - these are user-provided improvement suggestions",
+        "- Create a priority list of flagged items to analyze first",
+        "FLOW-WIDE OBSERVATIONS - Review aggregated insights:",
+        "- flowWideObservations.patternsDetected: Cross-step patterns already identified (should be populated by prior steps; if empty, note this as an improvement opportunity)",
+        "- flowWideObservations.userFeedbackSummary: Aggregated user feedback",
+        "- flowWideObservations.recommendationsForFuture: Prior recommendations to action",
+        "- flowWideObservations.efficiencyMetrics: Performance data for trend analysis (should be populated by apply-changes and other steps; if empty, derive from step logs)"
+      ]
+    },
+    {
+      "number": 2,
+      "name": "Analyze for Improvements (with Deep Dive)",
+      "description": "Identify improvement opportunities from the log with thorough root cause analysis - do NOT save a shallow finding",
+      "actions": [
+        "ANALYZE FLAGGED ITEMS FIRST: Start with entries from priority list (forImprovementStep: true and potentialImprovement values)",
+        "SECTION-SPECIFIC ANALYSIS:",
+        "- From problemsEncountered: Identify recurring problems, systemic issues, preventable errors",
+        "- From decisionsMade: Question choices, identify alternatives, spot questionable patterns",
+        "- From agentReasoning: Find flawed logic, incorrect assumptions, misunderstandings",
+        "- From actionsTaken: Spot inefficiencies, redundant actions, unnecessary steps",
+        "- From userInteractions: Group corrections, identify repeated manual interventions",
+        "- From filesModified: Note high iteration counts, identify files needing frequent rework",
+        "- From flowWideObservations: Review pre-aggregated patterns and recommendations",
+        "Group similar user corrections",
+        "Identify steps with multiple iterations",
+        "Find documentation gaps",
+        "Detect repeated manual interventions",
+        "TRACE ACTUAL EXECUTION: Review log.json to identify exactly which files were used during this flow (which prompts, which steps, which templates)",
+        "IDENTIFY ALL AFFECTED FILES: For each finding, find ALL files in the framework that could be affected - not just one obvious file",
+        "CHECK FRAMEWORK-WIDE IMPACT: Consider if the issue exists in multiple places (e.g., both the flow pane and the flow-run skill)",
+        "VERIFY FILE USAGE: Before naming any file in a finding's scope, confirm that file was actually relevant to this flow execution",
+        "ROOT CAUSE ANALYSIS: Ask 'why did this happen?' at least 3 times to find the true root cause, not just the symptom",
+        "DOCUMENT REASONING: For each finding, capture: (1) What files were actually used, (2) What files would need to change, (3) Why each file would need to change"
+      ]
+    },
+    {
+      "number": 3,
+      "name": "Prioritize Improvements",
+      "description": "Rank improvements by frequency, impact, and ease",
+      "actions": [
+        "Score each improvement by: Frequency, Impact, Ease",
+        "Focus on high frequency + high impact + easy to implement",
+        "Limit to top 3-5 improvements"
+      ]
+    },
+    {
+      "number": 4,
+      "name": "Save Each Finding",
+      "description": "For each prioritized improvement, save it as a finding in the global store — no proposal, no implementation, no approval",
+      "actions": [
+        "For each prioritized finding, call the tool write_finding (see the flow-state-update skill) with category, title, what, why, impact, and scope (a list of target file paths)",
+        "Do not propose the finding in chat. Do not wait for a response. Do not modify any file.",
+        "Findings are automatically grouped by this flow's template (via templateId) — no extra step needed"
+      ]
+    },
+    {
+      "number": 5,
+      "name": "Summarize Findings Saved",
+      "description": "Create a final summary of all findings written this run",
+      "actions": [
+        "List every finding written this run, with its category and target files",
+        "Note that zero findings is a valid, non-error outcome",
+        "Record flowWideObservations.recommendationsForFuture with all recommendations from this analysis"
+      ]
+    },
+    {
+      "number": 6,
+      "name": "Extract Flavor Changes",
+      "description": "Find the lasting personal preferences of the user in the log and propose them as flavors — no implementation, no approval wait",
+      "actions": [
+        "Read steps[].userInteractions for what the user liked, disliked or corrected, and for preferences they stated in their own words",
+        "Keep only a preference that holds beyond this flow: a taste (tools, style, naming, tone). Skip a one-time instruction, a fact about this task, and any how-to (a how-to is a skill, not a flavor)",
+        "Call the tool list_flavors first. If a flavor on the same topic exists, call save_flavor with its id as targetId to propose a new text; if the user took one back, call delete_flavor. Give evidence (the user's words) on both",
+        "Call the tool save_flavor with topic (the area, for example Tests) and text (one clear sentence) for each new flavor. Add evidence: a few of the user's own words that led to it",
+        "These calls only PROPOSE. The user accepts or rejects each one on the Flavors tab of the live page, so do not wait and do not ask in chat",
+        "Zero proposals is a valid outcome"
+      ]
+    },
+    {
+      "number": 7,
+      "name": "End-Step: Log Problems",
+      "description": "Log what went wrong in this step",
+      "actions": [
+        "Log problems: If any problems, errors, workarounds, or unexpected situations were encountered during this step, log them with the tool add_log_entry, in its problems list. This feeds the continuous-improvement step's analysis."
+      ]
+    }
+  ],
+  "flow": {
+    "description": "Read log → Analyze for improvements (with deep dive: trace execution, find ALL affected files) → Prioritize → Save each as a finding (write_finding, no proposal/implementation) → Propose flavor changes (save_flavor, delete_flavor) → Summarize → step completes immediately, no approval needed"
+  },
+  "memoryFileUsage": {
+    "readFrom": [],
+    "writeTo": [
+      "improvements.json"
+    ],
+    "fields": [
+      "Improvements Identified: List with descriptions",
+      "Improvements Saved: Each with category, target files, and the global finding id it was written as",
+      "Summary: Total identified, total saved",
+      "Flavors Proposed: Each with topic, text and whether it adds, updates or removes one"
+    ]
+  },
+  "improvementCategories": [
+    {
+      "name": "Automation Opportunities",
+      "description": "User repeatedly asked for same type of change"
+    },
+    {
+      "name": "Flow Optimization",
+      "description": "Steps required too many iterations"
+    },
+    {
+      "name": "Documentation Enhancement",
+      "description": "User had questions documentation should answer"
+    },
+    {
+      "name": "Validation Strengthening",
+      "description": "Errors caught late that could be caught early"
+    },
+    {
+      "name": "Context Enhancement",
+      "description": "Missing information requiring multiple round trips"
+    },
+    {
+      "name": "Pattern Violations",
+      "description": "Deviations from standards that should be enforced"
+    }
+  ],
+  "prioritization": {
+    "criteria": [
+      "frequency",
+      "impact",
+      "ease"
+    ],
+    "maxImprovements": 5,
+    "focus": "high frequency + high impact + easy to implement"
+  },
+  "workflow": {
+    "steps": [
+      "gather",
+      "prioritize",
+      "save"
+    ],
+    "approvalRequired": false
+  },
+  "successCriteria": [
+    "Flow log has been fully analyzed",
+    "All identified improvements have been saved as findings via write_finding (or zero findings, if none were found)",
+    "Flavor changes found in the log have been proposed via save_flavor or delete_flavor (or none, if the log shows no lasting preference)",
+    "Memory file documents all findings saved",
+    "Step completes without proposing anything in chat or waiting on the user"
+  ],
+  "dependencies": {
+    "requiredFiles": [
+      "log.json"
+    ],
+    "requiredTools": [
+      "read_file"
+    ]
+  },
+  "references": {
+    "relatedSteps": [],
+    "usedInTemplates": [
+      "all flows (auto-injected by framework)"
+    ]
+  }
+}

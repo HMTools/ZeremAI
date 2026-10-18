@@ -1,0 +1,22 @@
+{
+  "id": "RM-034",
+  "title": "Loop-back execution in flows",
+  "description": "Templates already accept loopBackTo, loopCondition and maxIterations. Make the flow runner honor them: reset the target step, jump back, and stop at a loop-depth limit to prevent infinite cycles.",
+  "type": "feature",
+  "status": "proposed",
+  "priority": "high",
+  "category": "framework",
+  "milestone": "backlog",
+  "effort": "",
+  "tags": [
+    "flow-control",
+    "processes"
+  ],
+  "dependencies": [],
+  "created": "2026-06-06",
+  "updated": "2026-10-12",
+  "author": "m4t4ngm@gmail.com",
+  "notes": "",
+  "acceptance_criteria": [],
+  "illustration": "dynamic-workflow"
+}
